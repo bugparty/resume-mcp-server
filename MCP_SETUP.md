@@ -1,50 +1,50 @@
-# FastMCP Resume Agent Server - 快速开始
+# FastMCP Resume Agent Server - Quick Start
 
-## 🏃‍♂️ 快速启动
+## 🏃‍♂️ Quick Start
 
-### 方式一：直接启动 HTTP 服务器（推荐）
+### Option 1: Start the HTTP server directly (recommended)
 
-\`\`\`bash
+```bash
 cd /home/bowman/myagent
 python src/myagent/mcp_server.py
-\`\`\`
+```
 
-服务器将在 http://localhost:8000 启动，提供 HTTP 接口。
+The server will start at http://localhost:8000 and expose an HTTP API.
 
-### 方式二：使用启动脚本（STDIO 模式）适合cluade
+### Option 2: Use the startup script (STDIO mode) for Claude
 
-\`\`\`bash
+```bash
 cd /home/bowman/myagent
 uv run python scripts/start_mcp_server.py
-\`\`\`
+```
 
-### 🌐 通过 Cloudflare 隧道对外提供服务 适合chatgpt
+### 🌐 Expose via Cloudflare Tunnel (for ChatGPT)
 
-如果需要让 ChatGPT 等外部客户端访问，可以使用 Cloudflare 隧道：
+If you want external clients like ChatGPT to access the server, use Cloudflare Tunnel:
 
-1. **启动 MCP 服务器**：
-   \`\`\`bash
+1. **Start the MCP server:**
+   ```bash
    python src/myagent/mcp_server.py
-   \`\`\`
+   ```
 
-2. **启动 Cloudflare 隧道**：
-   \`\`\`bash
+2. **Start the Cloudflare tunnel:**
+   ```bash
    cloudflared tunnel --url http://localhost:8000
-   \`\`\`
+   ```
 
-3. **获取公网地址**：
-   Cloudflare 会提供一个类似 `https://xxx.trycloudflare.com` 的公网地址
+3. **Get a public URL:**
+   Cloudflare will return a URL like `https://xxx.trycloudflare.com`
 
-4. **ChatGPT 客户端配置**：
-   - 服务器地址：使用 Cloudflare 提供的 HTTPS 地址
-   - 认证方式：选择"无认证"
-   - 协议：HTTP/HTTPS
+4. **ChatGPT client configuration:**
+   - Server URL: use the HTTPS URL from Cloudflare
+   - Authentication: None
+   - Protocol: HTTP/HTTPS
 
-### 🖥️ 在 Claude Desktop 中使用
+### 🖥️ Use in Claude Desktop
 
-将以下配置添加到 Claude Desktop 的 MCP 配置中：
+Add the following to Claude Desktop's MCP configuration:
 
-\`\`\`json
+```json
 {
   "mcpServers": {
     "resume-agent": {
@@ -54,136 +54,136 @@ uv run python scripts/start_mcp_server.py
     }
   }
 }
-\`\`\`
+```
 
-## 🧪 测试服务器
+## 🧪 Test the Server
 
-### 1. 测试服务器启动
-\`\`\`bash
+### 1. Test server startup
+```bash
 cd /home/bowman/myagent
 uv run python scripts/test_mcp_server.py
-\`\`\`
+```
 
-### 2. HTTP 接口测试
+### 2. Test HTTP endpoints
 
-当使用 HTTP 模式启动后，可以通过以下方式测试：
+When running in HTTP mode, you can test with:
 
-\`\`\`bash
-# 测试服务器状态
+```bash
+# Check server health
 curl http://localhost:8000/health
 
-# 查看可用工具
+# List available tools
 curl http://localhost:8000/tools
-\`\`\`
+```
 
-### 3. Cloudflare 隧道测试
+### 3. Test via Cloudflare tunnel
 
-\`\`\`bash
-# 使用 Cloudflare 提供的地址测试
+```bash
+# Use the Cloudflare-provided URL
 curl https://xxx.trycloudflare.com/health
-\`\`\`
+```
 
-## 💡 使用示例
+## 💡 Usage Examples
 
-启动后，你可以在 Claude Desktop 中使用这些命令：
+After starting, you can run these commands in Claude Desktop:
 
-\`\`\`
-list_resume_versions()  # 查看所有简历版本
-load_complete_resume("resume.yaml")  # 加载完整简历
-analyze_jd("Job description text here...")  # 分析职位描述
-\`\`\`
+```
+list_resume_versions()  # list all resume versions
+load_complete_resume("resume.yaml")  # load full resume
+analyze_jd("Job description text here...")  # analyze a job description
+```
 
-在 ChatGPT 中通过 HTTP 接口使用：
+Use the HTTP interface in ChatGPT:
 
-\`\`\`json
+```json
 {
   "tool": "list_resume_versions",
   "args": {}
 }
-\`\`\`
+```
 
-## 🔧 技术特点
+## 🔧 Technical Highlights
 
-- **零修改**：完全复用现有 tools.py 中的功能
-- **双模式**：支持 STDIO 和 HTTP 两种运行模式
-- **云端访问**：通过 Cloudflare 隧道支持外部客户端
-- **类型安全**：保持原有的 Pydantic 模型
-- **标准协议**：完全兼容 MCP 标准
+- **Zero changes**: fully reuses functionality from tools.py
+- **Dual modes**: supports STDIO and HTTP
+- **Cloud access**: expose to external clients via Cloudflare Tunnel
+- **Type-safe**: retains original Pydantic models
+- **Standard protocol**: fully compatible with MCP
 
-## 🛠️ 配置说明
+## 🛠️ Configuration
 
-### 环境变量设置
+### Environment variables
 
-确保已配置必要的环境变量（复制 `sample.env` 到 `.env`）：
+Ensure required environment variables are configured (copy `sample.env` to `.env`):
 
-\`\`\`bash
+```bash
 cp sample.env .env
-# 编辑 .env 文件，设置必要的 API 密钥和路径
-\`\`\`
+# Edit .env and set required API keys and paths
+```
 
-### Cloudflare 隧道配置
+### Cloudflare Tunnel configuration
 
-如需持久化隧道，可以配置 Cloudflare 隧道：
+For a persistent tunnel, configure Cloudflare Tunnel:
 
-\`\`\`bash
-# 创建隧道
+```bash
+# Create a tunnel
 cloudflared tunnel create myagent-mcp
 
-# 配置隧道
+# Route DNS
 cloudflared tunnel route dns myagent-mcp myagent-mcp.yourdomain.com
 
-# 启动隧道
+# Run the tunnel
 cloudflared tunnel run myagent-mcp
-\`\`\`
+```
 
-## 🐛 故障排除
+## 🐛 Troubleshooting
 
-### 常见问题
+### Common issues
 
-1. **导入错误**：确保从项目根目录运行命令
-2. **端口占用**：检查 8000 端口是否被占用
-3. **环境变量**：确保 `.env` 文件配置正确
-4. **依赖缺失**：运行 `uv sync` 安装所有依赖
+1. **Import errors**: ensure commands are run from the project root
+2. **Port in use**: check that port 8000 is free
+3. **Environment variables**: confirm `.env` is configured correctly
+4. **Missing dependencies**: run `uv sync` to install all deps
 
-### 日志调试
+### Logging and debugging
 
-\`\`\`bash
-# 启动时查看详细日志
+```bash
+# Show verbose logs at startup
 python src/myagent/mcp_server.py --verbose
-\`\`\`
+```
 
-查看详细文档：`docs/mcp_server.md`
+See the detailed docs: `docs/mcp_server.md`
 
-## 🚀 已完成设置
+## 🚀 Setup Complete
 
-你的 Resume Agent 工具现在已经通过 FastMCP 暴露为 MCP 服务器！支持本地运行和通过 Cloudflare 隧道对外提供服务。
+Your Resume Agent is now exposed as an MCP server via FastMCP! It supports local runs and external access via Cloudflare Tunnel.
 
-### 📁 新增文件
-- `src/myagent/mcp_server.py` - MCP 服务器主文件
-- `scripts/start_mcp_server.py` - 启动脚本
-- `scripts/test_mcp_server.py` - 测试脚本
-- `docs/mcp_server.md` - 详细文档
+### 📁 New Files
+- `src/myagent/mcp_server.py` - MCP server entrypoint
+- `scripts/start_mcp_server.py` - startup script
+- `scripts/test_mcp_server.py` - test script
+- `docs/mcp_server.md` - detailed documentation
 
-### 🛠️ 可用工具 (14个)
+### 🛠️ Available Tools (14)
 
-#### 简历版本管理
-- `list_resume_versions` - 列出所有简历版本
-- `load_complete_resume` - 加载完整简历
-- `load_resume_section` - 加载特定段落
-- `update_resume_section` - 更新段落内容
-- `create_new_version` - 创建新版本
-- `list_modules_in_version` - 列出版本中的段落
-- `update_main_resume` - 更新整个简历文件
+#### Resume Version Management
+- `list_resume_versions` - list all resume versions
+- `load_complete_resume` - load full resume
+- `load_resume_section` - load a specific section
+- `update_resume_section` - update a section
+- `create_new_version` - create a new version
+- `list_modules_in_version` - list sections in a version
+- `update_main_resume` - update the whole resume file
 
-#### 职位描述分析
-- `analyze_jd` - 分析职位描述
-- `read_jd_file` - 读取JD文件
-- `tailor_section_for_jd` - 根据JD定制简历段落
+#### Job Description Analysis
+- `analyze_jd` - analyze a job description
+- `read_jd_file` - read a JD file
+- `tailor_section_for_jd` - tailor a resume section for the JD
 
-#### 简历摘要和索引
-- `summarize_resumes_to_index` - 生成简历摘要索引
-- `read_resume_summary` - 读取简历摘要
+#### Resume Summary and Index
+- `summarize_resumes_to_index` - generate resume summary index
+- `read_resume_summary` - read resume summary
 
-#### 简历渲染
-- `render_resume_to_latex` - 渲染为LaTeX
-- `compile_resume_pdf` - 编译为PDF
+#### Resume Rendering
+- `render_resume_to_latex` - render to LaTeX
+- `compile_resume_pdf` - compile to PDF
