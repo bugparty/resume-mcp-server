@@ -115,7 +115,6 @@ uv run python scripts/render_resume_cli.py resume --tex build/resume.tex --pdf b
 - Python 3.12+
 - UV包管理器
 - XeLaTeX（用于PDF生成）
-- API密钥：Google API Key（免费），DeepSeek API Key（需要充值1美元）
 
 ## 🚀 立即开始
 
