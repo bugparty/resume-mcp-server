@@ -2,7 +2,7 @@
 
 This manual is for end users. It explains what the resume agent's MCP server can do, how to get started quickly, how the documentation is organized, and how the code modules are structured.
 
-For instructions on installing/connecting an MCP client, see [mcp_setup.md](./mcp_setup.md).
+For instructions on installing/connecting an MCP client, see [MCP Setup Guide](./MCP_SETUP.md).
 
 ### Introduction
 - **Positioning**: Uses MCP (Model Context Protocol) to unify resume management, JD (job description) analysis, and PDF rendering into a set of remotely callable tools, making integration easy for desktop clients (e.g., Claude Desktop, ChatGPT developer mode) or automation workflows.

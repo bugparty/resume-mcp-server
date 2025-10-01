@@ -51,7 +51,7 @@ docker run --rm -p 8000:8000 \
   resume-mcp:latest
 ```
 
-容器会自动创建公网URL供ChatGPT集成使用。详细说明请参见 [Docker部署指南](./DOCKER.md)。
+容器会自动创建公网URL供ChatGPT集成使用。详细说明请参见 [Docker部署指南](./DOCKER-cn.md)。
 
 ### 选项2：本地环境搭建
 
@@ -72,7 +72,7 @@ docker run --rm -p 8000:8000 \
 3. **安装XeLaTeX**（用于PDF生成）
    - macOS: `brew install --cask mactex-no-gui`
    - Ubuntu: `sudo apt-get install texlive-xetex texlive-latex-recommended`
-   - 完整安装说明请参见 [MCP配置指南](./MCP_SETUP.md)
+   - 完整安装说明请参见 [MCP配置指南](./MCP_SETUP_cn.md)
 
 4. **启动MCP服务器**
    ```bash
@@ -85,9 +85,9 @@ docker run --rm -p 8000:8000 \
 
 ## 📚 文档导航
 
-- **[MCP配置指南](./MCP_SETUP.md)** - 详细的MCP服务器配置和客户端连接
-- **[用户使用手册](./MCP_USER_MANUAL.md)** - 工具使用指南和典型工作流
-- **[Docker部署指南](./DOCKER.md)** - Docker部署和云访问配置
+- **[MCP配置指南](./MCP_SETUP_cn.md)** - 详细的MCP服务器配置和客户端连接
+- **[用户使用手册](./MCP_USER_MANUAL_cn.md)** - 工具使用指南和典型工作流
+- **[Docker部署指南](./DOCKER-cn.md)** - Docker部署和云访问配置
 - **[简历版本管理](./docs/resume_version_management.md)** - 简历版本管理
 
 ## 🛠️ 开发相关
@@ -123,4 +123,4 @@ uv run python scripts/render_resume_cli.py resume --tex build/resume.tex --pdf b
 - **普通用户**：使用Docker一键部署，5分钟即可使用
 - **开发者**：本地环境搭建，完全控制配置和定制
 
-详细的安装说明和故障排查，请参见 [MCP配置指南](./MCP_SETUP.md)。
+详细的安装说明和故障排查，请参见 [MCP配置指南](./MCP_SETUP_cn.md)。

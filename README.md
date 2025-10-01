@@ -1,5 +1,7 @@
 # Resume MCP Agent
 
+[中文版 README](./README-cn.md)
+
 ## 🤖 What is Resume MCP Agent?
 
 Resume MCP Agent is an intelligent resume assistant based on MCP (Model Context Protocol) that allows you to directly manage and optimize your resume within AI clients like Claude Desktop and ChatGPT.

@@ -2,7 +2,7 @@
 
 本手册面向最终使用者，介绍简历代理的 MCP 服务器能做什么、如何快速上手、文档组织方式，以及代码模块划分。
 
-如何安装/接入 MCP 客户端请参考 [mcp_setup.md](./mcp_setup.md)。
+如何安装/接入 MCP 客户端请参考 [MCP配置指南](./MCP_SETUP_cn.md)。
 
 ### 简介
 - **定位**: 通过 MCP（Model Context Protocol）将简历管理、JD 分析与 PDF 渲染能力统一为一组可远程调用的工具，便于桌面客户端（如 Claude Desktop， chatgpt开发者模式）或自动化流程集成。
