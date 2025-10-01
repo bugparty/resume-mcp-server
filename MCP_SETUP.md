@@ -5,7 +5,7 @@
 ### Option 1: Start the HTTP server directly (recommended)
 
 ```bash
-cd /home/bowman/myagent
+cd resume_mcp
 python src/myagent/mcp_server.py
 ```
 
@@ -14,7 +14,7 @@ The server will start at http://localhost:8000 and expose an HTTP API.
 ### Option 2: Use the startup script (STDIO mode) for Claude
 
 ```bash
-cd /home/bowman/myagent
+cd resume_mcp
 uv run python scripts/start_mcp_server.py
 ```
 
@@ -49,8 +49,8 @@ Add the following to Claude Desktop's MCP configuration:
   "mcpServers": {
     "resume-agent": {
       "command": "uv",
-      "args": ["run", "python", "/home/bowman/myagent/scripts/start_mcp_server.py"],
-      "cwd": "/home/bowman/myagent"
+      "args": ["run", "python", "scripts/start_mcp_server.py"],
+      "cwd": "/path/to/resume_mcp"
     }
   }
 }
@@ -60,7 +60,7 @@ Add the following to Claude Desktop's MCP configuration:
 
 ### 1. Test server startup
 ```bash
-cd /home/bowman/myagent
+cd resume_mcp
 uv run python scripts/test_mcp_server.py
 ```
 

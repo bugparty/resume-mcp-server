@@ -63,7 +63,7 @@ Add to your Claude Desktop MCP configuration:
   "mcpServers": {
     "resume-agent": {
       "command": "python",
-      "args": ["/path/to/myagent/scripts/start_mcp_server.py"]
+      "args": ["/path/to/resume_mcp/scripts/start_mcp_server.py"]
     }
   }
 }

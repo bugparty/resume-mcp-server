@@ -5,7 +5,7 @@
 ### 方式一：直接启动 HTTP 服务器（推荐）
 
 \`\`\`bash
-cd /home/bowman/myagent
+cd resume_mcp
 python src/myagent/mcp_server.py
 \`\`\`
 
@@ -14,7 +14,7 @@ python src/myagent/mcp_server.py
 ### 方式二：使用启动脚本（STDIO 模式）适合cluade
 
 \`\`\`bash
-cd /home/bowman/myagent
+cd resume_mcp
 uv run python scripts/start_mcp_server.py
 \`\`\`
 
@@ -49,8 +49,8 @@ uv run python scripts/start_mcp_server.py
   "mcpServers": {
     "resume-agent": {
       "command": "uv",
-      "args": ["run", "python", "/home/bowman/myagent/scripts/start_mcp_server.py"],
-      "cwd": "/home/bowman/myagent"
+      "args": ["run", "python", "scripts/start_mcp_server.py"],
+      "cwd": "/path/to/resume_mcp"
     }
   }
 }
@@ -60,7 +60,7 @@ uv run python scripts/start_mcp_server.py
 
 ### 1. 测试服务器启动
 \`\`\`bash
-cd /home/bowman/myagent
+cd resume_mcp
 uv run python scripts/test_mcp_server.py
 \`\`\`
 
