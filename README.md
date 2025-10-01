@@ -77,7 +77,6 @@
 - Google API Key is free and available from Google AI Studio
 - For more information about UV, visit [UV documentation](https://github.com/astral-sh/uv)
 - CLI tools: render & compile via `scripts/render_resume_cli.py`
-- LangChain tools: `RenderResumeToLaTeX` and `CompileResumePDF`
 - Run tests (schema, pytest, PDF): `uv run python scripts/run_all_tests.py`
 - PDF generation requires `xelatex` and the Awesome-CV assets (under `templates/`)
 
