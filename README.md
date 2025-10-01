@@ -51,16 +51,6 @@
    uv run python scripts/run_all_tests.py
    ```
 
-8. **Load Environment Variables**
-   Ensure `.env` contains entries such as:
-   ```env
-   GOOGLE_API_KEY=...
-   DEEPSEEK_API_KEY=...
-   RESUME_DATA_DIR=/data/resumes
-   RESUME_SUMMARY_PATH=/src/myagent/resume_summary.yaml
-   RESUME_JD_DIR=/data/jd
-   ```
-
 9. **Optional: Manual PDF Compilation**
    ```bash
    xelatex build/resume.tex
