@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ResumeSummary",
+  "type": "object",
+  "required": [
+    "resumes"
+  ],
+  "properties": {
+    "resumes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "version",
+          "metadata"
+        ],
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "position": {
+                "type": "string"
+              },
+              "location": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "highlights": {
+            "type": "object",
+            "properties": {
+              "summary": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "skills": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "projects": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": true
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,45 @@
+# MyAgent Development Environment
+
+## Essential Setup Instructions
+
+### Python Environment Activation
+**CRITICAL**: Always activate the virtual environment before running Python commands:
+```bash
+cd /home/bowman/myagent && source .venv/bin/activate
+```
+
+### Project Overview
+This is a Python-based resume management and job application agent system built with:
+- Python 3.12 virtual environment
+- UV package manager
+- LangChain for AI integrations
+- PyTest for testing
+- Source code in `src/myagent/`
+- Test fixtures in `tests/fixtures/test_data/`
+
+### Development Workflow
+1. **Always activate environment first**: `cd /home/bowman/myagent && source .venv/bin/activate`
+2. **Install dependencies**: `uv sync`
+3. **Run tests**: `uv run pytest` or `uv run python tests/test_resume_operations.py`
+4. **Run the agent**: `uv run python main.py`
+5. **Code formatting**: `uv run black .`
+
+### Common Commands
+- Test single file: `uv run python tests/test_resume_operations.py`
+- Run all tests: `uv run pytest`
+- Run with coverage: `uv run pytest --cov`
+- Format code: `uv run black .`
+- Start agent: `uv run python main.py`
+
+### Module Import Pattern
+For test files to work when run directly, include this pattern:
+```python
+import sys
+from pathlib import Path
+
+# Add src directory to Python path for module imports
+ROOT = Path(__file__).resolve().parents[1]
+SRC_PATH = ROOT / "src"
+if str(SRC_PATH) not in sys.path:
+    sys.path.insert(0, str(SRC_PATH))
+```

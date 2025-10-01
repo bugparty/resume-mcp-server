@@ -1,0 +1,29 @@
+((# 
+  Skills Section Template
+  
+  Variables:
+    - title: Section title (e.g., "Technical Skills", "Skills")
+    - groups: List of skill groups
+      - category: Category name (e.g., "Programming Languages")
+      - items: List of skill items (strings)
+    
+  Example data:
+    {
+      "title": "Technical Skills",
+      "groups": [
+        {
+          "category": "Programming Languages",
+          "items": ["Python", "Go", "JavaScript"]
+        }
+      ]
+    }
+#))
+\cvsection{((( title | escape_tex )))}
+\begin{cvskills}
+((*- for group in groups *))
+  \cvskill
+    {((( group.category | escape_tex )))}
+    {((( group['items'] | join(', ') | escape_tex )))}
+((*- endfor *))
+\end{cvskills}
+

@@ -1,0 +1,23 @@
+((# 
+  Summary Section Template
+  
+  Variables:
+    - title: Section title (e.g., "Summary", "Profile")
+    - bullets: List of summary bullet points (strings)
+    
+  Example data:
+    {
+      "title": "Summary",
+      "bullets": [
+        "5+ years of experience...",
+        "Expert in Python and Go..."
+      ]
+    }
+#))
+\cvsection{((( title | escape_tex )))}
+\begin{cvitems}
+((*- for bullet in bullets *))
+  \item {((( bullet | markdown_to_latex )))}
+((*- endfor *))
+\end{cvitems}
+

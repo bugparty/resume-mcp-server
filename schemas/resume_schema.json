@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/resume.schema.json",
+  "title": "Resume",
+  "type": "object",
+  "required": ["source", "metadata", "sections"],
+  "properties": {
+    "source": {
+      "type": "string",
+      "minLength": 1
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["first_name", "last_name"],
+      "properties": {
+        "first_name": {"type": "string"},
+        "last_name": {"type": "string"},
+        "position": {"type": "string"},
+        "address": {"type": "string"},
+        "mobile": {"type": "string"},
+        "email": {"type": "string"},
+        "github": {"type": "string"},
+        "linkedin": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["type", "id"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["summary", "skills", "entries", "raw"]
+          },
+          "id": {"type": "string"},
+          "title": {"type": "string"},
+          "bullets": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["category", "items"],
+              "properties": {
+                "category": {"type": "string"},
+                "items": {
+                  "type": "array",
+                  "items": {"type": "string"}
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["title", "organization"],
+              "properties": {
+                "title": {"type": "string"},
+                "organization": {"type": "string"},
+                "location": {"type": "string"},
+                "period": {"type": "string"},
+                "bullets": {
+                  "type": "array",
+                  "items": {"type": "string"}
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "content": {"type": "string"}
+        },
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {"type": {"const": "summary"}}
+            },
+            "then": {
+              "required": ["title", "bullets"],
+              "properties": {
+                "bullets": {
+                  "minItems": 1
+                }
+              }
+            },
+            "else": {
+              "not": {
+                "required": ["bullets"]
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {"type": {"const": "skills"}}
+            },
+            "then": {
+              "required": ["title", "groups"],
+              "properties": {
+                "groups": {
+                  "minItems": 1
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {"required": ["bullets"]},
+                  {"required": ["entries"]},
+                  {"required": ["content"]}
+                ]
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {"type": {"const": "entries"}}
+            },
+            "then": {
+              "required": ["title", "entries"],
+              "properties": {
+                "entries": {
+                  "minItems": 1
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {"required": ["bullets"]},
+                  {"required": ["groups"]},
+                  {"required": ["content"]}
+                ]
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {"type": {"const": "raw"}}
+            },
+            "then": {
+              "required": ["title", "content"],
+              "properties": {
+                "content": {
+                  "minLength": 1
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {"required": ["bullets"]},
+                  {"required": ["groups"]},
+                  {"required": ["entries"]}
+                ]
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {"id": {"const": "experience"}}
+            },
+            "then": {
+              "properties": {
+                "title": {
+                  "pattern": "^(?!.*Projects).*Experience.*$",
+                  "description": "When id is 'experience', title must contain 'Experience' and not contain 'Projects'"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {"id": {"const": "projects"}}
+            },
+            "then": {
+              "properties": {
+                "title": {
+                  "pattern": "^(?!.*Experience).*Projects?.*$",
+                  "description": "When id is 'projects', title must contain 'Project' or 'Projects' and not contain 'Experience'"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "additionalProperties": false
+}

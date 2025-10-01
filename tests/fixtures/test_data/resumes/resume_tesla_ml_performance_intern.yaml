@@ -1,0 +1,52 @@
+source: resume_tesla_ml_performance_intern.tex
+metadata:
+  first_name: Bowen
+  last_name: Han
+  position: Tesla ML Performance Intern
+  address: Riverside, CA, USA
+  mobile: (+1) 601-555-0000
+  email: example@example.com
+  github: test-github
+  linkedin: test-linkedin
+sections:
+- type: summary
+  title: Summary
+  id: summary
+  bullets:
+  - Focused on optimizing ML workloads for Tesla Dojo using DeepSeek-based pipelines.
+  - Experienced with distributed training, profiling, and CUDA performance tuning.
+- type: entries
+  title: Education
+  id: education
+  entries:
+  - title: M.S. in Computer Engineering
+    organization: UCR
+    location: Riverside, CA
+    period: Sep. 2024 - Dec. 2025
+    bullets:
+    - "Coursework: Machine Learning, High Performance Computing."
+- type: skills
+  title: Skills
+  id: skills
+  groups:
+  - category: Programming
+    items:
+    - C++
+    - Python
+    - CUDA
+  - category: Tooling
+    items:
+    - PyTorch
+    - Profilers
+    - Distributed Systems
+- type: entries
+  title: Work Experience
+  id: experience
+  entries:
+  - title: Performance Intern
+    organization: Tesla
+    location: Remote
+    period: 2024
+    bullets:
+    - Tuned distributed training runs on simulated Dojo clusters.
+    - Benchmarked parallel compute kernels and optimized communication patterns.

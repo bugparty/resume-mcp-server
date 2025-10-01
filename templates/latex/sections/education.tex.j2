@@ -1,0 +1,49 @@
+((# 
+  Education Section Template
+  
+  Variables:
+    - title: Section title (e.g., "Education", "Academic Background")
+    - entries: List of education entries
+      - title: Degree name (e.g., "M.S. in Computer Science", "Bachelor of Engineering")
+      - organization: School/University name (e.g., "MIT", "Peking University")
+      - location: Location (e.g., "Cambridge, MA", "Beijing, China")
+      - period: Time period (e.g., "2020-2024", "Sep 2018 - Jun 2022")
+      - bullets: List of bullet points (coursework, GPA, honors, etc.) (optional)
+    
+  Example data:
+    {
+      "title": "Education",
+      "entries": [
+        {
+          "title": "M.S. in Computer Science",
+          "organization": "Stanford University",
+          "location": "Stanford, CA",
+          "period": "2020-2022",
+          "bullets": [
+            "GPA: 3.9/4.0",
+            "Coursework: Machine Learning, Distributed Systems"
+          ]
+        }
+      ]
+    }
+#))
+\cvsection{((( title | escape_tex )))}
+\begin{cventries}
+((*- for entry in entries *))
+  \cventry
+    {((( entry.title | escape_tex )))}           % Degree
+    {((( entry.organization | escape_tex )))}    % School/University
+    {((( entry.location | escape_tex )))}        % Location
+    {((( entry.period | escape_tex )))}          % Time Period
+    {
+    ((*- if entry.bullets *))
+      \begin{cvitems}
+      ((*- for bullet in entry.bullets *))
+        \item {((( bullet | markdown_to_latex )))}
+      ((*- endfor *))
+      \end{cvitems}
+    ((*- endif *))
+    }
+((*- endfor *))
+\end{cventries}
+

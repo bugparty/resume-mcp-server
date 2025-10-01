@@ -1,0 +1,83 @@
+source: resume.tex
+metadata:
+  first_name: ""
+  last_name: ""
+  position: ""
+  address: ""
+  mobile: ""
+  email: ""
+  github: ""
+  linkedin: ""
+sections:
+- type: summary
+  title: Summary
+  id: summary
+  bullets:
+  - "Brief professional summary highlighting key experience and skills"
+  - "Second bullet point showcasing technical expertise"
+  - "Third bullet point emphasizing achievements and technologies"
+  
+- type: entries
+  entries:
+  - title: "Degree Name"
+    organization: "University Name"
+    location: "City, State"
+    period: "Start Date - End Date"
+    bullets:
+    - "Relevant coursework or achievements"
+    - "GPA or academic honors if applicable"
+  title: Education
+  id: education
+- type: skills
+  title: Technical Skills
+  id: skills
+  groups:
+  - category: "Programming Languages"
+    items:
+    - "Language 1"
+    - "Language 2"
+    - "Language 3"
+  - category: "Frameworks & Tools"
+    items:
+    - "Framework 1"
+    - "Tool 1"
+    - "Tool 2"
+  - category: "Technologies"
+    items:
+    - "Technology 1"
+    - "Technology 2"
+    - "Technology 3"
+
+- type: experience
+  title: Experience
+  id: experience
+  entries:
+  - title: "Job Title"
+    organization: "Company Name"
+    location: "City, State"
+    period: "Start Date - End Date"
+    bullets:
+    - "Key responsibility or achievement"
+    - "Quantifiable result or impact"
+    - "Technologies used or skills demonstrated"
+  - title: "Previous Job Title"
+    organization: "Previous Company"
+    location: "City, State"
+    period: "Start Date - End Date"
+    bullets:
+    - "Major project or responsibility"
+    - "Achievement with metrics"
+    - "Technical skills applied"
+
+- type: projects
+  title: Projects
+  id: projects
+  entries:
+  - title: "Project Name"
+    organization: "Context (Personal/Academic/Professional)"
+    location: ""
+    period: "Project Duration"
+    bullets:
+    - "Project description and objectives"
+    - "Technologies and tools used"
+    - "Results achieved or lessons learned"

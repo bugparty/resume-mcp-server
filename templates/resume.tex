@@ -1,0 +1,252 @@
+%% Resume Template for version: ((( version_name )))
+\documentclass[11pt, a4paper]{awesome-cv}
+% Configure page margins with geometry
+\geometry{left=1.4cm, top=.8cm, right=1.4cm, bottom=1.8cm, footskip=.5cm}
+\fontdir[fonts/]
+\colorlet{awesome}{awesome-red}
+% Set false if you don't want to highlight section with awesome color
+\setbool{acvSectionColorHighlight}{true}
+% If you would like to change the social information separator from a pipe (|) to something else
+\renewcommand{\acvHeaderSocialSep}{\quad\textbar\quad}
+%-------------------------------------------------------------------------------
+%       SPACING ADJUSTMENTS
+%       Add some spacing between job titles and descriptions
+%-------------------------------------------------------------------------------
+% Redefine cventry to add more spacing before description
+\let\oldcventry\cventry
+\renewcommand*{\cventry}[5]{%
+  \vspace{-2.0mm}
+  \setlength\tabcolsep{0pt}
+  \setlength{\extrarowheight}{0pt}
+  \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}} L{\textwidth - 4.5cm} R{4.5cm}}
+    \ifempty{#2#3}
+      {\entrypositionstyle{#1} & \entrydatestyle{#4} \\}
+      {\entrytitlestyle{#2} & \entrylocationstyle{#3} \\
+      \entrypositionstyle{#1} & \entrydatestyle{#4} \\[0.3em]}  % Add spacing here
+    \multicolumn{2}{L{\textwidth}}{\descriptionstyle{#5}}
+  \end{tabular*}%
+}
+
+%-------------------------------------------------------------------------------
+%       PERSONAL INFORMATION
+%       Comment any of the lines below if they are not required
+%-------------------------------------------------------------------------------
+% Available options: circle|rectangle,edge/noedge,left/right
+% \photo[rectangle,edge,right]{./examples/profile}
+\name{Bowen}{Han}
+\position{Tech Lead{\enskip\cdotp\enskip}Software Engineer}
+\address{Riverside,CA,  USA}
+\mobile{(+1) 6015520630}
+\email{bhan001@ucr.edu}
+%\homepage{www.posquit0.com}
+\github{bugparty}
+\linkedin{bowmanhan}
+%\quote{``Be the change that you want to see in the world."}
+%-------------------------------------------------------------------------------
+\begin{document}
+% Print the header with above personal informations
+% Give optional argument to change alignment(C: center, L: left, R: right)
+\makecvheader[C]
+% Print the footer with 3 arguments(<left>, <center>, <right>)
+% Leave any of these blank if they are not needed
+\makecvfooter
+  {\today}
+  {Bowen Han~~~·~~~Résumé}
+  {\thepage}
+%-------------------------------------------------------------------------------
+%       CV/RESUME CONTENT
+%       Each section is imported separately, open each file in turn to modify content
+%-------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
+\cvsection{Summary}
+\begin{cvitems}
+  \item {Brief professional summary highlighting key experience and skills}
+  \item {Second bullet point showcasing technical expertise}
+  \item {Third bullet point emphasizing achievements and technologies}
+\end{cvitems}
+
+\cvsection{Education}
+\begin{cventries}
+  \cventry
+    {Degree Name}
+    {University Name}
+    {City, State}
+    {Start Date - End Date}
+    {
+      \begin{cvitems}
+        \item {Relevant coursework or achievements}
+        \item {GPA or academic honors if applicable}
+      \end{cvitems}
+    }
+\end{cventries}
+
+\cvsection{Technical Skills}
+\begin{cvskills}
+  \cvskill
+    {Programming Languages}
+    {Language 1, Language 2, Language 3}
+  \cvskill
+    {Frameworks \& Tools}
+    {Framework 1, Tool 1, Tool 2}
+  \cvskill
+    {Technologies}
+    {Technology 1, Technology 2, Technology 3}
+\end{cvskills}
+
+\cvsection{Projects (Selected)}
+\begin{cventries}
+  \cventry
+    {AI Infrastructure Engineer}
+    {Brix / Brix AI}
+    {Mountain View, CA · Remote}
+    {Jan. 2023 – Present}
+    {
+      \begin{cvitems}
+        \item {Built and optimized a \textbf{custom LLM inference engine}, reducing latency by \textasciitilde{}35\% on NVIDIA GPUs via CUDA kernel fusion and PTX tuning.}
+        \item {Designed a \textbf{distributed inference pipeline} supporting 1000+ concurrent requests with sub‑second response time.}
+        \item {Developed a \textbf{high‑throughput video processing pipeline} (JAX) for image stitching/manipulation; trained a lip‑sync model in PyTorch.}
+        \item {Implemented \textbf{tensor parallelism} and \textbf{KV‑cache optimizations} in a vLLM‑based serving stack, achieving \textasciitilde{}2× throughput on multi‑B parameter models.}
+        \item {Benchmarked and scaled \textbf{distributed training} with DeepSpeed/Megatron‑LM to 128 GPUs on Slurm.}
+        \item {Integrated \textbf{quantization‑aware training} and mixed precision (FP16/FP8) inference; productionized with \textbf{Kubernetes + CI/CD}.}
+        \item {Built \textbf{data acquisition pipelines} by reverse‑engineering APIs / protocols to automate dataset collection and retraining.}
+      \end{cvitems}
+    }
+  \cventry
+    {Senior Technical Lead}
+    {Arpara Corp.}
+    {Beijing, China}
+    {Apr. 2021 – Aug. 2023}
+    {
+      \begin{cvitems}
+        \item {Stood up a \textbf{4‑person Android OS team}; provided mentorship and technical leadership.}
+        \item {Built AOSP \textbf{CI/CD} on Linux (Jenkins, Docker, GitLab, Kubernetes), cutting build time \textasciitilde{}40\% and improving release consistency.}
+        \item {\textbf{System‑level debugging} across kernel drivers, Android framework, and cross‑platform issues; fixed critical bugs to raise stability.}
+        \item {Authored \textbf{Linux IMU user‑space/kernel components} in C; tuned \textbf{sensor fusion} with MATLAB on Qualcomm SoCs.}
+        \item {\textbf{Board bring‑up} for new ARM platforms (Linux/Android).}
+        \item {Drove \textbf{Android OS security research}; identified and patched AOSP / proprietary firmware vulnerabilities.}
+        \item {\textbf{WebAssembly reverse engineering}: dynamic debugging to extract decrypted memory; built custom \textbf{dynamic injection} tooling.}
+        \item {Contributed to \textbf{Li Auto} Android framework/display customization; wrote \textbf{USB IMU} and \textbf{virtual mouse} drivers.}
+        \item {Built \textbf{C++ services} on Android framework for dynamic sensor switching; performed Android/C++ reverse engineering on competitors.}
+      \end{cvitems}
+    }
+  \cventry
+    {Reverse Engineer \& Co‑Founder}
+    {Rolling Blocks}
+    {Hong Kong, China}
+    {Jun. 2018 – Jan. 2020}
+    {
+      \begin{cvitems}
+        \item {Architected a \textbf{high‑traffic WordPress platform} with Nginx LB and a \textbf{distributed MySQL} cluster; added static generation to cut load.}
+        \item {Built \textbf{distributed WeChat/web crawlers} (Python/JavaScript); exposed \textbf{REST APIs} for control/queries.}
+        \item {Deployed on AWS (EC2, S3, CloudFront, RDS, IAM) with containerization and GitHub Actions; HA/fault‑tolerant/autoscaling design.}
+        \item {\textbf{Reverse‑engineered} a well‑known IM app and a live streaming Android app (Frida/Xposed/Smali) to bypass protections and extract data.}
+      \end{cvitems}
+    }
+  \cventry
+    {Software Developer}
+    {Meituan}
+    {Beijing, China}
+    {Sep. 2015 – Mar. 2018}
+    {
+      \begin{cvitems}
+        \item {Achieved \textbf{5× throughput} in scanning by offloading image pipelines to GPU using \textbf{OpenCL} and ARM asm.}
+        \item {Shipped a cross‑platform \textbf{C++ SDK} for cloud storage (segmentation, resume, templated meta‑programming); served \textasciitilde{}200k users.}
+        \item {Led \textbf{reverse‑engineering} of POS integrations (x86 asm, Smali) to decode proprietary crypto schemes.}
+        \item {Built \textbf{Android POS} apps/launchers with Java/RxJava/OkHttp; delivered secure, scalable payments clients.}
+        \item {Reverse‑engineered a major \textbf{travel app}; extracted encryption/signature algorithms enabling large‑scale crawler development.}
+      \end{cvitems}
+    }
+  \cventry
+    {Teaching Assistant}
+    {University of California, Riverside}
+    {Riverside, CA}
+    {Sep. 2024 – Dec. 2024}
+    {
+      \begin{cvitems}
+        \item {Built an \textbf{autograder} (Python + JavaScript + Browser extension) for the Algorithms course; improved grading efficiency by \textasciitilde{}30\%.}
+      \end{cvitems}
+    }
+  \cventry
+    {Intern / Prototype Engineer}
+    {Baidu}
+    {Beijing, China}
+    {2013 – 2014}
+    {
+      \begin{cvitems}
+        \item {\textbf{Search Dept., Test Dev Intern} (Jul. 2013 – Oct. 2013): Front/back‑end for mobile search in PHP; submitted patches to \textbf{ThinkPHP}; wrote \textbf{E2E} automation and trained interns/contractors (JavaScript, shell).}
+        \item {\textbf{IDL HCI, Prototype Engineer} (Apr. 2014 – Jul. 2014): Prototyped smart‑wear Android apps; authored E2E test scripts in Node.js; supported HCI researchers.}
+        \item {See the separate \textbf{Projects} section for details; highlights include contributions to \textbf{llama.cpp}, \textbf{FFmpeg}, and \textbf{GTest}, plus PCL research and Linux kernel work.}
+      \end{cvitems}
+    }
+\end{cventries}
+
+\cvsection{Projects}
+\begin{cventries}
+  \cventry
+    {Contributor}
+    {Linux Kernel Optimization}
+    {UCR, CA}
+    {Mar. 2024}
+    {
+      \begin{cvitems}
+        \item {Optimized memory management in \textbf{C} with custom \textbf{mmap} mappings, reducing latency \textasciitilde{}15\% on memory‑intensive workloads.}
+        \item {Improved scheduler efficiency; debugged concurrency with \textbf{GDB}.}
+      \end{cvitems}
+    }
+  \cventry
+    {`llama.cpp`}
+    {Open‑Source Contributor}
+    {}
+    {}
+    {
+      \begin{cvitems}
+        \item {Contributed \textbf{CUDA kernel} improvements (e.g., ggml PAD\_REFLECT\_1D), reducing LLM inference latency by up to \textbf{35\%}.}
+      \end{cvitems}
+    }
+  \cventry
+    {FFmpeg}
+    {Contributor}
+    {}
+    {}
+    {
+      \begin{cvitems}
+        \item {Enhanced \textbf{GPU filters} for video preprocessing in ML pipelines; reliability/perf patches upstream.}
+      \end{cvitems}
+    }
+  \cventry
+    {GTest}
+    {Contributor}
+    {}
+    {}
+    {
+      \begin{cvitems}
+        \item {Added utilities to strengthen testing for ML infra systems; improved CI stability.}
+      \end{cvitems}
+    }
+  \cventry
+    {Pomodoro Timer}
+    {Full‑Stack App}
+    {}
+    {}
+    {
+      \begin{cvitems}
+        \item {Built with \textbf{React/Next.js/Redux/TypeScript}; \textbf{Playwright} E2E tests.}
+        \item {Deployed on \textbf{Cloudflare Compute} with automated CI/CD.}
+      \end{cvitems}
+    }
+  \cventry
+    {Ethereum \& dApps}
+    {Rolling Blocks}
+    {}
+    {}
+    {
+      \begin{cvitems}
+        \item {Developed \textbf{smart contracts} and a distributed exchange; maintained a \textbf{CDN cluster} (cut traffic cost \textbf{10×}).}
+        \item {Created \textbf{WeChat crawler} and load‑balanced WordPress infra.}
+        \item {Android IM \& live‑streaming apps: used \textbf{Frida/Xposed/Smali} to bypass protections and extract data.}
+        \item {Android travel app: extracted \textbf{encryption/signature} algorithms to enable scalable crawlers.}
+      \end{cvitems}
+    }
+\end{cventries}
+
+\end{document}

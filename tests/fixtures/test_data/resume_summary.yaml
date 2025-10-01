@@ -1,0 +1,41 @@
+resumes:
+- metadata:
+    position: DeepSeek Test Engineer
+    email: example@example.com
+    mobile: (+1) 601-555-0000
+    github: test-github
+    linkedin: test-linkedin
+  highlights:
+    summary:
+    - '**8+ years of experience** tailoring Markdown-driven resumes for AI-assisted
+      workflows.'
+    - Experienced with **DeepSeek**, **LangChain**, and configurable data pipelines.
+    skills:
+    - Python
+    - Markdown
+    - YAML
+    - DeepSeek
+    - LangChain
+    entries:
+    - AI Resume Agent - Open Source Project
+  version: resume
+- metadata:
+    position: Tesla ML Performance Intern
+    email: example@example.com
+    mobile: (+1) 601-555-0000
+    github: test-github
+    linkedin: test-linkedin
+  highlights:
+    summary:
+    - Focused on optimizing ML workloads for Tesla Dojo using DeepSeek-based pipelines.
+    - Experienced with distributed training, profiling, and CUDA performance tuning.
+    skills:
+    - C++
+    - Python
+    - CUDA
+    - PyTorch
+    - Profilers
+    - Distributed Systems
+    entries:
+    - Performance Intern - Tesla
+  version: resume_tesla_ml_performance_intern

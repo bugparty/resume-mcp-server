@@ -1,0 +1,687 @@
+resumes:
+- version: resumeFrontEnd.tex
+  modules: {}
+  main: "== Main Resume File: resumeFrontEnd.tex ==\n%-------------------------------------------------------------------------------\n\
+    % CONFIGURATIONS\n%-------------------------------------------------------------------------------\n\
+    % A4 paper size by default, use 'letterpaper' for US letter\n\\documentclass[11pt,\
+    \ a4paper]{awesome-cv}\n\n% Configure page margins with geometry\n\\geometry{left=1.4cm,\
+    \ top=.8cm, right=1.4cm, bottom=1.8cm, footskip=.5cm}\n\n% Specify the location\
+    \ of the included fonts\n\\fontdir[fonts/]\n\n% Color for highlights\n% Awesome\
+    \ Colors: awesome-emerald, awesome-skyblue, awesome-red, awesome-pink, awesome-orange\n\
+    %                 awesome-nephritis, awesome-concrete, awesome-darknight\n\\colorlet{awesome}{awesome-red}\n\
+    % Uncomment if you would like to specify your own color\n% \\definecolor{awesome}{HTML}{CA63A8}\n\
+    \n% Colors for text\n% Uncomment if you would like to specify your own color\n\
+    % \\definecolor{darktext}{HTML}{414141}\n% \\definecolor{text}{HTML}{333333}\n\
+    % \\definecolor{graytext}{HTML}{5D5D5D}\n% \\definecolor{lighttext}{HTML}{999999}\n\
+    \n% Set false if you don't want to highlight section with awesome color\n\\setbool{acvSectionColorHighlight}{true}\n\
+    \n% If you would like to change the social information separator from a pipe (|)\
+    \ to something else\n\\renewcommand{\\acvHeaderSocialSep}{\\quad\\textbar\\quad}\n\
+    %-------------------------------------------------------------------------------\n\
+    %\tPERSONAL INFORMATION\n%-------------------------------------------------------------------------------\n\
+    % Available options: circle|rectangle,edge/noedge,left/right\n% \\photo[rectangle,edge,right]{./examples/profile}\n\
+    \\name{Bowen}{Han}\n\\position{Tech Lead{\\enskip\\cdotp\\enskip}Firmware Engineer}\n\
+    \\address{Riverside,CA,  USA}\n\n\\mobile{(+1) 6015520630}\n\\email{bhan001@ucr.edu}\n\
+    %\\homepage{www.posquit0.com}\n\\github{bugparty}\n\\linkedin{bowmanhan}\n% \\\
+    gitlab{gitlab-id}\n% \\stackoverflow{SO-id}{SO-name}\n% \\twitter{@twit}\n% \\\
+    skype{skype-id}\n% \\reddit{reddit-id}\n% \\medium{madium-id}\n% \\googlescholar{googlescholar-id}{name-to-display}\n\
+    %% \\firstname and \\lastname will be used\n% \\googlescholar{googlescholar-id}{}\n\
+    % \\extrainfo{extra informations}\n\n%\\quote{``Be the change that you want to\
+    \ see in the world.\"}\n\n\n%-------------------------------------------------------------------------------\n\
+    \\begin{document}\n\n% Print the header with above personal informations\n% Give\
+    \ optional argument to change alignment(C: center, L: left, R: right)\n\\makecvheader[C]\n\
+    \n% Print the footer with 3 arguments(<left>, <center>, <right>)\n% Leave any\
+    \ of these blank if they are not needed\n\\makecvfooter\n  {\\today}\n  {Bowen\
+    \ Han~~~·~~~Résumé}\n  {\\thepage}\n\n\n%-------------------------------------------------------------------------------\n\
+    %\tCV/RESUME CONTENT\n%\tEach section is imported separately, open each file in\
+    \ turn to modify content\n%-------------------------------------------------------------------------------\n\
+    \\input{resume/summary_frontend.tex}\n\\input{resume/education.tex}\n\\input{cv/skills.tex}\n\
+    \\input{resume/experience.tex}\n%\\input{resume/honors.tex}\n%\\input{resume/presentation.tex}\n\
+    %\\input{resume/writing.tex}\n%\\input{resume/committees.tex}\n\n%\\input{resume/extracurricular.tex}\n\
+    %-------------------------------------------------------------------------------\n\
+    \\end{document}\n\n== Module Files (4) ==\n[Module File: resume/summary_frontend]\n\
+    %-------------------------------------------------------------------------------\n\
+    %\tSECTION TITLE\n%-------------------------------------------------------------------------------\n\
+    \\cvsection{Summary}\n\n\n%-------------------------------------------------------------------------------\n\
+    %\tCONTENT\n%-------------------------------------------------------------------------------\n\
+    \\begin{cvparagraph}\n\n%---------------------------------------------------------\n\
+    \\textbf{8+ years of experience} in software development, with a diverse skill\
+    \ set covering client-side development (\\textbf{JavaScript},\\textbf{TypeScript},\n\
+    \\textbf{Android} application development, \\textbf{Full-Stack} engineering and\
+    \ customization of the Android operating system. \nSkilled in designing and delivering\
+    \ efficient, scalable, and maintainable systems, leveraging modern tools and practices\
+    \ such as \\textbf{Docker}, \\textbf{CI/CD}, and \\textbf{Kubernetes}. A passionate\
+    \ advocate for \\textbf{Linux}, Android, and open-source technologies, with a\
+    \ strong commitment to crafting seamless user experiences and robust, high-quality\
+    \ software architectures.\n\\end{cvparagraph}\n\n[Module File: resume/education]\n\
+    \\cvsection{Education}\n\n\\begin{cventries}\n\n  \\cventryCompact\n    {M.S.\
+    \ in Computer Engineering} % Degree\n    {UCR } % Institution\n    {Riverside,\
+    \ CA} % Location\n    {Sep. 2024 - Dec. 2025} % Date(s)\n    {\n      \\begin{cvitems}\
+    \ % Description(s) bullet points\n        \\item { Related Courses: Computer Architecture,\
+    \ Operating System, High Performance Computing, GPA 4.0/4.0.}\n      \\end{cvitems}\n\
+    \    }\n    \n  \\cventryCompact\n    {B.S. in Software  Engineering} % Degree\n\
+    \    {Hebei University of Economics and Business} % Institution\n    {Hebei, China}\
+    \ % Location\n    {Sep. 2011 - Jun. 2015} % Date(s)\n    {\n      \\begin{cvitems}\
+    \ % Description(s) bullet points\n        \\item { Received top full-time and\
+    \ internship job offers among over 200 students, \n        last 36 credits GPA\
+    \ 3.8/4.0.}\n      \\end{cvitems}\n    }\n\\end{cventries}\n\n[Module File: cv/skills]\n\
+    %-------------------------------------------------------------------------------\n\
+    %\tSECTION TITLE\n%-------------------------------------------------------------------------------\n\
+    \\cvsection{Skills}\n\n\n%-------------------------------------------------------------------------------\n\
+    %\tCONTENT\n%-------------------------------------------------------------------------------\n\
+    \\begin{cvskills}\n\n%---------------------------------------------------------\n\
+    \  \\cvskill\n    {DevOps} % Category\n    {AWS, Docker, Kubernetes, VMWare vSphere,\
+    \ Ansible, Terraform, Jenkins,Github Action, CircleCI, GitLab} % Skills\n\n%---------------------------------------------------------\n\
+    \  \\cvskill\n    {Full-Stack} % Category\n    {Express, Django, REST API, MongoDB,\
+    \ MySQL, gRPC,Hugo, Redux, React, Vue, HTML5, CSS, JQuery,WebPack,Gulp,Babel,Electron}\
+    \ % Skills\n\n%---------------------------------------------------------\n  \\\
+    cvskill\n    {Softwares} % Category\n    {Linux (Arch Linux, Debian, Red Hat),\
+    \ QEMU, Git, LXC/LXD, Docker, Jenk-ins, Redis, PyTorch, XGBoost, CatBoost,  Electron,\
+    \ MongoDB, Mysql, Postgres,\nProxmox, ElasticSearch, Kubernetes, WireShark, AWS\
+    \ Lambda} % Skills\n\n%---------------------------------------------------------\n\
+    \  \\cvskill\n    {Programming} % Category\n    {C++, Rust, CUDA, Python, JavaScript(Node.js\
+    \ and Browser), TypeScript, JAVA, PHP, BASH, OCaml, LISP} % Skills\n\n\n%---------------------------------------------------------\n\
+    \\end{cvskills}\n\n[Module File: resume/experience]\n\\cvsection{Work Experience}\n\
+    \\begin{cventries}\n\n%---------------------------------------------------------\n\
+    \  \\cventryII\n    {Tech Lead} % Job title\n    {Arpara Corp.} % Organization\n\
+    \    {Beijing, China} % Location\n    {Apr. 2021 - Aug. 2023} % Date(s)\n    {\n\
+    \      \\begin{cvitems} % Description(s) of tasks/responsibilities\n        \\\
+    item {Enhanced team capabilities by providing \\textbf{mentorship} and technical\
+    \ guidance, leading to the successful build-up of a 4-member Android OS team from\
+    \ scratch.}\n        \\item {Built and deployed overall AOSP building infrastructure,\
+    \ Reduced build times by 40\\% and improved release consistency by architecting\
+    \ and deploying automated \\textbf{CI/CD} pipelines using \\textbf{Jenkins}, \\\
+    textbf{Docker},GitLab and \\textbf{Kubernetes} on Linux..}\n        \\item {Resolved\
+    \ complex system-level issues within large-scale codebases, including debugging\
+    \ and optimizing kernel drivers, addressing Android framework bugs, and ensuring\
+    \ cross-platform compatibility. Demonstrated expertise in analyzing and modifying\
+    \ Android source code to fix critical bugs and enhance system stability and performance.}\n\
+    \        \\item {\n        Write linux kernel driver for IMU sensor using \\textbf{C},\
+    \ using \\textbf{MATLAB} to tune \\textbf{sensor fusion algorithm} on \\textbf{Qualcomm\
+    \ SOC}s.\n        }\n        \\item {\n        \\textbf{Bring up} new arm board\
+    \ for linux and Android.\n        }\n      \\end{cvitems}\n    }\n\n%---------------------------------------------------------\n\
+    \  \\cventryII\n    {FullStack Engineer \\& Co Founder} % Job title\n    {Rolling\
+    \ Blocks} % Organization\n    {HongKong, China} % Location\n    {Jun. 2018 - Jan.\
+    \ 2020} % Date(s)\n    {\n      \\begin{cvitems} % Description(s) of tasks/responsibilities\n\
+    \        \\item { Developed a high-performance WordPress-based news website by\
+    \ designing and implementing a scalable architecture to handle high traffic volumes.\
+    \ Utilized \\textbf{Nginx load balancing} to distribute traffic and ensure high\
+    \ availability. Optimized database performance with a \\textbf{distributed MySQL\
+    \ cluster}, enabling fast and reliable data access. Enhanced site speed and scalability\
+    \ by implementing \\textbf{WordPress static content generation}, significantly\
+    \ reducing server load and improving user experience. }\n        \\item {Implemented\
+    \ a distributed  WeChat crawler and Web Crawer using \\textbf{Python}, \\textbf{JavaScript}}\n\
+    \        \\item { Technologies involved: React, Vue, \\textbf{Docker}, Nginx,\
+    \ Minio, \\textbf{gRPC}, Scrapy, Node.js, Express, MongoDB,MySQL}\n        \\\
+    item {Implemented RESTful API server for querying, controlling Crawers.}\n   \
+    \     \\item {Built and deployed overall service infrastructure utilizing Docker\
+    \ container, Github Action, and several \\textbf{AWS} stack(Including EC2, S3,\
+    \ CloudFront, RDS, IAM), focusing on high-availability, fault tolerance, and auto-scaling.}\n\
+    \      \\end{cvitems}\n    }\n\n\\cventryII\n    {Software Developer} % Job title\n\
+    \    {Meituan} % Organization\n    {Beijing, China} % Location\n    {Sep. 2015\
+    \ - Mar. 2018} % Date(s)\n    {\n      \\begin{cvitems} % Description(s) of tasks/responsibilities\n\
+    \        \\item {Boosted scanning module throughput by 5x by engineering GPU-accelerated\
+    \ image processing pipelines using \\textbf{OpenCL},arm assembly for heterogeneous\
+    \ computing optimizations.}\n        \\item {Impacted 200k users with enhanced\
+    \ cloud storage capabilities by developing a cross-platform \\textbf{C++} SDK,\
+    \ implementing file segmentation algorithms and resumable transfer protocols using\
+    \ template metaprogramming techniques.}\n        \\item {Enabled secure POS system\
+    \ integrations by leading \\textbf{reverse engineering} initiatives analyzing\
+    \ X86 assembly and smali bytecode to decrypt proprietary encryption schemes.}\n\
+    \        \\item {\n        Developed Android POS software with efficient and scalable\
+    \ solutions by utilizing \\textbf{Java}, \\textbf{RxJava}, and OkHttp for Android\
+    \ customized launcher interfaces and payment-related applications.\n        }\n\
+    \      \\end{cvitems}\n    }\n\n%---------------------------------------------------------\n\
+    \  \\cventryII\n    {Intern Software Engineer} % Job title\n    {Baidu} % Organization\n\
+    \    {Beijing, China} % Location\n    {Apr. 2014 - Jul. 2014} % Date(s)\n    {\n\
+    \      \\begin{cvitems} % Description(s) of tasks/responsibilities\n        \\\
+    item {Developed the front and back end of Baidu’s mobile search pages (using PHP,HTML/CSS\
+    \ ), merged patches to ThinkPHP during this period}\n        \\item {\n      \
+    \  Write E2E auto test script for Baidu mobile search pages using \\textbf{NodeJS}\n\
+    \        }\n        \\item {Prototyping  Smart Wear Android App for my supervisor,\
+    \ He is directly reporting to CEO of Baidu. }\n      \\end{cvitems}\n      }\n\
+    \  \n\n%---------------------------------------------------------\n\\end{cventries}"
+- version: resume.tex
+  modules: {}
+  main: "== Main Resume File: resume.tex ==\n%-------------------------------------------------------------------------------\n\
+    % CONFIGURATIONS\n%-------------------------------------------------------------------------------\n\
+    % A4 paper size by default, use 'letterpaper' for US letter\n\\documentclass[11pt,\
+    \ a4paper]{awesome-cv}\n\n% Configure page margins with geometry\n\\geometry{left=1.4cm,\
+    \ top=.8cm, right=1.4cm, bottom=1.8cm, footskip=.5cm}\n\n% Specify the location\
+    \ of the included fonts\n\\fontdir[fonts/]\n\n% Color for highlights\n% Awesome\
+    \ Colors: awesome-emerald, awesome-skyblue, awesome-red, awesome-pink, awesome-orange\n\
+    %                 awesome-nephritis, awesome-concrete, awesome-darknight\n\\colorlet{awesome}{awesome-red}\n\
+    % Uncomment if you would like to specify your own color\n% \\definecolor{awesome}{HTML}{CA63A8}\n\
+    \n% Colors for text\n% Uncomment if you would like to specify your own color\n\
+    % \\definecolor{darktext}{HTML}{414141}\n% \\definecolor{text}{HTML}{333333}\n\
+    % \\definecolor{graytext}{HTML}{5D5D5D}\n% \\definecolor{lighttext}{HTML}{999999}\n\
+    \n% Set false if you don't want to highlight section with awesome color\n\\setbool{acvSectionColorHighlight}{true}\n\
+    \n% If you would like to change the social information separator from a pipe (|)\
+    \ to something else\n\\renewcommand{\\acvHeaderSocialSep}{\\quad\\textbar\\quad}\n\
+    \n\n%-------------------------------------------------------------------------------\n\
+    %\tPERSONAL INFORMATION\n%\tComment any of the lines below if they are not required\n\
+    %-------------------------------------------------------------------------------\n\
+    % Available options: circle|rectangle,edge/noedge,left/right\n% \\photo[rectangle,edge,right]{./examples/profile}\n\
+    \\name{Bowen}{Han}\n\\position{Tech Lead{\\enskip\\cdotp\\enskip}Software Engineer}\n\
+    \\address{Riverside,CA,  USA}\n\n\\mobile{(+1) 6015520630}\n\\email{bhan001@ucr.edu}\n\
+    %\\homepage{www.posquit0.com}\n\\github{bugparty}\n\\linkedin{bowmanhan}\n% \\\
+    gitlab{gitlab-id}\n% \\stackoverflow{SO-id}{SO-name}\n% \\twitter{@twit}\n% \\\
+    skype{skype-id}\n% \\reddit{reddit-id}\n% \\medium{madium-id}\n% \\googlescholar{googlescholar-id}{name-to-display}\n\
+    %% \\firstname and \\lastname will be used\n% \\googlescholar{googlescholar-id}{}\n\
+    % \\extrainfo{extra informations}\n\n%\\quote{``Be the change that you want to\
+    \ see in the world.\"}\n\n\n%-------------------------------------------------------------------------------\n\
+    \\begin{document}\n\n% Print the header with above personal informations\n% Give\
+    \ optional argument to change alignment(C: center, L: left, R: right)\n\\makecvheader[C]\n\
+    \n% Print the footer with 3 arguments(<left>, <center>, <right>)\n% Leave any\
+    \ of these blank if they are not needed\n\\makecvfooter\n  {\\today}\n  {Bowen\
+    \ Han~~~·~~~Résumé}\n  {\\thepage}\n\n\n%-------------------------------------------------------------------------------\n\
+    %\tCV/RESUME CONTENT\n%\tEach section is imported separately, open each file in\
+    \ turn to modify content\n%-------------------------------------------------------------------------------\n\
+    \\input{resume/summary.tex}\n\\input{resume/education.tex}\n\\input{cv/skills.tex}\n\
+    \\input{resume/experience.tex}\n%\\input{resume/honors.tex}\n%\\input{resume/presentation.tex}\n\
+    %\\input{resume/writing.tex}\n%\\input{resume/committees.tex}\n\n%\\input{resume/extracurricular.tex}\n\
+    \n\n%-------------------------------------------------------------------------------\n\
+    \\end{document}\n\n== Module Files (4) ==\n[Module File: resume/summary]\n%-------------------------------------------------------------------------------\n\
+    %\tSECTION TITLE\n%-------------------------------------------------------------------------------\n\
+    \\cvsection{Summary}\n\n\n%-------------------------------------------------------------------------------\n\
+    %\tCONTENT\n%-------------------------------------------------------------------------------\n\
+    \\begin{cvparagraph}\n\n%---------------------------------------------------------\n\
+    \\textbf{8+ years of experience} in software development, with a diverse skill\
+    \ set covering client-side development (\\textbf{C++}), \\textbf{Android} application\
+    \ development, \\textbf{Full-Stack} engineering and customization of the Android\
+    \ operating system. \nSkilled in designing and delivering efficient, scalable,\
+    \ and maintainable systems, leveraging modern tools and practices such as \\textbf{Docker},\
+    \ \\textbf{CI/CD}, and \\textbf{Kubernetes}. A passionate advocate for \\textbf{Linux},\
+    \ Android, and open-source technologies, with a strong commitment to crafting\
+    \ seamless user experiences and robust, high-quality software architectures.\n\
+    \\end{cvparagraph}\n\n[Module File: resume/education]\n\\cvsection{Education}\n\
+    \n\\begin{cventries}\n\n  \\cventryCompact\n    {M.S. in Computer Engineering}\
+    \ % Degree\n    {UCR } % Institution\n    {Riverside, CA} % Location\n    {Sep.\
+    \ 2024 - Dec. 2025} % Date(s)\n    {\n      \\begin{cvitems} % Description(s)\
+    \ bullet points\n        \\item { Related Courses: Computer Architecture, Operating\
+    \ System, High Performance Computing, GPA 4.0/4.0.}\n      \\end{cvitems}\n  \
+    \  }\n    \n  \\cventryCompact\n    {B.S. in Software  Engineering} % Degree\n\
+    \    {Hebei University of Economics and Business} % Institution\n    {Hebei, China}\
+    \ % Location\n    {Sep. 2011 - Jun. 2015} % Date(s)\n    {\n      \\begin{cvitems}\
+    \ % Description(s) bullet points\n        \\item { Received top full-time and\
+    \ internship job offers among over 200 students, \n        last 36 credits GPA\
+    \ 3.8/4.0.}\n      \\end{cvitems}\n    }\n\\end{cventries}\n\n[Module File: cv/skills]\n\
+    %-------------------------------------------------------------------------------\n\
+    %\tSECTION TITLE\n%-------------------------------------------------------------------------------\n\
+    \\cvsection{Skills}\n\n\n%-------------------------------------------------------------------------------\n\
+    %\tCONTENT\n%-------------------------------------------------------------------------------\n\
+    \\begin{cvskills}\n\n%---------------------------------------------------------\n\
+    \  \\cvskill\n    {DevOps} % Category\n    {AWS, Docker, Kubernetes, VMWare vSphere,\
+    \ Ansible, Terraform, Jenkins,Github Action, CircleCI, GitLab} % Skills\n\n%---------------------------------------------------------\n\
+    \  \\cvskill\n    {Full-Stack} % Category\n    {Express, Django, REST API, MongoDB,\
+    \ MySQL, gRPC,Hugo, Redux, React, Vue, HTML5, CSS, JQuery,WebPack,Gulp,Babel,Electron}\
+    \ % Skills\n\n%---------------------------------------------------------\n  \\\
+    cvskill\n    {Softwares} % Category\n    {Linux (Arch Linux, Debian, Red Hat),\
+    \ QEMU, Git, LXC/LXD, Docker, Jenk-ins, Redis, PyTorch, XGBoost, CatBoost,  Electron,\
+    \ MongoDB, Mysql, Postgres,\nProxmox, ElasticSearch, Kubernetes, WireShark, AWS\
+    \ Lambda} % Skills\n\n%---------------------------------------------------------\n\
+    \  \\cvskill\n    {Programming} % Category\n    {C++, Rust, CUDA, Python, JavaScript(Node.js\
+    \ and Browser), TypeScript, JAVA, PHP, BASH, OCaml, LISP} % Skills\n\n\n%---------------------------------------------------------\n\
+    \\end{cvskills}\n\n[Module File: resume/experience]\n\\cvsection{Work Experience}\n\
+    \\begin{cventries}\n\n%---------------------------------------------------------\n\
+    \  \\cventryII\n    {Tech Lead} % Job title\n    {Arpara Corp.} % Organization\n\
+    \    {Beijing, China} % Location\n    {Apr. 2021 - Aug. 2023} % Date(s)\n    {\n\
+    \      \\begin{cvitems} % Description(s) of tasks/responsibilities\n        \\\
+    item {Enhanced team capabilities by providing \\textbf{mentorship} and technical\
+    \ guidance, leading to the successful build-up of a 4-member Android OS team from\
+    \ scratch.}\n        \\item {Built and deployed overall AOSP building infrastructure,\
+    \ Reduced build times by 40\\% and improved release consistency by architecting\
+    \ and deploying automated \\textbf{CI/CD} pipelines using \\textbf{Jenkins}, \\\
+    textbf{Docker},GitLab and \\textbf{Kubernetes} on Linux..}\n        \\item {Resolved\
+    \ complex system-level issues within large-scale codebases, including debugging\
+    \ and optimizing kernel drivers, addressing Android framework bugs, and ensuring\
+    \ cross-platform compatibility. Demonstrated expertise in analyzing and modifying\
+    \ Android source code to fix critical bugs and enhance system stability and performance.}\n\
+    \        \\item {\n        Write linux kernel driver for IMU sensor using \\textbf{C},\
+    \ using \\textbf{MATLAB} to tune \\textbf{sensor fusion algorithm} on \\textbf{Qualcomm\
+    \ SOC}s.\n        }\n        \\item {\n        \\textbf{Bring up} new arm board\
+    \ for linux and Android.\n        }\n      \\end{cvitems}\n    }\n\n%---------------------------------------------------------\n\
+    \  \\cventryII\n    {FullStack Engineer \\& Co Founder} % Job title\n    {Rolling\
+    \ Blocks} % Organization\n    {HongKong, China} % Location\n    {Jun. 2018 - Jan.\
+    \ 2020} % Date(s)\n    {\n      \\begin{cvitems} % Description(s) of tasks/responsibilities\n\
+    \        \\item { Developed a high-performance WordPress-based news website by\
+    \ designing and implementing a scalable architecture to handle high traffic volumes.\
+    \ Utilized \\textbf{Nginx load balancing} to distribute traffic and ensure high\
+    \ availability. Optimized database performance with a \\textbf{distributed MySQL\
+    \ cluster}, enabling fast and reliable data access. Enhanced site speed and scalability\
+    \ by implementing \\textbf{WordPress static content generation}, significantly\
+    \ reducing server load and improving user experience. }\n        \\item {Implemented\
+    \ a distributed  WeChat crawler and Web Crawer using \\textbf{Python}, \\textbf{JavaScript}}\n\
+    \        \\item { Technologies involved: React, Vue, \\textbf{Docker}, Nginx,\
+    \ Minio, \\textbf{gRPC}, Scrapy, Node.js, Express, MongoDB,MySQL}\n        \\\
+    item {Implemented RESTful API server for querying, controlling Crawers.}\n   \
+    \     \\item {Built and deployed overall service infrastructure utilizing Docker\
+    \ container, Github Action, and several \\textbf{AWS} stack(Including EC2, S3,\
+    \ CloudFront, RDS, IAM), focusing on high-availability, fault tolerance, and auto-scaling.}\n\
+    \      \\end{cvitems}\n    }\n\n\\cventryII\n    {Software Developer} % Job title\n\
+    \    {Meituan} % Organization\n    {Beijing, China} % Location\n    {Sep. 2015\
+    \ - Mar. 2018} % Date(s)\n    {\n      \\begin{cvitems} % Description(s) of tasks/responsibilities\n\
+    \        \\item {Boosted scanning module throughput by 5x by engineering GPU-accelerated\
+    \ image processing pipelines using \\textbf{OpenCL},arm assembly for heterogeneous\
+    \ computing optimizations.}\n        \\item {Impacted 200k users with enhanced\
+    \ cloud storage capabilities by developing a cross-platform \\textbf{C++} SDK,\
+    \ implementing file segmentation algorithms and resumable transfer protocols using\
+    \ template metaprogramming techniques.}\n        \\item {Enabled secure POS system\
+    \ integrations by leading \\textbf{reverse engineering} initiatives analyzing\
+    \ X86 assembly and smali bytecode to decrypt proprietary encryption schemes.}\n\
+    \        \\item {\n        Developed Android POS software with efficient and scalable\
+    \ solutions by utilizing \\textbf{Java}, \\textbf{RxJava}, and OkHttp for Android\
+    \ customized launcher interfaces and payment-related applications.\n        }\n\
+    \      \\end{cvitems}\n    }\n\n%---------------------------------------------------------\n\
+    \  \\cventryII\n    {Intern Software Engineer} % Job title\n    {Baidu} % Organization\n\
+    \    {Beijing, China} % Location\n    {Apr. 2014 - Jul. 2014} % Date(s)\n    {\n\
+    \      \\begin{cvitems} % Description(s) of tasks/responsibilities\n        \\\
+    item {Developed the front and back end of Baidu’s mobile search pages (using PHP,HTML/CSS\
+    \ ), merged patches to ThinkPHP during this period}\n        \\item {\n      \
+    \  Write E2E auto test script for Baidu mobile search pages using \\textbf{NodeJS}\n\
+    \        }\n        \\item {Prototyping  Smart Wear Android App for my supervisor,\
+    \ He is directly reporting to CEO of Baidu. }\n      \\end{cvitems}\n      }\n\
+    \  \n\n%---------------------------------------------------------\n\\end{cventries}"
+- version: resume_C++.tex
+  modules: {}
+  main: "== Main Resume File: resume_C++.tex ==\n%-------------------------------------------------------------------------------\n\
+    % CONFIGURATIONS\n%-------------------------------------------------------------------------------\n\
+    % A4 paper size by default, use 'letterpaper' for US letter\n\\documentclass[11pt,\
+    \ a4paper]{awesome-cv}\n\n% Configure page margins with geometry\n\\geometry{left=1.4cm,\
+    \ top=.8cm, right=1.4cm, bottom=1.8cm, footskip=.5cm}\n\n% Specify the location\
+    \ of the included fonts\n\\fontdir[fonts/]\n\n% Color for highlights\n% Awesome\
+    \ Colors: awesome-emerald, awesome-skyblue, awesome-red, awesome-pink, awesome-orange\n\
+    %                 awesome-nephritis, awesome-concrete, awesome-darknight\n\\colorlet{awesome}{awesome-red}\n\
+    % Uncomment if you would like to specify your own color\n% \\definecolor{awesome}{HTML}{CA63A8}\n\
+    \n% Colors for text\n% Uncomment if you would like to specify your own color\n\
+    % \\definecolor{darktext}{HTML}{414141}\n% \\definecolor{text}{HTML}{333333}\n\
+    % \\definecolor{graytext}{HTML}{5D5D5D}\n% \\definecolor{lighttext}{HTML}{999999}\n\
+    \n% Set false if you don't want to highlight section with awesome color\n\\setbool{acvSectionColorHighlight}{true}\n\
+    \n% If you would like to change the social information separator from a pipe (|)\
+    \ to something else\n\\renewcommand{\\acvHeaderSocialSep}{\\quad\\textbar\\quad}\n\
+    \n\n%-------------------------------------------------------------------------------\n\
+    %\tPERSONAL INFORMATION\n%\tComment any of the lines below if they are not required\n\
+    %-------------------------------------------------------------------------------\n\
+    % Available options: circle|rectangle,edge/noedge,left/right\n% \\photo[rectangle,edge,right]{./examples/profile}\n\
+    \\name{Bowen}{Han}\n\\position{C++ Software Engineer}\n\\mobile{6015520630}\n\\\
+    email{bhan001@ucr.edu}\n%\\homepage{www.posquit0.com}\n\\github{bugparty}\n\\\
+    linkedin{bowmanhan}\n% \\gitlab{gitlab-id}\n% \\stackoverflow{SO-id}{SO-name}\n\
+    % \\twitter{@twit}\n% \\skype{skype-id}\n% \\reddit{reddit-id}\n% \\medium{madium-id}\n\
+    % \\googlescholar{googlescholar-id}{name-to-display}\n%% \\firstname and \\lastname\
+    \ will be used\n% \\googlescholar{googlescholar-id}{}\n% \\extrainfo{extra informations}\n\
+    \n%\\quote{``Be the change that you want to see in the world.\"}\n\n\n%-------------------------------------------------------------------------------\n\
+    \\begin{document}\n\n% Print the header with above personal informations\n% Give\
+    \ optional argument to change alignment(C: center, L: left, R: right)\n\\makecvheader[C]\n\
+    \n% Print the footer with 3 arguments(<left>, <center>, <right>)\n% Leave any\
+    \ of these blank if they are not needed\n\\makecvfooter\n  {\\today}\n  {Bowen\
+    \ Han~~~·~~~Résumé}\n  {\\thepage}\n\n\n%-------------------------------------------------------------------------------\n\
+    %\tCV/RESUME CONTENT\n%\tEach section is imported separately, open each file in\
+    \ turn to modify content\n%-------------------------------------------------------------------------------\n\
+    \\input{resume_2yoe_c++/summary.tex}\n\\input{resume/education.tex}\n\\input{resume_2yoe_c++/skills.tex}\n\
+    \\input{resume_2yoe_c++/experience.tex}\n\\input{resume_2yoe_c++/projects.tex}\n\
+    %\\input{resume/presentation.tex}\n%\\input{resume/writing.tex}\n%\\input{resume/committees.tex}\n\
+    \n%\\input{resume/extracurricular.tex}\n\n\n%-------------------------------------------------------------------------------\n\
+    \\end{document}\n\n== Module Files (5) ==\n[Module File: resume_2yoe_c++/summary]\n\
+    \\cvsection{Summary}\n\n\\begin{cvparagraph}\n%---------------------------------------------------------\n\
+    \\textbf{3+ years of experience} in software development, with a strong focus\
+    \ on \\textbf{C++} for system-level programming and performance-critical applications.\
+    \ Proficient in analyzing and debugging large-scale codebases, utilizing tools\
+    \ like \\textbf{GDB}, \\textbf{LLDB}, \\textbf{AddressSanitizer}, and \\textbf{IDA\
+    \ Pro} to identify and resolve elusive bugs, enhancing software reliability. Experienced\
+    \ in \\textbf{Linux} development workflows, building automated \\textbf{CI/CD}\
+    \ pipelines, and optimizing real-time systems, including Android daemons and kernel-level\
+    \ components. Passionate about tackling complex challenges in autonomous systems,\
+    \ with a proven track record of delivering robust, scalable solutions and a keen\
+    \ interest in advancing safety and resilience in cutting-edge technologies.\n\\\
+    end{cvparagraph}\n\n[Module File: resume/education]\n\\cvsection{Education}\n\n\
+    \\begin{cventries}\n\n  \\cventryCompact\n    {M.S. in Computer Engineering} %\
+    \ Degree\n    {UCR } % Institution\n    {Riverside, CA} % Location\n    {Sep.\
+    \ 2024 - Dec. 2025} % Date(s)\n    {\n      \\begin{cvitems} % Description(s)\
+    \ bullet points\n        \\item { Related Courses: Computer Architecture, Operating\
+    \ System, High Performance Computing, GPA 4.0/4.0.}\n      \\end{cvitems}\n  \
+    \  }\n    \n  \\cventryCompact\n    {B.S. in Software  Engineering} % Degree\n\
+    \    {Hebei University of Economics and Business} % Institution\n    {Hebei, China}\
+    \ % Location\n    {Sep. 2011 - Jun. 2015} % Date(s)\n    {\n      \\begin{cvitems}\
+    \ % Description(s) bullet points\n        \\item { Received top full-time and\
+    \ internship job offers among over 200 students, \n        last 36 credits GPA\
+    \ 3.8/4.0.}\n      \\end{cvitems}\n    }\n\\end{cventries}\n\n[Module File: resume_2yoe_c++/skills]\n\
+    \\cvsection{Skills}\n\\begin{cvskills}\n\n%---------------------------------------------------------\n\
+    \  \\cvskill\n    {Programming} % Category\n    {C++,Python, BASH,X86 Assembly,\
+    \ Arm Assembly, JavaScript(Node.js and Browser), TypeScript, JAVA, CUDA, PHP }\
+    \ % Skills\n\n%---------------------------------------------------------\n  \\\
+    cvskill\n    {Frameworks} % Category\n    {STL, Boost,QT, WIN32 API, Django, gRPC,\
+    \ Redux, React, HTML5, CSS, JQuery,WebPack,Gulp,Babel,Electron} % Skills\n\n%---------------------------------------------------------\n\
+    \  \\cvskill\n    {Softwares} % Category\n    {Linux (Arch Linux, Debian, Red\
+    \ Hat), QEMU, Git, LXC/LXD, Docker, Jenk-ins, Redis, GDB, LLDB, IDA pro\n, CLion,\
+    \ VSCode,Visual Studio,gprof} % Skills\n%---------------------------------------------------------\n\
+    \  \\cvskill\n    {DevOps} % Category\n    {AWS, Docker, Kubernetes, VMWare vSphere,\
+    \ Ansible, Terraform, Jenkins,Github Action, CircleCI, GitLab} % Skills\n\n\n\n\
+    \n\n\n\n\n%---------------------------------------------------------\n\\end{cvskills}\n\
+    \n[Module File: resume_2yoe_c++/experience]\n\\cvsection{Work Experience}\n\\\
+    begin{cventries}\n\n%---------------------------------------------------------\n\
+    \  \\cventryII\n    {C++ Software Engineer} % Job title\n    {Arpara Corp.} %\
+    \ Organization\n    {Beijing, China} % Location\n    {Apr. 2021 - Aug. 2023} %\
+    \ Date(s)\n    {\n      \\begin{cvitems} % Description(s) of tasks/responsibilities\n\
+    \        \\item {Navigated the expansive Firefox codebase to identify and resolve\
+    \ a subtle, high-impact bug, improving browser reliability. Submitted an optimized\
+    \ build script to the Firefox repository, enhancing the efficiency of the build\
+    \ process.}\n        \\item {Built and deployed overall AOSP building infrastructure,\
+    \ Reduced build times by 40\\% and improved release consistency by architecting\
+    \ and deploying automated CI/CD pipelines using Jenkins, Docker, GitLab and Kubernetes\
+    \ on Linux.}\n        \\item {Resolved complex system-level issues within large-scale\
+    \ codebases, including debugging and optimizing kernel drivers, addressing Android\
+    \ framework bugs, and ensuring cross-platform compatibility. Demonstrated expertise\
+    \ in analyzing and modifying Android source code to fix critical bugs and enhance\
+    \ system stability and performance.}\n        \\item {Developed a C++ daemon for\
+    \ Android to improve system stability, utilizing Cppcheck for static analysis\
+    \ to detect bugs early and AddressSanitizer (ASan) to resolve memory issues, reducing\
+    \ crashes by 30\\%. Profiled with gprof to optimize critical execution paths,\
+    \ achieving a 25\\% performance boost.\nEmployed IDA Pro and Hex-Rays to reverse-engineer\
+    \ binaries, ensuring behavior aligned with expectations, and integrated Sentry\
+    \ for real-time error tracking to enhance production reliability across Android\
+    \ devices.\n        }\n      \\end{cvitems}\n    }\n\n%---------------------------------------------------------\n\
+    \  \n%---------------------------------------------------------\n\\end{cventries}\n\
+    \n[Module File: resume_2yoe_c++/projects]\n\\cvsection{Projects}\n\\begin{cventries}\n\
+    %---------------------------------------------------------\n  \\cventry\n    {Main\
+    \ Contributor}\n    {Research on PCL(Point Cloud Library)} % Event\n    {UCR,CA}\
+    \ % Location\n    {Nov. 2024} % Date(s)\n    {\n      \\begin{cvitems} % Description(s)\n\
+    \        \\item {Achieved a 2x speedup by replacing recursive traversal with a\
+    \ priority queue approach in C++14}\n        \\item {Extend the LLDB debugger\
+    \ by customizing a script that enhances debugging by providing clear, concise\
+    \ summaries and synthetic views of complex PCL data structures, aiding in the\
+    \ inspection and analysis of point cloud data.}\n        \\item {\n        I utilized\
+    \ the Google Test framework (gtest) to implement unit testing for the Point Cloud\
+    \ Library (PCL). I leveraged GitHub Actions to automate the testing process and\
+    \ set up continuous integration (CI) workflows. This integration allowed for automatic\
+    \ running of tests on each push and pull request, ensuring immediate detection\
+    \ of issues and maintaining high code quality.\n        }\n      \\end{cvitems}\n\
+    \    }\n\n%---------------------------------------------------------\n\n\n\\cventry\n\
+    \  {Contributor} % Role\n  {Linux Kernel  Optimization} % Event\n  {UCR,CA} %\
+    \ Location (adjust if you have a specific location)\n  {Mar. 2024} % Date (adjust\
+    \ to your timeline)\n  {\n    \\begin{cvitems} % Description(s)\n      \\item\
+    \ {Enhanced Linux kernel performance by optimizing memory management using C,\
+    \ implementing custom {mmap} mappings to reduce latency in memory-intensive workloads\
+    \ by 15\\%.}\n      \\item {Improved task scheduling efficiency by modifying scheduler\
+    \ logic, leveraging {GDB} to debug concurrency issues and ensure system stability\
+    \ under heavy loads.}\n    \\end{cvitems}\n  }\n%---------------------------------------------------------\n\
+    \\end{cventries}"
+- version: resume_devops.tex
+  modules: {}
+  main: "== Main Resume File: resume_devops.tex ==\n%-------------------------------------------------------------------------------\n\
+    % CONFIGURATIONS\n%-------------------------------------------------------------------------------\n\
+    % A4 paper size by default, use 'letterpaper' for US letter\n\\documentclass[11pt,\
+    \ a4paper]{awesome-cv}\n\n% Configure page margins with geometry\n\\geometry{left=1.4cm,\
+    \ top=.8cm, right=1.4cm, bottom=1.8cm, footskip=.5cm}\n\n% Specify the location\
+    \ of the included fonts\n\\fontdir[fonts/]\n\n% Color for highlights\n% Awesome\
+    \ Colors: awesome-emerald, awesome-skyblue, awesome-red, awesome-pink, awesome-orange\n\
+    %                 awesome-nephritis, awesome-concrete, awesome-darknight\n\\colorlet{awesome}{awesome-red}\n\
+    % Uncomment if you would like to specify your own color\n% \\definecolor{awesome}{HTML}{CA63A8}\n\
+    \n% Colors for text\n% Uncomment if you would like to specify your own color\n\
+    % \\definecolor{darktext}{HTML}{414141}\n% \\definecolor{text}{HTML}{333333}\n\
+    % \\definecolor{graytext}{HTML}{5D5D5D}\n% \\definecolor{lighttext}{HTML}{999999}\n\
+    \n% Set false if you don't want to highlight section with awesome color\n\\setbool{acvSectionColorHighlight}{true}\n\
+    \n% If you would like to change the social information separator from a pipe (|)\
+    \ to something else\n\\renewcommand{\\acvHeaderSocialSep}{\\quad\\textbar\\quad}\n\
+    \n\n%-------------------------------------------------------------------------------\n\
+    %\tPERSONAL INFORMATION\n%\tComment any of the lines below if they are not required\n\
+    %-------------------------------------------------------------------------------\n\
+    % Available options: circle|rectangle,edge/noedge,left/right\n% \\photo[rectangle,edge,right]{./examples/profile}\n\
+    \\name{Bowen}{Han}\n\\position{Tech Lead{\\enskip\\cdotp\\enskip}DevOps Engineer}\n\
+    \\address{Riverside,CA,  USA}\n\n\\mobile{(+1) 6015520630}\n\\email{bhan001@ucr.edu}\n\
+    %\\homepage{www.posquit0.com}\n\\github{bugparty}\n\\linkedin{bowmanhan}\n% \\\
+    gitlab{gitlab-id}\n% \\stackoverflow{SO-id}{SO-name}\n% \\twitter{@twit}\n% \\\
+    skype{skype-id}\n% \\reddit{reddit-id}\n% \\medium{madium-id}\n% \\googlescholar{googlescholar-id}{name-to-display}\n\
+    %% \\firstname and \\lastname will be used\n% \\googlescholar{googlescholar-id}{}\n\
+    % \\extrainfo{extra informations}\n\n%\\quote{``Be the change that you want to\
+    \ see in the world.\"}\n\n\n%-------------------------------------------------------------------------------\n\
+    \\begin{document}\n\n% Print the header with above personal informations\n% Give\
+    \ optional argument to change alignment(C: center, L: left, R: right)\n\\makecvheader[C]\n\
+    \n% Print the footer with 3 arguments(<left>, <center>, <right>)\n% Leave any\
+    \ of these blank if they are not needed\n\\makecvfooter\n  {\\today}\n  {Bowen\
+    \ Han~~~·~~~Résumé}\n  {\\thepage}\n\n\n%-------------------------------------------------------------------------------\n\
+    %\tCV/RESUME CONTENT\n%\tEach section is imported separately, open each file in\
+    \ turn to modify content\n%-------------------------------------------------------------------------------\n\
+    \\input{resume/summary.tex}\n\\input{resume/education.tex}\n\\input{cv/skills.tex}\n\
+    \\input{resume/experience.tex}\n%\\input{resume/honors.tex}\n%\\input{resume/presentation.tex}\n\
+    %\\input{resume/writing.tex}\n%\\input{resume/committees.tex}\n\n%\\input{resume/extracurricular.tex}\n\
+    \n\n%-------------------------------------------------------------------------------\n\
+    \\end{document}\n\n== Module Files (4) ==\n[Module File: resume/summary]\n%-------------------------------------------------------------------------------\n\
+    %\tSECTION TITLE\n%-------------------------------------------------------------------------------\n\
+    \\cvsection{Summary}\n\n\n%-------------------------------------------------------------------------------\n\
+    %\tCONTENT\n%-------------------------------------------------------------------------------\n\
+    \\begin{cvparagraph}\n\n%---------------------------------------------------------\n\
+    \\textbf{8+ years of experience} in software development, with a diverse skill\
+    \ set covering client-side development (\\textbf{C++}), \\textbf{Android} application\
+    \ development, \\textbf{Full-Stack} engineering and customization of the Android\
+    \ operating system. \nSkilled in designing and delivering efficient, scalable,\
+    \ and maintainable systems, leveraging modern tools and practices such as \\textbf{Docker},\
+    \ \\textbf{CI/CD}, and \\textbf{Kubernetes}. A passionate advocate for \\textbf{Linux},\
+    \ Android, and open-source technologies, with a strong commitment to crafting\
+    \ seamless user experiences and robust, high-quality software architectures.\n\
+    \\end{cvparagraph}\n\n[Module File: resume/education]\n\\cvsection{Education}\n\
+    \n\\begin{cventries}\n\n  \\cventryCompact\n    {M.S. in Computer Engineering}\
+    \ % Degree\n    {UCR } % Institution\n    {Riverside, CA} % Location\n    {Sep.\
+    \ 2024 - Dec. 2025} % Date(s)\n    {\n      \\begin{cvitems} % Description(s)\
+    \ bullet points\n        \\item { Related Courses: Computer Architecture, Operating\
+    \ System, High Performance Computing, GPA 4.0/4.0.}\n      \\end{cvitems}\n  \
+    \  }\n    \n  \\cventryCompact\n    {B.S. in Software  Engineering} % Degree\n\
+    \    {Hebei University of Economics and Business} % Institution\n    {Hebei, China}\
+    \ % Location\n    {Sep. 2011 - Jun. 2015} % Date(s)\n    {\n      \\begin{cvitems}\
+    \ % Description(s) bullet points\n        \\item { Received top full-time and\
+    \ internship job offers among over 200 students, \n        last 36 credits GPA\
+    \ 3.8/4.0.}\n      \\end{cvitems}\n    }\n\\end{cventries}\n\n[Module File: cv/skills]\n\
+    %-------------------------------------------------------------------------------\n\
+    %\tSECTION TITLE\n%-------------------------------------------------------------------------------\n\
+    \\cvsection{Skills}\n\n\n%-------------------------------------------------------------------------------\n\
+    %\tCONTENT\n%-------------------------------------------------------------------------------\n\
+    \\begin{cvskills}\n\n%---------------------------------------------------------\n\
+    \  \\cvskill\n    {DevOps} % Category\n    {AWS, Docker, Kubernetes, VMWare vSphere,\
+    \ Ansible, Terraform, Jenkins,Github Action, CircleCI, GitLab} % Skills\n\n%---------------------------------------------------------\n\
+    \  \\cvskill\n    {Full-Stack} % Category\n    {Express, Django, REST API, MongoDB,\
+    \ MySQL, gRPC,Hugo, Redux, React, Vue, HTML5, CSS, JQuery,WebPack,Gulp,Babel,Electron}\
+    \ % Skills\n\n%---------------------------------------------------------\n  \\\
+    cvskill\n    {Softwares} % Category\n    {Linux (Arch Linux, Debian, Red Hat),\
+    \ QEMU, Git, LXC/LXD, Docker, Jenk-ins, Redis, PyTorch, XGBoost, CatBoost,  Electron,\
+    \ MongoDB, Mysql, Postgres,\nProxmox, ElasticSearch, Kubernetes, WireShark, AWS\
+    \ Lambda} % Skills\n\n%---------------------------------------------------------\n\
+    \  \\cvskill\n    {Programming} % Category\n    {C++, Rust, CUDA, Python, JavaScript(Node.js\
+    \ and Browser), TypeScript, JAVA, PHP, BASH, OCaml, LISP} % Skills\n\n\n%---------------------------------------------------------\n\
+    \\end{cvskills}\n\n[Module File: resume/experience]\n\\cvsection{Work Experience}\n\
+    \\begin{cventries}\n\n%---------------------------------------------------------\n\
+    \  \\cventryII\n    {Tech Lead} % Job title\n    {Arpara Corp.} % Organization\n\
+    \    {Beijing, China} % Location\n    {Apr. 2021 - Aug. 2023} % Date(s)\n    {\n\
+    \      \\begin{cvitems} % Description(s) of tasks/responsibilities\n        \\\
+    item {Enhanced team capabilities by providing \\textbf{mentorship} and technical\
+    \ guidance, leading to the successful build-up of a 4-member Android OS team from\
+    \ scratch.}\n        \\item {Built and deployed overall AOSP building infrastructure,\
+    \ Reduced build times by 40\\% and improved release consistency by architecting\
+    \ and deploying automated \\textbf{CI/CD} pipelines using \\textbf{Jenkins}, \\\
+    textbf{Docker},GitLab and \\textbf{Kubernetes} on Linux..}\n        \\item {Resolved\
+    \ complex system-level issues within large-scale codebases, including debugging\
+    \ and optimizing kernel drivers, addressing Android framework bugs, and ensuring\
+    \ cross-platform compatibility. Demonstrated expertise in analyzing and modifying\
+    \ Android source code to fix critical bugs and enhance system stability and performance.}\n\
+    \        \\item {\n        Write linux kernel driver for IMU sensor using \\textbf{C},\
+    \ using \\textbf{MATLAB} to tune \\textbf{sensor fusion algorithm} on \\textbf{Qualcomm\
+    \ SOC}s.\n        }\n        \\item {\n        \\textbf{Bring up} new arm board\
+    \ for linux and Android.\n        }\n      \\end{cvitems}\n    }\n\n%---------------------------------------------------------\n\
+    \  \\cventryII\n    {FullStack Engineer \\& Co Founder} % Job title\n    {Rolling\
+    \ Blocks} % Organization\n    {HongKong, China} % Location\n    {Jun. 2018 - Jan.\
+    \ 2020} % Date(s)\n    {\n      \\begin{cvitems} % Description(s) of tasks/responsibilities\n\
+    \        \\item { Developed a high-performance WordPress-based news website by\
+    \ designing and implementing a scalable architecture to handle high traffic volumes.\
+    \ Utilized \\textbf{Nginx load balancing} to distribute traffic and ensure high\
+    \ availability. Optimized database performance with a \\textbf{distributed MySQL\
+    \ cluster}, enabling fast and reliable data access. Enhanced site speed and scalability\
+    \ by implementing \\textbf{WordPress static content generation}, significantly\
+    \ reducing server load and improving user experience. }\n        \\item {Implemented\
+    \ a distributed  WeChat crawler and Web Crawer using \\textbf{Python}, \\textbf{JavaScript}}\n\
+    \        \\item { Technologies involved: React, Vue, \\textbf{Docker}, Nginx,\
+    \ Minio, \\textbf{gRPC}, Scrapy, Node.js, Express, MongoDB,MySQL}\n        \\\
+    item {Implemented RESTful API server for querying, controlling Crawers.}\n   \
+    \     \\item {Built and deployed overall service infrastructure utilizing Docker\
+    \ container, Github Action, and several \\textbf{AWS} stack(Including EC2, S3,\
+    \ CloudFront, RDS, IAM), focusing on high-availability, fault tolerance, and auto-scaling.}\n\
+    \      \\end{cvitems}\n    }\n\n\\cventryII\n    {Software Developer} % Job title\n\
+    \    {Meituan} % Organization\n    {Beijing, China} % Location\n    {Sep. 2015\
+    \ - Mar. 2018} % Date(s)\n    {\n      \\begin{cvitems} % Description(s) of tasks/responsibilities\n\
+    \        \\item {Boosted scanning module throughput by 5x by engineering GPU-accelerated\
+    \ image processing pipelines using \\textbf{OpenCL},arm assembly for heterogeneous\
+    \ computing optimizations.}\n        \\item {Impacted 200k users with enhanced\
+    \ cloud storage capabilities by developing a cross-platform \\textbf{C++} SDK,\
+    \ implementing file segmentation algorithms and resumable transfer protocols using\
+    \ template metaprogramming techniques.}\n        \\item {Enabled secure POS system\
+    \ integrations by leading \\textbf{reverse engineering} initiatives analyzing\
+    \ X86 assembly and smali bytecode to decrypt proprietary encryption schemes.}\n\
+    \        \\item {\n        Developed Android POS software with efficient and scalable\
+    \ solutions by utilizing \\textbf{Java}, \\textbf{RxJava}, and OkHttp for Android\
+    \ customized launcher interfaces and payment-related applications.\n        }\n\
+    \      \\end{cvitems}\n    }\n\n%---------------------------------------------------------\n\
+    \  \\cventryII\n    {Intern Software Engineer} % Job title\n    {Baidu} % Organization\n\
+    \    {Beijing, China} % Location\n    {Apr. 2014 - Jul. 2014} % Date(s)\n    {\n\
+    \      \\begin{cvitems} % Description(s) of tasks/responsibilities\n        \\\
+    item {Developed the front and back end of Baidu’s mobile search pages (using PHP,HTML/CSS\
+    \ ), merged patches to ThinkPHP during this period}\n        \\item {\n      \
+    \  Write E2E auto test script for Baidu mobile search pages using \\textbf{NodeJS}\n\
+    \        }\n        \\item {Prototyping  Smart Wear Android App for my supervisor,\
+    \ He is directly reporting to CEO of Baidu. }\n      \\end{cvitems}\n      }\n\
+    \  \n\n%---------------------------------------------------------\n\\end{cventries}"
+- version: resume_android_reverse_engineer.tex
+  modules: {}
+  main: "== Main Resume File: resume_android_reverse_engineer.tex ==\n%-------------------------------------------------------------------------------\n\
+    % CONFIGURATIONS\n%-------------------------------------------------------------------------------\n\
+    % A4 paper size by default, use 'letterpaper' for US letter\n\\documentclass[11pt,\
+    \ a4paper]{awesome-cv}\n\n% Configure page margins with geometry\n\\geometry{left=1.4cm,\
+    \ top=.8cm, right=1.4cm, bottom=1.8cm, footskip=.5cm}\n\n% Specify the location\
+    \ of the included fonts\n\\fontdir[fonts/]\n\n% Color for highlights\n% Awesome\
+    \ Colors: awesome-emerald, awesome-skyblue, awesome-red, awesome-pink, awesome-orange\n\
+    %                 awesome-nephritis, awesome-concrete, awesome-darknight\n\\colorlet{awesome}{awesome-red}\n\
+    % Uncomment if you would like to specify your own color\n% \\definecolor{awesome}{HTML}{CA63A8}\n\
+    \n% Colors for text\n% Uncomment if you would like to specify your own color\n\
+    % \\definecolor{darktext}{HTML}{414141}\n% \\definecolor{text}{HTML}{333333}\n\
+    % \\definecolor{graytext}{HTML}{5D5D5D}\n% \\definecolor{lighttext}{HTML}{999999}\n\
+    \n% Set false if you don't want to highlight section with awesome color\n\\setbool{acvSectionColorHighlight}{true}\n\
+    \n% If you would like to change the social information separator from a pipe (|)\
+    \ to something else\n\\renewcommand{\\acvHeaderSocialSep}{\\quad\\textbar\\quad}\n\
+    \n\n%-------------------------------------------------------------------------------\n\
+    %\tPERSONAL INFORMATION\n%\tComment any of the lines below if they are not required\n\
+    %-------------------------------------------------------------------------------\n\
+    % Available options: circle|rectangle,edge/noedge,left/right\n% \\photo[rectangle,edge,right]{./examples/profile}\n\
+    \\name{Bowen}{Han}\n\\position{Tech Lead{\\enskip\\cdotp\\enskip}Reverse Engineer}\n\
+    \\address{Riverside,CA,  USA}\n\n\\mobile{(+1) 6015520630}\n\\email{bhan001@ucr.edu}\n\
+    %\\homepage{www.posquit0.com}\n\\github{bugparty}\n\\linkedin{bowmanhan}\n% \\\
+    gitlab{gitlab-id}\n% \\stackoverflow{SO-id}{SO-name}\n% \\twitter{@twit}\n% \\\
+    skype{skype-id}\n% \\reddit{reddit-id}\n% \\medium{madium-id}\n% \\googlescholar{googlescholar-id}{name-to-display}\n\
+    %% \\firstname and \\lastname will be used\n% \\googlescholar{googlescholar-id}{}\n\
+    % \\extrainfo{extra informations}\n\n%\\quote{``Be the change that you want to\
+    \ see in the world.\"}\n\n\n%-------------------------------------------------------------------------------\n\
+    \\begin{document}\n\n% Print the header with above personal informations\n% Give\
+    \ optional argument to change alignment(C: center, L: left, R: right)\n\\makecvheader[C]\n\
+    \n% Print the footer with 3 arguments(<left>, <center>, <right>)\n% Leave any\
+    \ of these blank if they are not needed\n\\makecvfooter\n  {\\today}\n  {Bowen\
+    \ Han~~~·~~~Résumé}\n  {\\thepage}\n\n\n%-------------------------------------------------------------------------------\n\
+    %\tCV/RESUME CONTENT\n%\tEach section is imported separately, open each file in\
+    \ turn to modify content\n%-------------------------------------------------------------------------------\n\
+    \\input{resume/summary_reverse_eng}\n\\input{resume/education.tex}\n\\input{cv/skills_reverse_eng.tex}\n\
+    \\input{resume/exp_reverse_eng.tex}\n%\\input{resume/honors.tex}\n%\\input{resume/presentation.tex}\n\
+    %\\input{resume/writing.tex}\n%\\input{resume/committees.tex}\n\n%\\input{resume/extracurricular.tex}\n\
+    \n\n%-------------------------------------------------------------------------------\n\
+    \\end{document}\n\n== Module Files (4) ==\n[Module File: resume/summary_reverse_eng]\
+    \ Error: File not found\n[Module File: resume/education]\n\\cvsection{Education}\n\
+    \n\\begin{cventries}\n\n  \\cventryCompact\n    {M.S. in Computer Engineering}\
+    \ % Degree\n    {UCR } % Institution\n    {Riverside, CA} % Location\n    {Sep.\
+    \ 2024 - Dec. 2025} % Date(s)\n    {\n      \\begin{cvitems} % Description(s)\
+    \ bullet points\n        \\item { Related Courses: Computer Architecture, Operating\
+    \ System, High Performance Computing, GPA 4.0/4.0.}\n      \\end{cvitems}\n  \
+    \  }\n    \n  \\cventryCompact\n    {B.S. in Software  Engineering} % Degree\n\
+    \    {Hebei University of Economics and Business} % Institution\n    {Hebei, China}\
+    \ % Location\n    {Sep. 2011 - Jun. 2015} % Date(s)\n    {\n      \\begin{cvitems}\
+    \ % Description(s) bullet points\n        \\item { Received top full-time and\
+    \ internship job offers among over 200 students, \n        last 36 credits GPA\
+    \ 3.8/4.0.}\n      \\end{cvitems}\n    }\n\\end{cventries}\n\n[Module File: cv/skills_reverse_eng]\n\
+    %-------------------------------------------------------------------------------\n\
+    %\tSECTION TITLE\n%-------------------------------------------------------------------------------\n\
+    \\cvsection{Skills}\n\n%\tCONTENT\n%-------------------------------------------------------------------------------\n\
+    \\begin{cvskillsII}\n\n%---------------------------------------------------------\n\
+    \  \\cvskillII\n    {Reverse Engineering} % Category\n    {Android Smali, WebAssembly,\
+    \ x86/ARM Assembly, Dalvik/ART,  Hooking, Anti-Debugging, Code Injection, Obfuscation\
+    \ Analysis, Encryption/Signature Extraction, Dynamic/Static Analysis} % Skills\n\
+    \n%---------------------------------------------------------\n  \\cvskillII\n\
+    \    {Security} % Category\n    {Android Application Security, AOSP Security Research,\
+    \ Vulnerability Analysis, Memory Dumping, Malware Analysis, API Hooking,  Symbolic\
+    \ Execution, Syscall Analysis} % Skills\n\n%---------------------------------------------------------\n\
+    \  \\cvskillII\n    {Android \\& Embedded} % Category\n    {AOSP Development,\
+    \ Kernel Debugging, Android HAL, Qualcomm SoC, Linux Kernel Development, ARM Board\
+    \ Bring-Up, System Optimization, Firmware Reverse Engineering} % Skills\n\n%---------------------------------------------------------\n\
+    \  \\cvskillII\n    {Programming} % Category\n    {C, C++, Python, Java, Kotlin,\
+    \ Rust, Bash, JavaScript, TypeScript, OCaml, Assembly (x86, ARM)} % Skills\n\n\
+    %---------------------------------------------------------\n  \\cvskillII\n  \
+    \  {DevOps \\& Tooling} % Category\n    {QEMU, Git, IDA Pro, Ghidra,  Xposed,\
+    \ Linux (Arch, Debian, Red Hat), WireShark, Terraform, Ansible, AWS} % Skills\n\
+    \n%---------------------------------------------------------\n\\end{cvskills}\n\
+    \n[Module File: resume/exp_reverse_eng]\n%-------------------------------------------------------------------------------\n\
+    %\tSECTION TITLE\n%-------------------------------------------------------------------------------\n\
+    \\cvsection{Work Experience}\n\n%-------------------------------------------------------------------------------\n\
+    %\tCONTENT\n%-------------------------------------------------------------------------------\n\
+    \\begin{cventries}\n\n%---------------------------------------------------------\n\
+    \  \\cventryII\n    {Teaching Assistant} % Job title\n    {UCR} % Organization\n\
+    \    {Riverside, CA} % Location\n    {Sep. 2024 - now} % Date(s)\n    {\n    \
+    \  \\begin{cvitems} % Description(s) of tasks/responsibilities\n        \\item\
+    \ {Enhanced course efficiency by 30\\% in the Algorithm course at University of\
+    \ California - Riverside by building an autograder using \\textbf{Python}, \\\
+    textbf{JavaScript}, \\textbf{Browser plugin}.}\n      \\end{cvitems}\n    }\n\n\
+    %---------------------------------------------------------\n   \\cventryII\n \
+    \   {Tech Lead} % Job title\n    {Arpara Corp.} % Organization\n    {Beijing,\
+    \ China} % Location\n    {Apr. 2021 - Aug. 2023} % Date(s)\n    {\n      \\begin{cvitems}\
+    \ % Description(s) of tasks/responsibilities\n        \\item {Reverse engineered\
+    \ \\textbf{WebAssembly} modules, dynamically debugging execution to extract \\\
+    textbf{decrypted memory data}. Developed custom tools to \\textbf{inject functions\
+    \ dynamically}, significantly enhancing debugging efficiency.}\n        \\item\
+    \ {Led the \\textbf{Android OS security research} initiative, identifying and\
+    \ patching vulnerabilities in \\textbf{AOSP} and proprietary firmware to improve\
+    \ system integrity.}\n        \\item {Built and deployed overall \\textbf{AOSP}\
+    \ building infrastructure, reducing build times by 40\\% and improving release\
+    \ consistency by architecting and deploying automated \\textbf{CI/CD} pipelines\
+    \ using \\textbf{Jenkins}, \\textbf{Docker}, \\textbf{GitLab}, and \\textbf{Kubernetes}\
+    \ on \\textbf{Linux}.}\n        \\item {Conducted \\textbf{Android system-level\
+    \ reverse engineering}, analyzing \\textbf{Dalvik bytecode} and \\textbf{ART runtime\
+    \ behavior} to debug and optimize system performance.}\n        \\item {Wrote\
+    \ \\textbf{Linux kernel drivers} for IMU sensors using \\textbf{C}, utilizing\
+    \ \\textbf{MATLAB} to tune \\textbf{sensor fusion algorithms} on \\textbf{Qualcomm\
+    \ SoCs}.}\n        \\item {Led \\textbf{Android/Linux ARM board bring-up} from\
+    \ scratch, optimizing system performance and stability.}\n      \\end{cvitems}\n\
+    \    }\n\n%-----------\n  \\cventryII\n    {Reverse Engineer \\& Co-Founder} %\
+    \ Job title\n    {Rolling Blocks} % Organization\n    {Hong Kong, China} % Location\n\
+    \    {Jun. 2018 - Jan. 2020} % Date(s)\n    {\n      \\begin{cvitems} % Description(s)\
+    \ of tasks/responsibilities\n        \\item {Reverse engineered a well-known \\\
+    textbf{IM application}, bypassing its \\textbf{protection mechanisms} to extract\
+    \ and access user-generated articles that were originally restricted from web\
+    \ crawlers.}\n        \\item {Reverse engineered a popular \\textbf{live streaming\
+    \ Android application}, utilizing \\textbf{hooking techniques} (\\textbf{Frida},\
+    \ \\textbf{Xposed}) to intercept and execute internal logic, enabling the extraction\
+    \ of valuable data and execution of custom code.}\n        \\item {Developed high-efficiency\
+    \ \\textbf{web crawlers} using \\textbf{Python} and \\textbf{JavaScript}, leveraging\
+    \ reverse-engineered insights to bypass API restrictions and gather structured\
+    \ data.}\n      \\end{cvitems}\n    }\n\n%---------------------------------------------------------\n\
+    \  \\cventryII\n    {Software Developer} % Job title\n    {Meituan} % Organization\n\
+    \    {Beijing, China} % Location\n    {Sep. 2015 - Mar. 2018} % Date(s)\n    {\n\
+    \      \\begin{cvitems} % Description(s) of tasks/responsibilities\n        \\\
+    item {Enabled secure POS system integrations by leading \\textbf{reverse engineering}\
+    \ initiatives analyzing \\textbf{x86 assembly}, \\textbf{Smali bytecode}, and\
+    \ \\textbf{Android applications} to decrypt proprietary encryption schemes.}\n\
+    \        \\item {Reverse engineered a well-known \\textbf{travel Android app},\
+    \ successfully extracting and analyzing its \\textbf{encryption and signature\
+    \ algorithms}, enabling the department to develop high-efficiency \\textbf{web\
+    \ crawlers} that gathered extensive data.}\n        \\item {Developed \\textbf{Android\
+    \ POS} software, utilizing \\textbf{Java}, \\textbf{RxJava}, and \\textbf{OkHttp}\
+    \ for customized launchers and payment-related applications.}\n        \\item\
+    \ {Boosted scanning module throughput by 5x by engineering GPU-accelerated image\
+    \ processing pipelines using \\textbf{OpenCL} and \\textbf{ARM assembly} for heterogeneous\
+    \ computing optimizations.}\n      \\end{cvitems}\n    }\n\n\n%---------------------------------------------------------\n\
+    \  \\cventryII\n    {Intern Software Engineer} % Job title\n    {Baidu} % Organization\n\
+    \    {Beijing, China} % Location\n    {Apr. 2014 - Jul. 2014} % Date(s)\n    {\n\
+    \      \\begin{cvitems} % Description(s) of tasks/responsibilities\n        \\\
+    item {Wrote \\textbf{E2E auto test scripts} for Baidu mobile search pages using\
+    \ \\textbf{Node.js}.}\n        \\item {Prototyped a \\textbf{Smart Wear Android\
+    \ App} for my supervisor, who reported directly to the CEO of Baidu.}\n      \\\
+    end{cvitems}\n    }\n\n%---------------------------------------------------------\n\
+    \\end{cventries}"

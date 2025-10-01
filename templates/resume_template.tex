@@ -1,0 +1,89 @@
+%% Resume Template for version: ((( version_name )))
+
+\documentclass[11pt, a4paper]{awesome-cv}
+
+% Configure page margins with geometry
+\geometry{left=1.4cm, top=.8cm, right=1.4cm, bottom=1.8cm, footskip=.5cm}
+\fontdir[fonts/]
+\colorlet{awesome}{awesome-red}
+
+% Set false if you don't want to highlight section with awesome color
+\setbool{acvSectionColorHighlight}{true}
+
+% If you would like to change the social information separator from a pipe (|) to something else
+\renewcommand{\acvHeaderSocialSep}{\quad\textbar\quad}
+
+%-------------------------------------------------------------------------------
+%       CJK (Chinese/Japanese/Korean) Font Support
+%-------------------------------------------------------------------------------
+% Add Chinese font support using xeCJK
+\usepackage{xeCJK}
+% Set Chinese fonts (fallback to available system fonts)
+\setCJKmainfont{Droid Sans Fallback}
+\setCJKsansfont{Droid Sans Fallback}
+\setCJKmonofont{Droid Sans Fallback}
+
+%-------------------------------------------------------------------------------
+%       SPACING ADJUSTMENTS
+%       Add some spacing between job titles and descriptions
+%-------------------------------------------------------------------------------
+% Redefine cventry to add more spacing before description
+\let\oldcventry\cventry
+\renewcommand*{\cventry}[5]{%
+  \vspace{-2.0mm}
+  \setlength\tabcolsep{0pt}
+  \setlength{\extrarowheight}{0pt}
+  \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}} L{\textwidth - 4.5cm} R{4.5cm}}
+    \ifempty{#2#3}
+      {\entrypositionstyle{#1} & \entrydatestyle{#4} \\}
+      {\entrytitlestyle{#2} & \entrylocationstyle{#3} \\
+      \entrypositionstyle{#1} & \entrydatestyle{#4} \\[0.3em]}  % Add spacing here
+    \multicolumn{2}{L{\textwidth}}{\descriptionstyle{#5}}
+  \end{tabular*}%
+}
+
+%-------------------------------------------------------------------------------
+%	PERSONAL INFORMATION
+%	Comment any of the lines below if they are not required
+%-------------------------------------------------------------------------------
+% Available options: circle|rectangle,edge/noedge,left/right
+% \photo[rectangle,edge,right]{./examples/profile}
+\name{Bowen}{Han}
+\position{Tech Lead{\enskip\cdotp\enskip}Software Engineer}
+\address{Riverside,CA,  USA}
+
+\mobile{(+1) 6015520630}
+\email{bhan001@ucr.edu}
+%\homepage{www.posquit0.com}
+\github{bugparty}
+\linkedin{bowmanhan}
+
+%\quote{``Be the change that you want to see in the world."}
+
+
+%-------------------------------------------------------------------------------
+\begin{document}
+
+% Print the header with above personal informations
+% Give optional argument to change alignment(C: center, L: left, R: right)
+\makecvheader[C]
+
+% Print the footer with 3 arguments(<left>, <center>, <right>)
+% Leave any of these blank if they are not needed
+\makecvfooter
+  {\today}
+  {Bowen Han~~~·~~~Résumé}
+  {\thepage}
+
+
+%-------------------------------------------------------------------------------
+%	CV/RESUME CONTENT
+%	Each section is imported separately, open each file in turn to modify content
+%-------------------------------------------------------------------------------
+\input{((( module_paths.summary )))}
+\input{((( module_paths.education )))}
+\input{((( module_paths.skills )))}
+\input{((( module_paths.experience )))}
+
+%-------------------------------------------------------------------------------
+\end{document} 

@@ -1,0 +1,120 @@
+((# 
+  Main Resume Template
+  
+  This is the main LaTeX document template that includes all sections.
+  
+  Variables:
+    - metadata: Personal information
+      - first_name: First name
+      - last_name: Last name
+      - position: Job title/position
+      - address: Address
+      - mobile: Phone number
+      - email: Email address
+      - github: GitHub username
+      - linkedin: LinkedIn username
+      - homepage: Personal website (optional)
+      - quote: Personal quote (optional)
+    - sections_content: Rendered LaTeX content of all sections
+    - version: Resume version name
+#))
+\documentclass[11pt, a4paper]{awesome-cv}
+
+% Configure page margins with geometry
+\geometry{left=1.4cm, top=.8cm, right=1.4cm, bottom=1.8cm, footskip=.5cm}
+\fontdir[fonts/]
+\colorlet{awesome}{awesome-red}
+
+% Set false if you don't want to highlight section with awesome color
+\setbool{acvSectionColorHighlight}{true}
+
+% If you would like to change the social information separator from a pipe (|) to something else
+\renewcommand{\acvHeaderSocialSep}{\quad\textbar\quad}
+
+%-------------------------------------------------------------------------------
+%       CJK (Chinese/Japanese/Korean) Font Support
+%-------------------------------------------------------------------------------
+% Add Chinese font support using xeCJK
+\usepackage{xeCJK}
+% Set Chinese fonts (fallback to available system fonts)
+\setCJKmainfont{Droid Sans Fallback}
+\setCJKsansfont{Droid Sans Fallback}
+\setCJKmonofont{Droid Sans Fallback}
+
+%-------------------------------------------------------------------------------
+%       SPACING ADJUSTMENTS
+%       Add some spacing between job titles and descriptions
+%-------------------------------------------------------------------------------
+% Redefine cventry to add more spacing before description
+\let\oldcventry\cventry
+\renewcommand*{\cventry}[5]{%
+  \vspace{-2.0mm}
+  \setlength\tabcolsep{0pt}
+  \setlength{\extrarowheight}{0pt}
+  \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}} L{\textwidth - 4.5cm} R{4.5cm}}
+    \ifempty{#2#3}
+      {\entrypositionstyle{#1} & \entrydatestyle{#4} \\}
+      {\entrytitlestyle{#2} & \entrylocationstyle{#3} \\
+      \entrypositionstyle{#1} & \entrydatestyle{#4} \\[0.3em]}  % Add spacing here
+    \multicolumn{2}{L{\textwidth}}{\descriptionstyle{#5}}
+  \end{tabular*}%
+}
+
+%-------------------------------------------------------------------------------
+%	PERSONAL INFORMATION
+%	Comment any of the lines below if they are not required
+%-------------------------------------------------------------------------------
+% Available options: circle|rectangle,edge/noedge,left/right
+((* if metadata.photo *))
+\photo[rectangle,edge,right]{((( metadata.photo )))}
+((* endif *))
+\name{((( (metadata.first_name | escape_tex | default('')) if (metadata.first_name | default('') or metadata.last_name | default('')) else '~' )))}{((( metadata.last_name | escape_tex | default('') )))}
+((* if metadata.position *))
+\position{((( metadata.position | escape_tex )))}
+((* endif *))
+((* if metadata.address *))
+\address{((( metadata.address | escape_tex )))}
+((* endif *))
+((* if metadata.mobile *))
+\mobile{((( metadata.mobile | escape_tex )))}
+((* endif *))
+((* if metadata.email *))
+\email{((( metadata.email | escape_tex )))}
+((* endif *))
+((* if metadata.homepage *))
+\homepage{((( metadata.homepage | escape_tex )))}
+((* endif *))
+((* if metadata.github *))
+\github{((( metadata.github | escape_tex )))}
+((* endif *))
+((* if metadata.linkedin *))
+\linkedin{((( metadata.linkedin | escape_tex )))}
+((* endif *))
+((* if metadata.quote *))
+\quote{``((( metadata.quote | escape_tex )))''}
+((* endif *))
+
+%-------------------------------------------------------------------------------
+\begin{document}
+
+% Print the header with above personal informations
+% Give optional argument to change alignment(C: center, L: left, R: right)
+((* if metadata.first_name or metadata.last_name or metadata.position or metadata.address or metadata.mobile or metadata.email or metadata.github or metadata.linkedin or metadata.homepage *))
+\makecvheader[C]
+((* endif *))
+
+% Print the footer with 3 arguments(<left>, <center>, <right>)
+% Leave any of these blank if they are not needed
+\makecvfooter
+  {\today}
+  {((( metadata.first_name | default('') ))) ((( metadata.last_name | default('') )))~~~·~~~Résumé}
+  {\thepage}
+
+%-------------------------------------------------------------------------------
+%	CV/RESUME CONTENT
+%	Each section is imported separately, open each file in turn to modify content
+%-------------------------------------------------------------------------------
+((( sections_content )))
+%-------------------------------------------------------------------------------
+\end{document}
+

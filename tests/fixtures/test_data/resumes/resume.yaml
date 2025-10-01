@@ -1,0 +1,52 @@
+source: resume.tex
+metadata:
+  first_name: Bowen
+  last_name: Han
+  position: DeepSeek Test Engineer
+  address: Riverside, CA, USA
+  mobile: (+1) 601-555-0000
+  email: example@example.com
+  github: test-github
+  linkedin: test-linkedin
+sections:
+- type: summary
+  title: Summary
+  id: summary
+  bullets:
+  - '**8+ years of experience** tailoring Markdown-driven resumes for AI-assisted
+    workflows.'
+  - Experienced with **DeepSeek**, **LangChain**, and configurable data pipelines.
+- type: entries
+  title: Education
+  id: education
+  entries:
+  - title: M.S. in Computer Engineering
+    organization: UCR
+    location: Riverside, CA
+    period: Sep. 2024 - Dec. 2025
+    bullets:
+    - 'Coursework: High Performance Computing, Operating Systems.'
+- type: skills
+  title: Skills
+  id: skills
+  groups:
+  - category: Languages
+    items:
+    - Python
+    - Markdown
+    - YAML
+  - category: Platforms
+    items:
+    - DeepSeek
+    - LangChain
+- type: entries
+  title: Work Experience
+  id: experience
+  entries:
+  - title: AI Resume Agent
+    organization: Open Source Project
+    location: Remote
+    period: 2023 - Present
+    bullets:
+    - Built modular resume tooling with configurable data directories.
+    - Automated JD analysis and section tailoring using DeepSeek APIs.

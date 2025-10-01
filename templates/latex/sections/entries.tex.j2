@@ -1,0 +1,38 @@
+((# 
+  Generic Entries Section Template (Fallback)
+  
+  This template is used as a fallback for any unknown section types.
+  It provides a generic entries layout that works for most structured data.
+  
+  Variables:
+    - title: Section title
+    - entries: List of entries
+      - title: Entry title
+      - organization: Organization/Institution
+      - location: Location
+      - period: Time period
+      - bullets: List of bullet points (optional)
+    
+  This template has the same structure as experience/projects/education,
+  making it a safe fallback for any entry-based section.
+#))
+\cvsection{((( title | escape_tex )))}
+\begin{cventries}
+((*- for entry in entries *))
+  \cventry
+    {((( entry.title | escape_tex )))}
+    {((( entry.organization | escape_tex )))}
+    {((( entry.location | escape_tex )))}
+    {((( entry.period | escape_tex )))}
+    {
+    ((*- if entry.bullets *))
+      \begin{cvitems}
+      ((*- for bullet in entry.bullets *))
+        \item {((( bullet | markdown_to_latex )))}
+      ((*- endfor *))
+      \end{cvitems}
+    ((*- endif *))
+    }
+((*- endfor *))
+\end{cventries}
+

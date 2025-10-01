@@ -1,0 +1,49 @@
+((# 
+  Work Experience Section Template
+  
+  Variables:
+    - title: Section title (e.g., "Experience", "Work Experience")
+    - entries: List of experience entries
+      - title: Job title/position (e.g., "Software Engineer")
+      - organization: Company name (e.g., "Tech Corp")
+      - location: Work location (e.g., "Beijing, China")
+      - period: Time period (e.g., "2020-Present")
+      - bullets: List of bullet points describing work (optional)
+    
+  Example data:
+    {
+      "title": "Work Experience",
+      "entries": [
+        {
+          "title": "Software Engineer",
+          "organization": "Tech Corp",
+          "location": "Beijing, China",
+          "period": "2020-Present",
+          "bullets": [
+            "Developed microservices using Python & Go",
+            "Led team of 5 engineers"
+          ]
+        }
+      ]
+    }
+#))
+\cvsection{((( title | escape_tex )))}
+\begin{cventries}
+((*- for entry in entries *))
+  \cventry
+    {((( entry.title | escape_tex )))}           % Position/Job Title
+    {((( entry.organization | escape_tex )))}    % Company Name
+    {((( entry.location | escape_tex )))}        % Location
+    {((( entry.period | escape_tex )))}          % Time Period
+    {
+    ((*- if entry.bullets *))
+      \begin{cvitems}
+      ((*- for bullet in entry.bullets *))
+        \item {((( bullet | markdown_to_latex )))}
+      ((*- endfor *))
+      \end{cvitems}
+    ((*- endif *))
+    }
+((*- endfor *))
+\end{cventries}
+
