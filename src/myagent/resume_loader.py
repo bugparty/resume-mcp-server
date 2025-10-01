@@ -18,7 +18,8 @@ from .filesystem import get_resume_fs
 import rapidfuzz
 
 # Lazily created LLM client (only when needed by tailoring functions)
-_llm = None
+# Exposed as a module-level name so tests can patch `myagent.resume_loader.llm`.
+llm = None
 
 # Configure logging for markdown parsing operations
 logger = logging.getLogger(__name__)
@@ -772,19 +773,27 @@ def _update_section_from_markdown(
     return section
 
 
-def update_resume_section(module_path: str, new_content: str) -> str:
+def update_resume_section(module_path: str, new_content: str | None = None) -> str:
     """
     Update a resume section with new Markdown content.
 
     Args:
         module_path: Version/section identifier (e.g., 'resume/summary')
-        new_content: New Markdown content for the section
+        new_content: New Markdown content for the section. If omitted, allow
+            combined format 'version/section:markdown' in module_path.
 
     Returns:
         Success or error message
     """
     module_path = module_path.strip()
-    version = module_path.split("/")[0]
+
+    # Support combined one-argument format: 'version/section:markdown'
+    if new_content is None and ":" in module_path:
+        module_path, new_content = module_path.split(":", 1)
+
+    if new_content is None:
+        return "[Error] Missing new content for section update."
+
     new_content = new_content.strip()
     if "/" not in module_path:
         return "[Error] Module path must follow 'version/section' format."
@@ -797,9 +806,7 @@ def update_resume_section(module_path: str, new_content: str) -> str:
                 return "[Error] Header content must contain at least one 'key: value' pair."
             data.setdefault("metadata", {}).update(metadata_updates)
             _save_resume(version, data)
-            return (
-                f"[Success] Updated {module_path}. updated metadata: {metadata_updates}"
-            )
+            return (f"[Success] Updated {module_path}. updated metadata: {metadata_updates}")
         else:
             data, section = _get_section(version, section_id)
             updated_section = _update_section_from_markdown(
@@ -807,9 +814,7 @@ def update_resume_section(module_path: str, new_content: str) -> str:
             )
             # _update_section_by_id(version, section_id, updated_section)
             _save_resume(version, data)
-            return (
-                f"[Success] Updated {module_path}. updated section: {updated_section}"
-            )
+            return (f"[Success] Updated {module_path}. updated section: {updated_section}")
     except (FileNotFoundError, KeyError) as exc:
         return f"[Error] {exc}"
 
@@ -884,10 +889,10 @@ Job Description Analysis:
 Return revised Markdown for the section. Use concise bullet points and keep any heading titles unchanged.
 """
     try:
-        global _llm
-        if _llm is None:
-            _llm = get_llm(provider="deepseek")
-        response = _llm.invoke([HumanMessage(content=prompt)])
+        global llm
+        if llm is None:
+            llm = get_llm(provider="deepseek")
+        response = llm.invoke([HumanMessage(content=prompt)])
         if hasattr(response, "content"):
             return response.content.strip()
         if isinstance(response, str):
