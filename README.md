@@ -20,10 +20,35 @@
    uv sync
    ```
 
-4. **Install Dependencies (requirements.txt) you either use uv sync or pip install but not both**
-   ```bash
-   uv pip install -r requirement.txt
-   ```
+4. ## Installing XeLaTeX
+- macOS (Homebrew):
+  ```bash
+  brew install --cask mactex-no-gui
+  # After install, ensure /Library/TeX/texbin is on your PATH
+  # (Homebrew usually configures this automatically.)
+  ```
+
+- Ubuntu/Debian:
+  ```bash
+  sudo apt-get update
+  sudo apt-get install -y texlive-xetex texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended
+  ```
+
+- Fedora:
+  ```bash
+  sudo dnf install -y texlive-xetex texlive-collection-latexrecommended texlive-collection-fontsrecommended
+  ```
+
+- Arch Linux:
+  ```bash
+  sudo pacman -S --needed texlive-bin texlive-basic texlive-latexrecommended texlive-fontsrecommended texlive-xetex
+  ```
+
+- Verify installation:
+  ```bash
+  xelatex --version
+  ```
+
 
 5. **Start the MCP Server**
    ```bash
@@ -56,8 +81,9 @@
    xelatex build/resume.tex
    ```
 
+
 ## MCP Usage
-- See `docs/mcp_server.md` and `MCP_SETUP.md` for connecting an MCP client and available tools.
+- See [MCP_USER_MANUAL_cn.md](./MCP_USER_MANUAL_cn.md) and [MCP_SETUP.md](./MCP_SETUP.md) for connecting an MCP client and available tools.
 
 ## Notes
 - Replace `<repository-url>` with the actual URL of the repository

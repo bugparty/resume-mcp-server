@@ -73,8 +73,35 @@
    - 进入 API 管理页面
    - 充值1美元获取 API TOKEN
    - 将 TOKEN 添加到 `.env` 文件的 `DEEPSEEK_API_KEY` 字段
+8. ## 安装 XeLaTeX
+- macOS（Homebrew）
+  ```bash
+  brew install --cask mactex-no-gui
+  # 安装后确保 /Library/TeX/texbin 已加入 PATH（Homebrew 通常会自动处理）
+  ```
 
-8. **启动 MCP 服务器**
+- Ubuntu/Debian
+  ```bash
+  sudo apt-get update
+  sudo apt-get install -y texlive-xetex texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended
+  ```
+
+- Fedora
+  ```bash
+  sudo dnf install -y texlive-xetex texlive-collection-latexrecommended texlive-collection-fontsrecommended
+  ```
+
+- Arch Linux
+  ```bash
+  sudo pacman -S --needed texlive-bin texlive-basic texlive-latexrecommended texlive-fontsrecommended texlive-xetex
+  ```
+
+- 验证安装
+  ```bash
+  xelatex --version
+  ```
+
+9. **启动 MCP 服务器**
    ```bash
    # HTTP 传输（便于本地调试）
    uv run python scripts/start_mcp_server.py --transport http --port 8000
@@ -82,6 +109,7 @@
    # 或使用 stdio 传输（供 MCP 客户端对接）
    uv run python scripts/start_mcp_server.py --transport stdio
    ```
+
 
 ## 使用示例
 
@@ -102,7 +130,7 @@
 ```
 
 ### MCP 使用
-- 参考 `docs/mcp_server.md` 与 `MCP_SETUP.md` 获取客户端连接与工具列表。
+ - 参考 [MCP_USER_MANUAL_cn.md](./MCP_USER_MANUAL_cn.md) 与 [MCP_SETUP.md](./MCP_SETUP.md) 获取客户端连接与工具列表。
 
 ### 3. 简历定制
 ```python
@@ -131,7 +159,6 @@
 - `src/myagent/tools.py`: 工具函数定义
 - `src/myagent/llm_config.py`: LLM 配置（已改为按需懒加载）
 - `data/resumes/`: 简历数据
-- `data/jd/`: 职位描述数据
 
 ## 注意事项
 
