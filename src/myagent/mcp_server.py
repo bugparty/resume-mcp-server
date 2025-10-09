@@ -977,8 +977,45 @@ def render_resume_to_overleaf(version: str) -> dict[str, str]:
     return response
 
 
+def _resolve_transport(default_transport: str, default_port: int) -> tuple[str, int]:
+    env_transport = (
+        os.getenv("FASTMCP_TRANSPORT")
+        or os.getenv("MCP_TRANSPORT")
+        or os.getenv("TRANSPORT")
+    )
+    transport = (env_transport or default_transport).lower()
+    if transport not in {"http", "stdio"}:
+        logger.warning(
+            "Unknown transport '%s' specified via environment; falling back to '%s'",
+            transport,
+            default_transport,
+        )
+        transport = default_transport
+
+    env_port = (
+        os.getenv("FASTMCP_PORT")
+        or os.getenv("MCP_PORT")
+        or os.getenv("PORT")
+    )
+    port = default_port
+    if env_port:
+        try:
+            port = int(env_port)
+        except ValueError:
+            logger.warning(
+                "Invalid port value '%s'; using default %d",
+                env_port,
+                default_port,
+            )
+            port = default_port
+
+    return transport, port
+
+
 def main(transport="stdio", port=8000):
     """Main entry point for the MCP server."""
+    transport, port = _resolve_transport(transport, port)
+
     # Initialize filesystem before starting server
     logger.info("=" * 80)
     logger.info("Starting MCP Server for Resume Agent Tools")
@@ -998,9 +1035,8 @@ def main(transport="stdio", port=8000):
     if transport == "http":
         mcp.run(transport="http", port=port, log_level="DEBUG")
     else:
-        mcp.run(log_level="DEBUG")
+        mcp.run()
 
 
 if __name__ == "__main__":
-    # Default to HTTP server when run directly
     main(transport="http", port=8000)
