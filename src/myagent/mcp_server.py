@@ -23,10 +23,11 @@ from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 from dotenv import load_dotenv
 
-# Add the src directory to Python path for imports
-if __name__ == "__main__":
-    project_root = Path(__file__).resolve().parents[2]
-    sys.path.insert(0, str(project_root / "src"))
+# Ensure src-based imports resolve when running via `fastmcp inspect`
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SRC_PATH = PROJECT_ROOT / "src"
+if str(SRC_PATH) not in sys.path and SRC_PATH.exists():
+    sys.path.insert(0, str(SRC_PATH))
 
 from fastmcp import FastMCP
 
@@ -244,7 +245,8 @@ async def read_data_file(path: str) -> Union[str, bytes]:
         path: Relative path within the data directory
 
     Returns:
-        File content as string for text files, bytes for binary files
+        - For files: string content for text files, bytes for binary files
+        - For directories: JSON string describing contained YAML files with their contents
     """
     data_dir = get_data_dir()
     file_path = data_dir / path
@@ -260,6 +262,27 @@ async def read_data_file(path: str) -> Union[str, bytes]:
 
     if not file_path.exists():
         raise FileNotFoundError(f"File not found: {path}")
+
+    if file_path.is_dir():
+        yaml_items = []
+        for item in sorted(file_path.glob("*.yml")) + sorted(file_path.glob("*.yaml")):
+            yaml_items.append(
+                {
+                    "name": item.name,
+                    "path": str(item.relative_to(data_dir)),
+                    "content": item.read_text(encoding="utf-8"),
+                }
+            )
+
+        return json.dumps(
+            {
+                "path": str(file_path.relative_to(data_dir)),
+                "type": "directory",
+                "item_count": len(yaml_items),
+                "yaml_files": yaml_items,
+            },
+            ensure_ascii=False,
+        )
 
     if not file_path.is_file():
         raise ValueError(f"Path is not a file: {path}")
