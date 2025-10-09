@@ -13,6 +13,7 @@ import yaml
 from langchain_core.messages import HumanMessage
 
 from .llm_config import get_llm
+# Load settings early to determine log directory before configuring handlers
 from .settings import get_settings
 from .filesystem import get_resume_fs
 import rapidfuzz
@@ -26,8 +27,9 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # Create logs directory if it doesn't exist
-LOGS_DIR = Path(__file__).resolve().parents[2] / "logs"
-LOGS_DIR.mkdir(exist_ok=True)
+SETTINGS = get_settings()
+LOGS_DIR = SETTINGS.logs_dir
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 # File handler for markdown parse logs
 markdown_log_file = LOGS_DIR / "markdown_parsing.log"

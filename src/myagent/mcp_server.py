@@ -35,35 +35,14 @@ SRC_PATH = PROJECT_ROOT / "src"
 if str(SRC_PATH) not in sys.path and SRC_PATH.exists():
     sys.path.insert(0, str(SRC_PATH))
 
+# Load environment variables early so settings pick up overrides
+load_dotenv(dotenv_path=PROJECT_ROOT / ".env", override=False)
+
 from fastmcp import FastMCP
 
 # Configure logging for MCP server
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-# Create logs directory if it doesn't exist
-LOGS_DIR = Path(__file__).resolve().parents[2] / "logs"
-LOGS_DIR.mkdir(exist_ok=True)
-
-# File handler for MCP tool calls
-mcp_log_file = LOGS_DIR / "mcp_server.log"
-file_handler = logging.FileHandler(mcp_log_file, encoding="utf-8")
-file_handler.setLevel(logging.INFO)
-
-# Console handler for real-time feedback
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-
-# Formatter
-formatter = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-file_handler.setFormatter(formatter)
-console_handler.setFormatter(formatter)
-
-logger.addHandler(file_handler)
-logger.addHandler(console_handler)
 
 
 def log_mcp_tool_call(func: Callable) -> Callable:
@@ -253,7 +232,7 @@ def _upload_bytes_to_s3(
 
 # Try relative import first, fall back to absolute import
 try:
-    from .settings import load_settings
+    from .settings import load_settings, get_settings
     from .filesystem import init_filesystems, get_output_fs
     from .tools import (
         list_resume_versions_tool,
@@ -270,7 +249,7 @@ try:
         compile_resume_pdf_tool,
     )
 except ImportError:
-    from myagent.settings import load_settings
+    from myagent.settings import load_settings, get_settings
     from myagent.filesystem import init_filesystems, get_output_fs
     from myagent.tools import (
         list_resume_versions_tool,
@@ -287,8 +266,35 @@ except ImportError:
         compile_resume_pdf_tool,
     )
 
-# Load environment variables from .env if present to support local development
-load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env", override=False)
+def _initialize_logging() -> Path:
+    settings = get_settings()
+    logs_dir = settings.logs_dir
+    logs_dir.mkdir(parents=True, exist_ok=True)
+
+    log_path = logs_dir / "mcp_server.log"
+
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    logger.handlers.clear()
+
+    file_handler = logging.FileHandler(log_path, encoding="utf-8")
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
+
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+
+    return log_path
+
+
+mcp_log_file = _initialize_logging()
 
 # Create FastMCP instance
 mcp = FastMCP("Resume Agent Tools")
