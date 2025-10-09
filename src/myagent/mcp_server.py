@@ -13,6 +13,7 @@ import logging
 import time
 from pathlib import Path
 import mimetypes
+from urllib.parse import urlparse
 from typing import Union, Any, Callable
 from functools import wraps
 from starlette.requests import Request
@@ -730,16 +731,18 @@ def render_resume_pdf(version: str) -> dict[str, str]:
 
     This function combines LaTeX generation and PDF compilation in one step,
     persists the PDF to the configured output filesystem, uploads the file to
-    the configured S3-compatible storage, and returns a time-limited download
-    link for downstream clients.
+    the configured S3-compatible storage, and returns a public download link
+    for downstream clients.
 
     Args:
         version: Resume version name without extension (e.g., 'resume')
 
     Returns:
         Dictionary with keys:
-        - `signed_url`: Pre-signed URL to download the uploaded PDF.
+        - `public_url`: Direct URL to download the uploaded PDF.
         - `filename`: Suggested filename (including `.pdf` extension) for the rendered resume.
+        - `pdf_path`: Filesystem URI for the saved PDF.
+        - `latex_assets_dir`: Optional directory containing LaTeX sources for debugging.
     """
     # First render to LaTeX
     latex_result = render_resume_to_latex_tool(version)
@@ -796,6 +799,10 @@ def render_resume_pdf(version: str) -> dict[str, str]:
 
     s3_config_kwargs: dict[str, Any] = {"signature_version": "s3v4"}
     addressing_style = os.getenv("RESUME_S3_ADDRESSING_STYLE")
+    if not addressing_style and s3_endpoint:
+        endpoint_host = urlparse(s3_endpoint).hostname or ""
+        if endpoint_host and not endpoint_host.endswith("amazonaws.com"):
+            addressing_style = "path"
     if addressing_style:
         s3_config_kwargs["s3"] = {"addressing_style": addressing_style}
     client_kwargs["config"] = Config(**s3_config_kwargs)
@@ -812,6 +819,7 @@ def render_resume_pdf(version: str) -> dict[str, str]:
     object_key = f"{key_prefix}{filename}" if key_prefix else filename
 
     try:
+        # Upload without ACL - R2 doesn't support ACLs, rely on bucket public access settings
         s3_client.put_object(
             Bucket=s3_bucket,
             Key=object_key,
@@ -822,32 +830,49 @@ def render_resume_pdf(version: str) -> dict[str, str]:
         logger.error("Failed to upload resume PDF '%s' to bucket '%s': %s", filename, s3_bucket, exc, exc_info=True)
         raise RuntimeError("Failed to upload resume PDF to S3") from exc
 
-    try:
-        expiration_seconds = int(os.getenv("RESUME_S3_URL_EXPIRATION", "3600"))
-    except ValueError:
-        logger.warning("Invalid RESUME_S3_URL_EXPIRATION value. Falling back to 3600 seconds.")
-        expiration_seconds = 3600
+    # Some S3-compatible stores (e.g., Cloudflare R2) are eventually consistent for
+    # new objects. Poll for availability so the first click doesn't 404.
+    max_attempts = 5
+    for attempt in range(1, max_attempts + 1):
+        try:
+            s3_client.head_object(Bucket=s3_bucket, Key=object_key)
+            break
+        except (BotoCoreError, ClientError) as exc:
+            error_code = getattr(exc, "response", {}).get("Error", {}).get("Code")
+            if error_code in {"404", "NoSuchKey"} and attempt < max_attempts:
+                time.sleep(0.4 * attempt)
+                continue
+            logger.error(
+                "Failed to verify availability for '%s' in bucket '%s' after attempt %d/%d: %s",
+                object_key,
+                s3_bucket,
+                attempt,
+                max_attempts,
+                exc,
+                exc_info=True,
+            )
+            raise RuntimeError("Uploaded resume PDF is not yet available for download") from exc
 
-    try:
-        signed_url = s3_client.generate_presigned_url(
-            "get_object",
-            Params={"Bucket": s3_bucket, "Key": object_key},
-            ExpiresIn=expiration_seconds,
+    # Construct public URL - prioritize explicit public base URL
+    public_base_url = os.getenv("RESUME_S3_PUBLIC_BASE_URL")
+    if not public_base_url:
+        raise RuntimeError(
+            "RESUME_S3_PUBLIC_BASE_URL must be set to the public R2 domain "
+            "(e.g., https://pub-xxxxx.r2.dev or your custom domain)"
         )
-    except (BotoCoreError, ClientError) as exc:
-        logger.error(
-            "Failed to generate presigned URL for '%s' in bucket '%s': %s",
-            object_key,
-            s3_bucket,
-            exc,
-            exc_info=True,
-        )
-        raise RuntimeError("Failed to generate presigned URL for resume PDF") from exc
+    
+    if not public_base_url.endswith("/"):
+        public_base_url += "/"
+    public_url = public_base_url + object_key
 
-    return {
-        "signed_url": signed_url,
+    response: dict[str, str] = {
+        "public_url": public_url,
         "filename": filename,
     }
+    if pdf_result.latex_assets_dir:
+        response["latex_assets_dir"] = pdf_result.latex_assets_dir
+    response["pdf_path"] = pdf_result.pdf_path
+    return response
 
 
 def main(transport="stdio", port=8000):

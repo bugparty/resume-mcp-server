@@ -3,6 +3,9 @@ import shutil
 import tempfile
 import json
 
+from fs.copy import copy_fs
+from fs.osfs import OSFS
+
 from langchain_core.messages import HumanMessage
 from .llm_config import get_thinking_llm
 from .resume_loader import (
@@ -83,6 +86,10 @@ class CompileResumeInput(BaseModel):
 
 class CompileResumeOutput(BaseModel):
     pdf_path: str = Field(..., description="Filesystem path to the generated PDF")
+    latex_assets_dir: str | None = Field(
+        default=None,
+        description="Filesystem path to the directory containing LaTeX sources and assets used for compilation.",
+    )
 
 # --- Tool Implementation Functions ---
 def list_resume_versions_tool() -> str:
@@ -312,18 +319,33 @@ def compile_resume_pdf_tool(tex_content: str, version_name: str = "resume") -> C
 
         compile_tex(tex_path)
         pdf_path = tex_path.with_suffix(".pdf")
-        
+
         # Generate filename with version name and timestamp
         from datetime import datetime
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_filename = f"{version_name}_{timestamp}.pdf"
-        
-        # Use output filesystem to save the PDF
+        latex_dir_name = f"{version_name}_{timestamp}_latex"
+
+        # Use output filesystem to save the PDF and LaTeX assets
         output_fs = get_output_fs()
-        with open(pdf_path, 'rb') as src_file:
+        with open(pdf_path, "rb") as src_file:
             output_fs.writebytes(output_filename, src_file.read())
 
-    return CompileResumeOutput(pdf_path="data://resumes/output/" + output_filename)
+        # Export LaTeX build directory for debugging
+        if output_fs.exists(latex_dir_name):
+            output_fs.removetree(latex_dir_name)
+        latex_subfs = output_fs.makedir(latex_dir_name, recreate=True)
+        try:
+            with OSFS(tmp_path) as tmp_fs:
+                copy_fs(tmp_fs, latex_subfs)
+        finally:
+            latex_subfs.close()
+
+    return CompileResumeOutput(
+        pdf_path="data://resumes/output/" + output_filename,
+        latex_assets_dir="data://resumes/output/" + latex_dir_name,
+    )
 
 # --- Tool Definitions ---
 tools = [

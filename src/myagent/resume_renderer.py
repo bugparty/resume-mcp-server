@@ -7,6 +7,9 @@ import subprocess
 from pathlib import Path
 from typing import Dict, List
 
+from fs.copy import copy_fs
+from fs.osfs import OSFS
+
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
 from .resume_loader import load_complete_resume_as_dict
@@ -21,8 +24,48 @@ LATEX_TEMPLATE_DIR = PROJECT_ROOT / "templates" / "latex"
 logger = logging.getLogger(__name__)
 
 
+UNICODE_LATEX_TOKENS = {
+    "×": "@@TEXTTIMES@@",
+    "•": "@@TEXTBULLET@@",
+    "…": "@@TEXTELLIPSIS@@",
+    "·": "@@TEXTMDOT@@",
+    "· ": "@@TEXTMDOT@@",  # with trailing space
+}
+
+UNICODE_SIMPLE_REPLACEMENTS = {
+    "–": "--",
+    "—": "---",
+    "−": "-",
+    "‑": "-",  # non-breaking hyphen
+    "“": "``",
+    "”": "''",
+    "‘": "`",
+    "’": "'",
+}
+
+
+def _preprocess_unicode(text: str) -> str:
+    for char, replacement in UNICODE_SIMPLE_REPLACEMENTS.items():
+        text = text.replace(char, replacement)
+    for char, token in UNICODE_LATEX_TOKENS.items():
+        text = text.replace(char, token)
+    return text
+
+
+def _restore_unicode_tokens(text: str) -> str:
+    replacements = {
+        "@@TEXTTIMES@@": r"$\times$",
+        "@@TEXTBULLET@@": r"\textbullet",
+        "@@TEXTELLIPSIS@@": r"\ldots",
+        "@@TEXTMDOT@@": r"\textperiodcentered",
+    }
+    for token, latex in replacements.items():
+        text = text.replace(token, latex)
+    return text
+
+
 def escape_tex(text: str) -> str:
-    text = str(text)
+    text = _preprocess_unicode(str(text))
     substitutions = {
         "\\": r"\textbackslash{}",
         "{": r"\{",
@@ -37,14 +80,16 @@ def escape_tex(text: str) -> str:
     }
     for old, new in substitutions.items():
         text = text.replace(old, new)
-    return text
+    return _restore_unicode_tokens(text)
 
 
 _LINK_PATTERN = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 
 
 def _apply_basic_markdown(text: str) -> str:
+    text = _preprocess_unicode(text)
     text = escape_tex(text)
+    text = _restore_unicode_tokens(text)
     text = text.replace("**", "__BOLD__")
     parts: List[str] = []
     bold = False

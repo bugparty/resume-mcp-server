@@ -10,4 +10,4 @@ wheels/
 .venv
 .env
 .DS_Store
-data/resumes/output/*.pdf
+data/resumes/output/**/*
