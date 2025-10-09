@@ -8,6 +8,21 @@ local filesystem and future S3 integration through configuration.
 from __future__ import annotations
 
 from typing import Optional
+import warnings
+warnings.filterwarnings(
+    "ignore",
+    message="pkg_resources is deprecated as an API",
+    category=UserWarning,
+    module="pkg_resources",
+)
+
+warnings.filterwarnings(
+    "ignore",
+    message="Deprecated call to `pkg_resources.declare_namespace",
+    category=DeprecationWarning,
+    module="pkg_resources",
+)
+
 from fs.base import FS
 from fs.osfs import OSFS
 from fs.memoryfs import MemoryFS
