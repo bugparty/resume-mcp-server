@@ -1,6 +1,7 @@
 from pathlib import Path
 import shutil
 import tempfile
+import json
 
 from langchain_core.messages import HumanMessage
 from .llm_config import get_thinking_llm
@@ -85,11 +86,16 @@ class CompileResumeOutput(BaseModel):
 
 # --- Tool Implementation Functions ---
 def list_resume_versions_tool() -> str:
-    """Return the available resume YAML versions stored in data/resumes."""
+    """Return the available resume versions as a JSON payload."""
     versions = find_resume_versions()
     if not versions:
-        return "[Error] No resume versions found."
-    return "\n".join([f"- {version}" for version in versions])
+        return json.dumps(
+            {"error": "No resume versions found.", "versions": [], "total": 0},
+            ensure_ascii=False,
+        )
+    return json.dumps(
+        {"versions": versions, "total": len(versions)}, ensure_ascii=False
+    )
 
 def load_resume_section_tool(module_path: str) -> str:
     """
