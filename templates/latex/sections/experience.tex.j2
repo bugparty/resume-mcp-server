@@ -32,7 +32,7 @@
 ((*- for entry in entries *))
   \cventry
     {((( entry.title | escape_tex )))}           % Position/Job Title
-    {((( entry.organization | escape_tex )))}    % Company Name
+  {((( entry.organization | markdown_to_latex )))}    % Company Name
     {((( entry.location | escape_tex )))}        % Location
     {((( entry.period | escape_tex )))}          % Time Period
     {

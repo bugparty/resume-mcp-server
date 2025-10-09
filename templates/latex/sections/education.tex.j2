@@ -32,7 +32,7 @@
 ((*- for entry in entries *))
   \cventry
     {((( entry.title | escape_tex )))}           % Degree
-    {((( entry.organization | escape_tex )))}    % School/University
+  {((( entry.organization | markdown_to_latex )))}    % School/University
     {((( entry.location | escape_tex )))}        % Location
     {((( entry.period | escape_tex )))}          % Time Period
     {

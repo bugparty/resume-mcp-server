@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import re
 import subprocess
 from pathlib import Path
 from typing import Dict, List
@@ -39,9 +40,10 @@ def escape_tex(text: str) -> str:
     return text
 
 
-def markdown_inline_to_latex(text: str) -> str:
-    # Bold
-    text = str(text).replace("\r\n", "\n").replace("\n", " ")
+_LINK_PATTERN = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+
+
+def _apply_basic_markdown(text: str) -> str:
     text = escape_tex(text)
     text = text.replace("**", "__BOLD__")
     parts: List[str] = []
@@ -53,7 +55,6 @@ def markdown_inline_to_latex(text: str) -> str:
             parts.append(chunk)
         bold = not bold
     text = "".join(parts)
-    # Italic
     text = text.replace("*", "__ITAL__")
     parts.clear()
     italic = False
@@ -63,6 +64,32 @@ def markdown_inline_to_latex(text: str) -> str:
         else:
             parts.append(chunk)
         italic = not italic
+    return "".join(parts)
+
+
+def markdown_inline_to_latex(text: str) -> str:
+    text = str(text).replace("\r\n", "\n").replace("\n", " ")
+    if not text:
+        return ""
+
+    parts: List[str] = []
+    last_end = 0
+    for match in _LINK_PATTERN.finditer(text):
+        if match.start() > last_end:
+            parts.append(_apply_basic_markdown(text[last_end : match.start()]))
+        label = match.group(1)
+        url = match.group(2)
+        label_latex = _apply_basic_markdown(label)
+        url_latex = escape_tex(url)
+        parts.append(r"\href{" + url_latex + r"}{" + label_latex + "}")
+        last_end = match.end()
+
+    if last_end < len(text):
+        parts.append(_apply_basic_markdown(text[last_end:]))
+
+    # If no links found, the above loop won't modify parts; handle plain text
+    if not parts:
+        return _apply_basic_markdown(text)
     return "".join(parts)
 
 
@@ -170,7 +197,7 @@ def render_entries(section: Dict[str, any]) -> str:
     lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cventries}"]
     for entry in section.get("entries", []):
         role = escape_tex(entry.get("title", "Role"))
-        organization = escape_tex(entry.get("organization", "Organization"))
+        organization = markdown_inline_to_latex(entry.get("organization", "Organization"))
         location = escape_tex(entry.get("location", ""))
         period = escape_tex(entry.get("period", ""))
         bullet_lines = []
@@ -196,7 +223,7 @@ def render_experience(section: Dict[str, any]) -> str:
     lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cventries}"]
     for entry in section.get("entries", []):
         position = escape_tex(entry.get("title", "Position"))
-        company = escape_tex(entry.get("organization", "Company"))
+        company = markdown_inline_to_latex(entry.get("organization", "Company"))
         location = escape_tex(entry.get("location", ""))
         period = escape_tex(entry.get("period", ""))
         bullet_lines = []
@@ -222,7 +249,7 @@ def render_projects(section: Dict[str, any]) -> str:
     lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cventries}"]
     for entry in section.get("entries", []):
         project_name = escape_tex(entry.get("title", "Project"))
-        context = escape_tex(entry.get("organization", ""))
+        context = markdown_inline_to_latex(entry.get("organization", ""))
         location = escape_tex(entry.get("location", ""))
         period = escape_tex(entry.get("period", ""))
         bullet_lines = []
@@ -248,7 +275,7 @@ def render_education(section: Dict[str, any]) -> str:
     lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cventries}"]
     for entry in section.get("entries", []):
         degree = escape_tex(entry.get("title", "Degree"))
-        school = escape_tex(entry.get("organization", "Institution"))
+        school = markdown_inline_to_latex(entry.get("organization", "Institution"))
         location = escape_tex(entry.get("location", ""))
         period = escape_tex(entry.get("period", ""))
         bullet_lines = []
