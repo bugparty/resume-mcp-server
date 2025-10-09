@@ -13,7 +13,13 @@ if str(SRC_PATH) not in sys.path:
 
 from myagent.settings import load_settings
 from myagent.filesystem import init_filesystems, reset_filesystems
-from myagent.resume_renderer import render_resume, compile_tex, markdown_inline_to_latex, escape_tex
+from myagent.resume_renderer import (
+    render_resume,
+    compile_tex,
+    markdown_inline_to_latex,
+    escape_tex,
+    _normalize_metadata,
+)
 from myagent.tools import compile_resume_pdf_tool
 
 FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "test_data"
@@ -84,3 +90,35 @@ def test_compile_exports_latex_assets(monkeypatch, tmp_path):
 
     reset_filesystems()
     init_filesystems(original_settings.resume_fs_url, original_settings.jd_fs_url)
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("bugparty", "bugparty"),
+        ("github.com/bugparty", "bugparty"),
+        ("https://github.com/bugparty", "bugparty"),
+        ("https://github.com/bugparty/", "bugparty"),
+        ("https://github.com/bugparty/awesome", "bugparty"),
+        ("HTTP://github.com/BugParty", "BugParty"),
+    ],
+)
+def test_normalize_metadata_github_handle(raw, expected):
+    normalized = _normalize_metadata({"github": raw})
+    assert normalized["github"] == expected
+
+
+@pytest.mark.parametrize(
+    "raw,expected",
+    [
+        ("bowmanhan", "bowmanhan"),
+        ("linkedin.com/in/bowmanhan", "bowmanhan"),
+        ("https://www.linkedin.com/in/bowmanhan", "bowmanhan"),
+        ("https://linkedin.com/in/bowmanhan/", "bowmanhan"),
+        ("https://linkedin.com/company/example", "example"),
+        ("LINKEDIN.COM/in/BowManHan", "BowManHan"),
+    ],
+)
+def test_normalize_metadata_linkedin_slug(raw, expected):
+    normalized = _normalize_metadata({"linkedin": raw})
+    assert normalized["linkedin"] == expected

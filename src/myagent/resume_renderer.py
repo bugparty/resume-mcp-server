@@ -5,7 +5,8 @@ import logging
 import re
 import subprocess
 from pathlib import Path
-from typing import Dict, List
+from typing import Any, Dict, List
+from urllib.parse import urlparse
 
 from fs.copy import copy_fs
 from fs.osfs import OSFS
@@ -62,6 +63,76 @@ def _restore_unicode_tokens(text: str) -> str:
     for token, latex in replacements.items():
         text = text.replace(token, latex)
     return text
+
+
+def _extract_github_handle(value: str) -> str:
+    raw = value.strip()
+    if not raw:
+        return raw
+
+    lower = raw.lower()
+    candidate = raw
+    if lower.startswith("http://") or lower.startswith("https://"):
+        parsed = urlparse(raw)
+    else:
+        parsed = urlparse("https://" + raw)
+
+    if parsed.netloc and parsed.netloc.lower().endswith("github.com"):
+        path = parsed.path.strip("/")
+        if path:
+            return path.split("/")[0]
+
+    if candidate.lower().startswith("github.com/"):
+        remainder = candidate.split("/", 1)[1]
+        return remainder.split("/")[0]
+
+    return raw
+
+
+def _extract_linkedin_slug(value: str) -> str:
+    raw = value.strip()
+    if not raw:
+        return raw
+
+    lower = raw.lower()
+    candidate = raw
+    if lower.startswith("http://") or lower.startswith("https://"):
+        parsed = urlparse(raw)
+    else:
+        parsed = urlparse("https://" + raw)
+
+    if parsed.netloc:
+        netloc = parsed.netloc.lower()
+        if netloc.endswith("linkedin.com"):
+            path = parsed.path.strip("/")
+            if path:
+                segments = path.split("/")
+                if segments[0] == "in" and len(segments) >= 2:
+                    return segments[1]
+                return segments[-1]
+
+    if candidate.lower().startswith("linkedin.com/"):
+        remainder = candidate.split("/", 1)[1]
+        parts = remainder.split("/")
+        if parts and parts[0].lower() == "in" and len(parts) >= 2:
+            return parts[1]
+        return parts[-1]
+
+    return raw
+
+
+def _normalize_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
+    if not metadata:
+        return metadata
+
+    normalized = dict(metadata)
+    github_value = metadata.get("github")
+    if isinstance(github_value, str) and github_value.strip():
+        normalized["github"] = _extract_github_handle(github_value)
+    linkedin_value = metadata.get("linkedin")
+    if isinstance(linkedin_value, str) and linkedin_value.strip():
+        normalized["linkedin"] = _extract_linkedin_slug(linkedin_value)
+    return normalized
 
 
 def escape_tex(text: str) -> str:
@@ -490,7 +561,7 @@ def render_resume(version: str) -> str:
         )
 
     # Get metadata and sections
-    metadata = data.get("metadata", {})
+    metadata = _normalize_metadata(data.get("metadata", {}))
     sections = data.get("sections", [])
 
     # Render all sections

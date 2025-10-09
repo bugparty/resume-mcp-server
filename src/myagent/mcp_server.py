@@ -120,12 +120,10 @@ try:
         load_complete_resume_tool,
         load_resume_section_tool,
         update_resume_section_tool,
-        analyze_jd_tool,
         create_new_version_tool,
         delete_resume_version_tool,
         update_main_resume_tool,
         list_modules_in_version_tool,
-        read_jd_file_tool,
         summarize_resumes_to_index_tool,
         read_resume_summary_tool,
         render_resume_to_latex_tool,
@@ -139,12 +137,10 @@ except ImportError:
         load_complete_resume_tool,
         load_resume_section_tool,
         update_resume_section_tool,
-        analyze_jd_tool,
         create_new_version_tool,
         delete_resume_version_tool,
         update_main_resume_tool,
         list_modules_in_version_tool,
-        read_jd_file_tool,
         summarize_resumes_to_index_tool,
         read_resume_summary_tool,
         render_resume_to_latex_tool,
@@ -186,11 +182,6 @@ Available Capabilities:
 - Render resumes to LaTeX and compile to PDF
 - Manage resume summaries and indexes
 - Read and compare multiple resume versions
-
-Tool Safety Categories:
-- **Read-Only Tools** *(no filesystem writes)*: `list_resume_versions`, `load_complete_resume`, `load_resume_section`, `analyze_jd`, `list_modules_in_version`, `read_jd_file`, `summarize_resumes_to_index`, `read_resume_summary`, `render_resume_to_latex`
-- **Write/Mutating Tools** *(persist changes or create files)*: `update_resume_section`, `create_new_version`, `delete_resume_version`, `update_main_resume`, `compile_resume_pdf`
-- Treat any other tools as read-only unless explicitly listed under write/mutating.
 
 Best Practices:
 - Always list available resume versions before loading
@@ -499,35 +490,6 @@ def list_modules_in_version(filename: str) -> str:
         filename: Resume filename (e.g., 'resume.yaml')
     """
     return list_modules_in_version_tool(filename)
-
-
-# Job Description Analysis Tools
-@mcp.tool(annotations=dict(readOnlyHint=True))
-@log_mcp_tool_call
-def analyze_jd(jd_text: str) -> str:
-    """
-    Analyzes job description text to extract key information.
-
-    Args:
-        jd_text: Job description text to analyze
-
-    Returns:
-        Structured analysis including job title, company, responsibilities, skills, etc.
-    """
-    return analyze_jd_tool(jd_text)
-
-
-@mcp.tool(annotations=dict(readOnlyHint=True))
-@log_mcp_tool_call
-def read_jd_file(filename: str) -> str:
-    """
-    Reads a job description file from the data/jd directory.
-
-    Args:
-        filename: JD filename (e.g., 'job1.txt'). Only .txt files are supported.
-    """
-    return read_jd_file_tool(filename)
-
 
 # Resume Summary and Index Tools
 @mcp.tool()
