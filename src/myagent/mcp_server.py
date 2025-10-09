@@ -9,6 +9,7 @@ allowing them to be used by MCP clients like Claude Desktop.
 import sys
 import os
 import json
+import base64
 import logging
 import time
 from pathlib import Path
@@ -109,7 +110,7 @@ def log_mcp_tool_call(func: Callable) -> Callable:
 # Try relative import first, fall back to absolute import
 try:
     from .settings import load_settings
-    from .filesystem import init_filesystems
+    from .filesystem import init_filesystems, get_output_fs
     from .tools import (
         list_resume_versions_tool,
         load_complete_resume_tool,
@@ -120,7 +121,6 @@ try:
         delete_resume_version_tool,
         update_main_resume_tool,
         list_modules_in_version_tool,
-        tailor_section_for_jd_tool,
         read_jd_file_tool,
         summarize_resumes_to_index_tool,
         read_resume_summary_tool,
@@ -129,7 +129,7 @@ try:
     )
 except ImportError:
     from myagent.settings import load_settings
-    from myagent.filesystem import init_filesystems
+    from myagent.filesystem import init_filesystems, get_output_fs
     from myagent.tools import (
         list_resume_versions_tool,
         load_complete_resume_tool,
@@ -140,7 +140,6 @@ except ImportError:
         delete_resume_version_tool,
         update_main_resume_tool,
         list_modules_in_version_tool,
-        tailor_section_for_jd_tool,
         read_jd_file_tool,
         summarize_resumes_to_index_tool,
         read_resume_summary_tool,
@@ -150,6 +149,73 @@ except ImportError:
 
 # Create FastMCP instance
 mcp = FastMCP("Resume Agent Tools")
+
+
+# Define server-level prompt to guide AI assistants
+@mcp.prompt()
+def resume_agent_prompt() -> list[dict]:
+    """
+    System prompt for the Resume Agent MCP Server.
+    
+    This prompt guides AI assistants on how to use this server effectively
+    for resume management and job application optimization.
+    """
+    return [
+        {
+            "role": "system",
+            "content": """You are a professional Resume Management Assistant powered by the Resume Agent MCP Server.
+
+Your primary responsibilities include:
+1. **Resume Version Management**: Help users create, manage, and organize multiple versions of their resumes
+2. **Content Optimization**: Tailor resume content to match specific job descriptions
+3. **Resume Rendering**: Generate professional PDF resumes from YAML data
+4. **Job Description Analysis**: Analyze job postings to identify key requirements and keywords
+
+Available Capabilities:
+- List and load resume versions from the data directory
+- Create new resume versions or update existing ones
+- Analyze job descriptions (JD) and extract key requirements
+- Update resume sections to match job requirements
+- Render resumes to LaTeX and compile to PDF
+- Manage resume summaries and indexes
+- Read and compare multiple resume versions
+
+Tool Safety Categories:
+- **Read-Only Tools** *(no filesystem writes)*: `list_resume_versions`, `load_complete_resume`, `load_resume_section`, `analyze_jd`, `list_modules_in_version`, `read_jd_file`, `summarize_resumes_to_index`, `read_resume_summary`, `render_resume_to_latex`
+- **Write/Mutating Tools** *(persist changes or create files)*: `update_resume_section`, `create_new_version`, `delete_resume_version`, `update_main_resume`, `compile_resume_pdf`
+- Treat any other tools as read-only unless explicitly listed under write/mutating.
+
+Best Practices:
+- Always list available resume versions before loading
+- When tailoring resumes, analyze the JD first to understand requirements
+- **IMPORTANT**: You CANNOT update the entire resume at once. You MUST update one section at a time using `update_resume_section`
+- Only update specific sections (e.g., 'resume/summary', 'resume/experience', 'resume/skills', 'resume/projects')
+- Never attempt to replace the complete resume YAML in a single operation
+- Minimize repetitive confirmations—if the user has requested help across multiple sections, acknowledge once and proceed section-by-section without asking for permission each time (unless the user explicitly requests step-by-step approval)
+- Keep resume content concise, professional, and achievement-focused
+- Use action verbs and quantifiable results when possible
+- Maintain consistent formatting across sections
+- Save different versions for different job applications
+
+Workflow Example:
+1. User provides a job description → analyze_jd to extract requirements
+2. List available resume versions → list_resume_versions
+3. Load relevant sections → load_resume_section or load_complete_resume
+4. Manually review and optimize content based on JD analysis
+5. **Update ONE section at a time** → update_resume_section for each section (summary, experience, skills, etc.)
+6. Repeat step 5 for other sections that need updates, narrating progress periodically without over-asking for confirmation
+7. Generate PDF → render_resume_to_latex + compile_resume_pdf
+    - The render_resume_pdf tool returns a dictionary with `base64_pdf_content` and `filename`. Decode the Base64 content and save it using the provided filename when a downloadable file is required.
+
+**Critical Reminder**: 
+- The system does NOT support updating the entire resume in one call
+- You must break down resume updates into individual section updates
+- Each section update is a separate tool call to `update_resume_section`
+- Common sections: 'resume/summary', 'resume/experience', 'resume/projects', 'resume/skills', 'resume/header'
+
+Always be helpful, professional, and focused on creating compelling resume content that highlights the user's strengths."""
+        }
+    ]
 
 
 @mcp.custom_route("/health", methods=["GET"])
@@ -223,7 +289,8 @@ async def read_data_file(path: str) -> Union[str, bytes]:
         return file_path.read_bytes()
 
 
-@mcp.tool()
+@mcp.tool(
+annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
 def list_data_directory(path: str = "") -> str:
     """
@@ -282,14 +349,14 @@ def list_data_directory(path: str = "") -> str:
 
 
 # Resume Version Management Tools
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
 def list_resume_versions() -> str:
     """Lists all available resume versions stored as YAML files."""
     return list_resume_versions_tool()
 
 
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
 def load_complete_resume(filename: str) -> str:
     """
@@ -301,7 +368,7 @@ def load_complete_resume(filename: str) -> str:
     return load_complete_resume_tool(filename)
 
 
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
 def load_resume_section(module_path: str) -> str:
     """
@@ -411,7 +478,7 @@ def delete_resume_version(version_name: str) -> str:
     return delete_resume_version_tool(version_name)
 
 
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
 def list_modules_in_version(filename: str) -> str:
     """
@@ -424,7 +491,7 @@ def list_modules_in_version(filename: str) -> str:
 
 
 # Job Description Analysis Tools
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
 def analyze_jd(jd_text: str) -> str:
     """
@@ -439,7 +506,7 @@ def analyze_jd(jd_text: str) -> str:
     return analyze_jd_tool(jd_text)
 
 
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
 def read_jd_file(filename: str) -> str:
     """
@@ -449,22 +516,6 @@ def read_jd_file(filename: str) -> str:
         filename: JD filename (e.g., 'job1.txt'). Only .txt files are supported.
     """
     return read_jd_file_tool(filename)
-
-
-@mcp.tool()
-@log_mcp_tool_call
-def tailor_section_for_jd(
-    module_path: str, section_content: str, jd_analysis: str
-) -> str:
-    """
-    Tailors the content of a specific resume section based on Job Description analysis.
-
-    Args:
-        module_path: Resume section path using 'version/section' format
-        section_content: Current Markdown content of the section
-        jd_analysis: The job description analysis result
-    """
-    return tailor_section_for_jd_tool(module_path, section_content, jd_analysis)
 
 
 # Resume Summary and Index Tools
@@ -481,7 +532,7 @@ def summarize_resumes_to_index() -> dict:
     return {"yaml_path": result.yaml_path, "message": result.message}
 
 
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
 def read_resume_summary() -> str:
     """
@@ -492,7 +543,7 @@ def read_resume_summary() -> str:
 
 
 # Resume Format Documentation Tools
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
 def get_resume_yaml_format() -> str:
     """
@@ -662,18 +713,22 @@ The following JSON schema defines the validation rules:
 # Resume Rendering Tools
 @mcp.tool()
 @log_mcp_tool_call
-def render_resume_pdf(version: str) -> str:
+def render_resume_pdf(version: str) -> dict[str, str]:
     """
-    Render a resume version directly to PDF file.
+    Render a resume version directly to PDF file. **This is a WRITE tool** because it
+    generates a new PDF under data/output.
 
-    This function combines LaTeX generation and PDF compilation in one step
-    and saves the PDF to the data/output directory with a meaningful filename.
+    This function combines LaTeX generation and PDF compilation in one step,
+    persists the PDF to the configured output filesystem, and returns the
+    binary file content for downstream clients.
 
     Args:
         version: Resume version name without extension (e.g., 'resume')
 
     Returns:
-        Filesystem path to the generated PDF file in data/output directory
+        Dictionary with keys:
+        - `base64_pdf_content`: Base64-encoded PDF bytes for direct download. Assistants should decode this string using Base64 and save the output using the provided filename when users need the document.
+        - `filename`: Suggested filename (including `.pdf` extension) for the rendered resume.
     """
     # First render to LaTeX
     latex_result = render_resume_to_latex_tool(version)
@@ -681,7 +736,25 @@ def render_resume_pdf(version: str) -> str:
 
     # Then compile to PDF - the tool now saves to data/output directory
     pdf_result = compile_resume_pdf_tool(latex_content, version)
-    return pdf_result.pdf_path
+    output_fs = get_output_fs()
+
+    # Extract filename from returned resource path (e.g., data://resumes/output/foo.pdf)
+    pdf_path = pdf_result.pdf_path
+    filename = pdf_path.split("/")[-1]
+
+    try:
+        with output_fs.open(filename, "rb") as pdf_file:
+            pdf_bytes = pdf_file.read()
+    except Exception as exc:
+        logger.error("Failed to read generated PDF '%s': %s", filename, exc, exc_info=True)
+        raise RuntimeError(f"Failed to read generated PDF '{filename}'") from exc
+
+    encoded_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
+
+    return {
+        "base64_pdf_content": encoded_pdf,
+        "filename": filename,
+    }
 
 
 def main(transport="stdio", port=8000):
