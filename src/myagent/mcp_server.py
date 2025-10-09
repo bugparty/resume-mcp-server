@@ -358,7 +358,11 @@ def list_data_directory(path: str = "") -> str:
 @mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
 def list_resume_versions() -> str:
-    """Lists all available resume versions stored as YAML files."""
+    """Lists all available resume versions stored as YAML files.
+
+    Returns:
+        JSON string containing the version names and total count.
+    """
     return list_resume_versions_tool()
 
 
