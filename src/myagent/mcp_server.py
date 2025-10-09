@@ -9,7 +9,6 @@ allowing them to be used by MCP clients like Claude Desktop.
 import sys
 import os
 import json
-import base64
 import logging
 import time
 from pathlib import Path
@@ -18,6 +17,10 @@ from typing import Union, Any, Callable
 from functools import wraps
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
+import boto3
+from botocore.config import Config
+from botocore.exceptions import BotoCoreError, ClientError
+from dotenv import load_dotenv
 
 # Add the src directory to Python path for imports
 if __name__ == "__main__":
@@ -147,6 +150,9 @@ except ImportError:
         compile_resume_pdf_tool,
     )
 
+# Load environment variables from .env if present to support local development
+load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env", override=False)
+
 # Create FastMCP instance
 mcp = FastMCP("Resume Agent Tools")
 
@@ -205,7 +211,7 @@ Workflow Example:
 5. **Update ONE section at a time** → update_resume_section for each section (summary, experience, skills, etc.)
 6. Repeat step 5 for other sections that need updates, narrating progress periodically without over-asking for confirmation
 7. Generate PDF → render_resume_to_latex + compile_resume_pdf
-    - The render_resume_pdf tool returns a dictionary with `base64_pdf_content` and `filename`. Decode the Base64 content and save it using the provided filename when a downloadable file is required.
+    - The render_resume_pdf tool uploads the generated PDF to configured object storage and returns a dictionary with a time-limited `signed_url` and `filename`. Download the file using the signed URL when a local copy is required.
 
 **Critical Reminder**: 
 - The system does NOT support updating the entire resume in one call
@@ -719,15 +725,16 @@ def render_resume_pdf(version: str) -> dict[str, str]:
     generates a new PDF under data/output.
 
     This function combines LaTeX generation and PDF compilation in one step,
-    persists the PDF to the configured output filesystem, and returns the
-    binary file content for downstream clients.
+    persists the PDF to the configured output filesystem, uploads the file to
+    the configured S3-compatible storage, and returns a time-limited download
+    link for downstream clients.
 
     Args:
         version: Resume version name without extension (e.g., 'resume')
 
     Returns:
         Dictionary with keys:
-        - `base64_pdf_content`: Base64-encoded PDF bytes for direct download. Assistants should decode this string using Base64 and save the output using the provided filename when users need the document.
+        - `signed_url`: Pre-signed URL to download the uploaded PDF.
         - `filename`: Suggested filename (including `.pdf` extension) for the rendered resume.
     """
     # First render to LaTeX
@@ -749,10 +756,92 @@ def render_resume_pdf(version: str) -> dict[str, str]:
         logger.error("Failed to read generated PDF '%s': %s", filename, exc, exc_info=True)
         raise RuntimeError(f"Failed to read generated PDF '{filename}'") from exc
 
-    encoded_pdf = base64.b64encode(pdf_bytes).decode("utf-8")
+    s3_bucket = (
+        os.getenv("RESUME_S3_BUCKET_NAME")
+        or os.getenv("RESUME_S3_BUCKET")
+        or os.getenv("S3_BUCKET_NAME")
+    )
+    if not s3_bucket:
+        raise RuntimeError(
+            "Resume S3 bucket not configured. Set RESUME_S3_BUCKET_NAME or S3_BUCKET_NAME."
+        )
+
+    s3_endpoint = os.getenv("RESUME_S3_ENDPOINT_URL") or os.getenv("S3_ENDPOINT_URL")
+    s3_region = os.getenv("RESUME_S3_REGION") or os.getenv("AWS_REGION")
+    access_key = (
+        os.getenv("RESUME_S3_ACCESS_KEY_ID")
+        or os.getenv("RESUME_S3_ACCESS_KEY")
+        or os.getenv("S3_ACCESS_KEY_ID")
+        or os.getenv("AWS_ACCESS_KEY_ID")
+    )
+    secret_key = (
+        os.getenv("RESUME_S3_SECRET_ACCESS_KEY")
+        or os.getenv("RESUME_S3_SECRET_KEY")
+        or os.getenv("S3_SECRET_ACCESS_KEY")
+        or os.getenv("AWS_SECRET_ACCESS_KEY")
+    )
+
+    client_kwargs: dict[str, Any] = {}
+    if s3_endpoint:
+        client_kwargs["endpoint_url"] = s3_endpoint
+    if s3_region:
+        client_kwargs["region_name"] = s3_region
+    if access_key and secret_key:
+        client_kwargs["aws_access_key_id"] = access_key
+        client_kwargs["aws_secret_access_key"] = secret_key
+
+    s3_config_kwargs: dict[str, Any] = {"signature_version": "s3v4"}
+    addressing_style = os.getenv("RESUME_S3_ADDRESSING_STYLE")
+    if addressing_style:
+        s3_config_kwargs["s3"] = {"addressing_style": addressing_style}
+    client_kwargs["config"] = Config(**s3_config_kwargs)
+
+    try:
+        s3_client = boto3.client("s3", **client_kwargs)
+    except Exception as exc:  # pragma: no cover - boto3 raises multiple subclasses
+        logger.error("Failed to create S3 client: %s", exc, exc_info=True)
+        raise RuntimeError("Failed to create S3 client for resume uploads") from exc
+
+    key_prefix = os.getenv("RESUME_S3_KEY_PREFIX", "resumes/")
+    if key_prefix and not key_prefix.endswith("/"):
+        key_prefix = f"{key_prefix}/"
+    object_key = f"{key_prefix}{filename}" if key_prefix else filename
+
+    try:
+        s3_client.put_object(
+            Bucket=s3_bucket,
+            Key=object_key,
+            Body=pdf_bytes,
+            ContentType="application/pdf",
+        )
+    except (BotoCoreError, ClientError) as exc:
+        logger.error("Failed to upload resume PDF '%s' to bucket '%s': %s", filename, s3_bucket, exc, exc_info=True)
+        raise RuntimeError("Failed to upload resume PDF to S3") from exc
+
+    try:
+        expiration_seconds = int(os.getenv("RESUME_S3_URL_EXPIRATION", "3600"))
+    except ValueError:
+        logger.warning("Invalid RESUME_S3_URL_EXPIRATION value. Falling back to 3600 seconds.")
+        expiration_seconds = 3600
+
+    try:
+        signed_url = s3_client.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": s3_bucket, "Key": object_key},
+            ExpiresIn=expiration_seconds,
+        )
+    except (BotoCoreError, ClientError) as exc:
+        logger.error(
+            "Failed to generate presigned URL for '%s' in bucket '%s': %s",
+            object_key,
+            s3_bucket,
+            exc,
+            exc_info=True,
+        )
+        raise RuntimeError("Failed to generate presigned URL for resume PDF") from exc
 
     return {
-        "base64_pdf_content": encoded_pdf,
+        "signed_url": signed_url,
         "filename": filename,
     }
 
