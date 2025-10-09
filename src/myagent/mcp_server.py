@@ -11,9 +11,13 @@ import os
 import json
 import logging
 import time
+import io
+import shutil
+import tempfile
+import zipfile
 from pathlib import Path
 import mimetypes
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
 from typing import Union, Any, Callable
 from functools import wraps
 from starlette.requests import Request
@@ -22,6 +26,8 @@ import boto3
 from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 from dotenv import load_dotenv
+from fs.copy import copy_fs
+from fs.osfs import OSFS
 
 # Ensure src-based imports resolve when running via `fastmcp inspect`
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -110,6 +116,139 @@ def log_mcp_tool_call(func: Callable) -> Callable:
             raise
 
     return wrapper
+
+
+# ---------------------------------------------------------------------------
+# S3 helpers
+# ---------------------------------------------------------------------------
+def _get_s3_client_and_settings() -> tuple[Any, str, str, str]:
+    """Create an S3 client using resume-related environment variables."""
+
+    s3_bucket = (
+        os.getenv("RESUME_S3_BUCKET_NAME")
+        or os.getenv("RESUME_S3_BUCKET")
+        or os.getenv("S3_BUCKET_NAME")
+    )
+    if not s3_bucket:
+        raise RuntimeError(
+            "Resume S3 bucket not configured. Set RESUME_S3_BUCKET_NAME or S3_BUCKET_NAME."
+        )
+
+    s3_endpoint = os.getenv("RESUME_S3_ENDPOINT_URL") or os.getenv("S3_ENDPOINT_URL")
+    s3_region = os.getenv("RESUME_S3_REGION") or os.getenv("AWS_REGION")
+    access_key = (
+        os.getenv("RESUME_S3_ACCESS_KEY_ID")
+        or os.getenv("RESUME_S3_ACCESS_KEY")
+        or os.getenv("S3_ACCESS_KEY_ID")
+        or os.getenv("AWS_ACCESS_KEY_ID")
+    )
+    secret_key = (
+        os.getenv("RESUME_S3_SECRET_ACCESS_KEY")
+        or os.getenv("RESUME_S3_SECRET_KEY")
+        or os.getenv("S3_SECRET_ACCESS_KEY")
+        or os.getenv("AWS_SECRET_ACCESS_KEY")
+    )
+
+    client_kwargs: dict[str, Any] = {}
+    if s3_endpoint:
+        client_kwargs["endpoint_url"] = s3_endpoint
+    if s3_region:
+        client_kwargs["region_name"] = s3_region
+    if access_key and secret_key:
+        client_kwargs["aws_access_key_id"] = access_key
+        client_kwargs["aws_secret_access_key"] = secret_key
+
+    s3_config_kwargs: dict[str, Any] = {"signature_version": "s3v4"}
+    addressing_style = os.getenv("RESUME_S3_ADDRESSING_STYLE")
+    if not addressing_style and s3_endpoint:
+        endpoint_host = urlparse(s3_endpoint).hostname or ""
+        if endpoint_host and not endpoint_host.endswith("amazonaws.com"):
+            addressing_style = "path"
+    if addressing_style:
+        s3_config_kwargs["s3"] = {"addressing_style": addressing_style}
+    client_kwargs["config"] = Config(**s3_config_kwargs)
+
+    try:
+        s3_client = boto3.client("s3", **client_kwargs)
+    except Exception as exc:  # pragma: no cover - boto3 can raise various subclasses
+        logger.error("Failed to create S3 client: %s", exc, exc_info=True)
+        raise RuntimeError("Failed to create S3 client for resume uploads") from exc
+
+    key_prefix = os.getenv("RESUME_S3_KEY_PREFIX", "resumes/")
+    if key_prefix and not key_prefix.endswith("/"):
+        key_prefix = f"{key_prefix}/"
+
+    public_base_url = os.getenv("RESUME_S3_PUBLIC_BASE_URL")
+    if not public_base_url:
+        raise RuntimeError(
+            "RESUME_S3_PUBLIC_BASE_URL must be set to the public R2 domain "
+            "(e.g., https://pub-xxxxx.r2.dev or your custom domain)"
+        )
+    if not public_base_url.endswith("/"):
+        public_base_url += "/"
+
+    return s3_client, s3_bucket, key_prefix, public_base_url
+
+
+def _build_object_key(filename: str, key_prefix: str) -> str:
+    return f"{key_prefix}{filename}" if key_prefix else filename
+
+
+def _ensure_s3_object_available(
+    s3_client: Any, bucket: str, object_key: str, description: str
+) -> None:
+    max_attempts = 5
+    for attempt in range(1, max_attempts + 1):
+        try:
+            s3_client.head_object(Bucket=bucket, Key=object_key)
+            return
+        except (BotoCoreError, ClientError) as exc:
+            error_code = getattr(exc, "response", {}).get("Error", {}).get("Code")
+            if error_code in {"404", "NoSuchKey"} and attempt < max_attempts:
+                time.sleep(0.4 * attempt)
+                continue
+            logger.error(
+                "Failed to verify availability for '%s' in bucket '%s' after attempt %d/%d: %s",
+                object_key,
+                bucket,
+                attempt,
+                max_attempts,
+                exc,
+                exc_info=True,
+            )
+            raise RuntimeError(
+                f"Uploaded {description} is not yet available for download"
+            ) from exc
+
+
+def _upload_bytes_to_s3(
+    data: bytes, filename: str, content_type: str, description: str
+) -> tuple[str, str]:
+    s3_client, s3_bucket, key_prefix, public_base_url = _get_s3_client_and_settings()
+    object_key = _build_object_key(filename, key_prefix)
+
+    try:
+        s3_client.put_object(
+            Bucket=s3_bucket,
+            Key=object_key,
+            Body=data,
+            ContentType=content_type,
+        )
+    except (BotoCoreError, ClientError) as exc:
+        logger.error(
+            "Failed to upload %s '%s' to bucket '%s': %s",
+            description,
+            filename,
+            s3_bucket,
+            exc,
+            exc_info=True,
+        )
+        raise RuntimeError(f"Failed to upload {description} to S3") from exc
+
+    _ensure_s3_object_available(s3_client, s3_bucket, object_key, description)
+
+    public_url = f"{public_base_url}{object_key}"
+    return public_url, object_key
 
 
 # Try relative import first, fall back to absolute import
@@ -245,8 +384,7 @@ async def read_data_file(path: str) -> Union[str, bytes]:
         path: Relative path within the data directory
 
     Returns:
-        - For files: string content for text files, bytes for binary files
-        - For directories: JSON string describing contained YAML files with their contents
+        File content as string for text files, bytes for binary files
     """
     data_dir = get_data_dir()
     file_path = data_dir / path
@@ -262,27 +400,6 @@ async def read_data_file(path: str) -> Union[str, bytes]:
 
     if not file_path.exists():
         raise FileNotFoundError(f"File not found: {path}")
-
-    if file_path.is_dir():
-        yaml_items = []
-        for item in sorted(file_path.glob("*.yml")) + sorted(file_path.glob("*.yaml")):
-            yaml_items.append(
-                {
-                    "name": item.name,
-                    "path": str(item.relative_to(data_dir)),
-                    "content": item.read_text(encoding="utf-8"),
-                }
-            )
-
-        return json.dumps(
-            {
-                "path": str(file_path.relative_to(data_dir)),
-                "type": "directory",
-                "item_count": len(yaml_items),
-                "yaml_files": yaml_items,
-            },
-            ensure_ascii=False,
-        )
 
     if not file_path.is_file():
         raise ValueError(f"Path is not a file: {path}")
@@ -748,107 +865,12 @@ def render_resume_pdf(version: str) -> dict[str, str]:
         logger.error("Failed to read generated PDF '%s': %s", filename, exc, exc_info=True)
         raise RuntimeError(f"Failed to read generated PDF '{filename}'") from exc
 
-    s3_bucket = (
-        os.getenv("RESUME_S3_BUCKET_NAME")
-        or os.getenv("RESUME_S3_BUCKET")
-        or os.getenv("S3_BUCKET_NAME")
+    public_url, _ = _upload_bytes_to_s3(
+        pdf_bytes,
+        filename,
+        "application/pdf",
+        "resume PDF",
     )
-    if not s3_bucket:
-        raise RuntimeError(
-            "Resume S3 bucket not configured. Set RESUME_S3_BUCKET_NAME or S3_BUCKET_NAME."
-        )
-
-    s3_endpoint = os.getenv("RESUME_S3_ENDPOINT_URL") or os.getenv("S3_ENDPOINT_URL")
-    s3_region = os.getenv("RESUME_S3_REGION") or os.getenv("AWS_REGION")
-    access_key = (
-        os.getenv("RESUME_S3_ACCESS_KEY_ID")
-        or os.getenv("RESUME_S3_ACCESS_KEY")
-        or os.getenv("S3_ACCESS_KEY_ID")
-        or os.getenv("AWS_ACCESS_KEY_ID")
-    )
-    secret_key = (
-        os.getenv("RESUME_S3_SECRET_ACCESS_KEY")
-        or os.getenv("RESUME_S3_SECRET_KEY")
-        or os.getenv("S3_SECRET_ACCESS_KEY")
-        or os.getenv("AWS_SECRET_ACCESS_KEY")
-    )
-
-    client_kwargs: dict[str, Any] = {}
-    if s3_endpoint:
-        client_kwargs["endpoint_url"] = s3_endpoint
-    if s3_region:
-        client_kwargs["region_name"] = s3_region
-    if access_key and secret_key:
-        client_kwargs["aws_access_key_id"] = access_key
-        client_kwargs["aws_secret_access_key"] = secret_key
-
-    s3_config_kwargs: dict[str, Any] = {"signature_version": "s3v4"}
-    addressing_style = os.getenv("RESUME_S3_ADDRESSING_STYLE")
-    if not addressing_style and s3_endpoint:
-        endpoint_host = urlparse(s3_endpoint).hostname or ""
-        if endpoint_host and not endpoint_host.endswith("amazonaws.com"):
-            addressing_style = "path"
-    if addressing_style:
-        s3_config_kwargs["s3"] = {"addressing_style": addressing_style}
-    client_kwargs["config"] = Config(**s3_config_kwargs)
-
-    try:
-        s3_client = boto3.client("s3", **client_kwargs)
-    except Exception as exc:  # pragma: no cover - boto3 raises multiple subclasses
-        logger.error("Failed to create S3 client: %s", exc, exc_info=True)
-        raise RuntimeError("Failed to create S3 client for resume uploads") from exc
-
-    key_prefix = os.getenv("RESUME_S3_KEY_PREFIX", "resumes/")
-    if key_prefix and not key_prefix.endswith("/"):
-        key_prefix = f"{key_prefix}/"
-    object_key = f"{key_prefix}{filename}" if key_prefix else filename
-
-    try:
-        # Upload without ACL - R2 doesn't support ACLs, rely on bucket public access settings
-        s3_client.put_object(
-            Bucket=s3_bucket,
-            Key=object_key,
-            Body=pdf_bytes,
-            ContentType="application/pdf",
-        )
-    except (BotoCoreError, ClientError) as exc:
-        logger.error("Failed to upload resume PDF '%s' to bucket '%s': %s", filename, s3_bucket, exc, exc_info=True)
-        raise RuntimeError("Failed to upload resume PDF to S3") from exc
-
-    # Some S3-compatible stores (e.g., Cloudflare R2) are eventually consistent for
-    # new objects. Poll for availability so the first click doesn't 404.
-    max_attempts = 5
-    for attempt in range(1, max_attempts + 1):
-        try:
-            s3_client.head_object(Bucket=s3_bucket, Key=object_key)
-            break
-        except (BotoCoreError, ClientError) as exc:
-            error_code = getattr(exc, "response", {}).get("Error", {}).get("Code")
-            if error_code in {"404", "NoSuchKey"} and attempt < max_attempts:
-                time.sleep(0.4 * attempt)
-                continue
-            logger.error(
-                "Failed to verify availability for '%s' in bucket '%s' after attempt %d/%d: %s",
-                object_key,
-                s3_bucket,
-                attempt,
-                max_attempts,
-                exc,
-                exc_info=True,
-            )
-            raise RuntimeError("Uploaded resume PDF is not yet available for download") from exc
-
-    # Construct public URL - prioritize explicit public base URL
-    public_base_url = os.getenv("RESUME_S3_PUBLIC_BASE_URL")
-    if not public_base_url:
-        raise RuntimeError(
-            "RESUME_S3_PUBLIC_BASE_URL must be set to the public R2 domain "
-            "(e.g., https://pub-xxxxx.r2.dev or your custom domain)"
-        )
-    
-    if not public_base_url.endswith("/"):
-        public_base_url += "/"
-    public_url = public_base_url + object_key
 
     response: dict[str, str] = {
         "public_url": public_url,
@@ -857,6 +879,95 @@ def render_resume_pdf(version: str) -> dict[str, str]:
     if pdf_result.latex_assets_dir:
         response["latex_assets_dir"] = pdf_result.latex_assets_dir
     response["pdf_path"] = pdf_result.pdf_path
+    return response
+
+
+@mcp.tool()
+@log_mcp_tool_call
+def render_resume_to_overleaf(version: str) -> dict[str, str]:
+    """
+    Render a resume version to a LaTeX project suitable for Overleaf import.
+
+    This tool generates the LaTeX sources without compiling them, bundles the
+    assets into a ZIP archive, uploads the archive to S3-compatible storage, and
+    returns an Overleaf import URL.
+
+    Args:
+        version: Resume version name without extension (e.g., 'resume')
+
+    Returns:
+        Dictionary with keys:
+        - `overleaf_url`: Direct link that opens the project in Overleaf via snip URI.
+        - `public_url`: Public URL of the uploaded ZIP archive.
+        - `filename`: Name of the ZIP archive stored in output storage.
+        - `zip_path`: Filesystem URI for the saved ZIP archive.
+        - `latex_assets_dir`: Directory containing the LaTeX sources for debugging.
+    """
+
+    latex_result = render_resume_to_latex_tool(version)
+    latex_content = latex_result.latex
+
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    zip_filename = f"{version}_{timestamp}_overleaf.zip"
+    latex_dir_name = f"{version}_{timestamp}_latex"
+
+    template_root = Path(__file__).resolve().parents[2] / "templates"
+    output_fs = get_output_fs()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+
+        tex_path = tmp_path / "main.tex"
+        tex_path.write_text(latex_content, encoding="utf-8")
+
+        essential_files = ["awesome-cv.cls", "profile.png"]
+        for filename in essential_files:
+            src_file = template_root / filename
+            if src_file.exists():
+                shutil.copy(src_file, tmp_path / filename)
+
+        fonts_src = template_root / "fonts"
+        if fonts_src.exists() and fonts_src.is_dir():
+            shutil.copytree(fonts_src, tmp_path / "fonts")
+
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            for path in tmp_path.rglob("*"):
+                if path.is_file():
+                    zip_file.write(path, arcname=str(path.relative_to(tmp_path)))
+
+        zip_bytes = zip_buffer.getvalue()
+
+        if output_fs.exists(latex_dir_name):
+            output_fs.removetree(latex_dir_name)
+        latex_subfs = output_fs.makedir(latex_dir_name, recreate=True)
+        try:
+            with OSFS(tmp_path) as tmp_fs:
+                copy_fs(tmp_fs, latex_subfs)
+        finally:
+            latex_subfs.close()
+
+    output_fs.writebytes(zip_filename, zip_bytes)
+
+    zip_path = f"data://resumes/output/{zip_filename}"
+    latex_assets_dir = f"data://resumes/output/{latex_dir_name}"
+
+    public_url, _ = _upload_bytes_to_s3(
+        zip_bytes,
+        zip_filename,
+        "application/zip",
+        "resume Overleaf package",
+    )
+
+    overleaf_url = f"https://www.overleaf.com/docs?snip_uri={quote(public_url, safe='')}&engine=xelatex"
+
+    response: dict[str, str] = {
+        "overleaf_url": overleaf_url,
+        "public_url": public_url,
+        "filename": zip_filename,
+        "zip_path": zip_path,
+        "latex_assets_dir": latex_assets_dir,
+    }
     return response
 
 
