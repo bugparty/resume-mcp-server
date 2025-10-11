@@ -21,7 +21,7 @@
 ((*- for entry in entries *))
   \cventry
     {((( entry.title | escape_tex )))}
-    {((( entry.organization | escape_tex )))}
+  {((( entry.organization | markdown_to_latex )))}
     {((( entry.location | escape_tex )))}
     {((( entry.period | escape_tex )))}
     {

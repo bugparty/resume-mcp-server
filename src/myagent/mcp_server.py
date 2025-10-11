@@ -11,47 +11,38 @@ import os
 import json
 import logging
 import time
+import io
+import shutil
+import tempfile
+import zipfile
 from pathlib import Path
 import mimetypes
+from urllib.parse import urlparse, quote
 from typing import Union, Any, Callable
 from functools import wraps
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
+import boto3
+from botocore.config import Config
+from botocore.exceptions import BotoCoreError, ClientError
+from dotenv import load_dotenv
+from fs.copy import copy_fs
+from fs.osfs import OSFS
 
-# Add the src directory to Python path for imports
-if __name__ == "__main__":
-    project_root = Path(__file__).resolve().parents[2]
-    sys.path.insert(0, str(project_root / "src"))
+# Ensure src-based imports resolve when running via `fastmcp inspect`
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SRC_PATH = PROJECT_ROOT / "src"
+if str(SRC_PATH) not in sys.path and SRC_PATH.exists():
+    sys.path.insert(0, str(SRC_PATH))
+
+# Load environment variables early so settings pick up overrides
+load_dotenv(dotenv_path=PROJECT_ROOT / ".env", override=False)
 
 from fastmcp import FastMCP
 
 # Configure logging for MCP server
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-# Create logs directory if it doesn't exist
-LOGS_DIR = Path(__file__).resolve().parents[2] / "logs"
-LOGS_DIR.mkdir(exist_ok=True)
-
-# File handler for MCP tool calls
-mcp_log_file = LOGS_DIR / "mcp_server.log"
-file_handler = logging.FileHandler(mcp_log_file, encoding="utf-8")
-file_handler.setLevel(logging.INFO)
-
-# Console handler for real-time feedback
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-
-# Formatter
-formatter = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-file_handler.setFormatter(formatter)
-console_handler.setFormatter(formatter)
-
-logger.addHandler(file_handler)
-logger.addHandler(console_handler)
 
 
 def log_mcp_tool_call(func: Callable) -> Callable:
@@ -106,68 +97,269 @@ def log_mcp_tool_call(func: Callable) -> Callable:
     return wrapper
 
 
+# ---------------------------------------------------------------------------
+# S3 helpers
+# ---------------------------------------------------------------------------
+def _get_s3_client_and_settings() -> tuple[Any, str, str, str]:
+    """Create an S3 client using resume-related environment variables."""
+
+    s3_bucket = (
+        os.getenv("RESUME_S3_BUCKET_NAME")
+        or os.getenv("RESUME_S3_BUCKET")
+        or os.getenv("S3_BUCKET_NAME")
+    )
+    if not s3_bucket:
+        raise RuntimeError(
+            "Resume S3 bucket not configured. Set RESUME_S3_BUCKET_NAME or S3_BUCKET_NAME."
+        )
+
+    s3_endpoint = os.getenv("RESUME_S3_ENDPOINT_URL") or os.getenv("S3_ENDPOINT_URL")
+    s3_region = os.getenv("RESUME_S3_REGION") or os.getenv("AWS_REGION")
+    access_key = (
+        os.getenv("RESUME_S3_ACCESS_KEY_ID")
+        or os.getenv("RESUME_S3_ACCESS_KEY")
+        or os.getenv("S3_ACCESS_KEY_ID")
+        or os.getenv("AWS_ACCESS_KEY_ID")
+    )
+    secret_key = (
+        os.getenv("RESUME_S3_SECRET_ACCESS_KEY")
+        or os.getenv("RESUME_S3_SECRET_KEY")
+        or os.getenv("S3_SECRET_ACCESS_KEY")
+        or os.getenv("AWS_SECRET_ACCESS_KEY")
+    )
+
+    client_kwargs: dict[str, Any] = {}
+    if s3_endpoint:
+        client_kwargs["endpoint_url"] = s3_endpoint
+    if s3_region:
+        client_kwargs["region_name"] = s3_region
+    if access_key and secret_key:
+        client_kwargs["aws_access_key_id"] = access_key
+        client_kwargs["aws_secret_access_key"] = secret_key
+
+    s3_config_kwargs: dict[str, Any] = {"signature_version": "s3v4"}
+    addressing_style = os.getenv("RESUME_S3_ADDRESSING_STYLE")
+    if not addressing_style and s3_endpoint:
+        endpoint_host = urlparse(s3_endpoint).hostname or ""
+        if endpoint_host and not endpoint_host.endswith("amazonaws.com"):
+            addressing_style = "path"
+    if addressing_style:
+        s3_config_kwargs["s3"] = {"addressing_style": addressing_style}
+    client_kwargs["config"] = Config(**s3_config_kwargs)
+
+    try:
+        s3_client = boto3.client("s3", **client_kwargs)
+    except Exception as exc:  # pragma: no cover - boto3 can raise various subclasses
+        logger.error("Failed to create S3 client: %s", exc, exc_info=True)
+        raise RuntimeError("Failed to create S3 client for resume uploads") from exc
+
+    key_prefix = os.getenv("RESUME_S3_KEY_PREFIX", "resumes/")
+    if key_prefix and not key_prefix.endswith("/"):
+        key_prefix = f"{key_prefix}/"
+
+    public_base_url = os.getenv("RESUME_S3_PUBLIC_BASE_URL")
+    if not public_base_url:
+        raise RuntimeError(
+            "RESUME_S3_PUBLIC_BASE_URL must be set to the public R2 domain "
+            "(e.g., https://pub-xxxxx.r2.dev or your custom domain)"
+        )
+    if not public_base_url.endswith("/"):
+        public_base_url += "/"
+
+    return s3_client, s3_bucket, key_prefix, public_base_url
+
+
+def _build_object_key(filename: str, key_prefix: str) -> str:
+    return f"{key_prefix}{filename}" if key_prefix else filename
+
+
+def _ensure_s3_object_available(
+    s3_client: Any, bucket: str, object_key: str, description: str
+) -> None:
+    max_attempts = 5
+    for attempt in range(1, max_attempts + 1):
+        try:
+            s3_client.head_object(Bucket=bucket, Key=object_key)
+            return
+        except (BotoCoreError, ClientError) as exc:
+            error_code = getattr(exc, "response", {}).get("Error", {}).get("Code")
+            if error_code in {"404", "NoSuchKey"} and attempt < max_attempts:
+                time.sleep(0.4 * attempt)
+                continue
+            logger.error(
+                "Failed to verify availability for '%s' in bucket '%s' after attempt %d/%d: %s",
+                object_key,
+                bucket,
+                attempt,
+                max_attempts,
+                exc,
+                exc_info=True,
+            )
+            raise RuntimeError(
+                f"Uploaded {description} is not yet available for download"
+            ) from exc
+
+
+def _upload_bytes_to_s3(
+    data: bytes, filename: str, content_type: str, description: str
+) -> tuple[str, str]:
+    s3_client, s3_bucket, key_prefix, public_base_url = _get_s3_client_and_settings()
+    object_key = _build_object_key(filename, key_prefix)
+
+    try:
+        s3_client.put_object(
+            Bucket=s3_bucket,
+            Key=object_key,
+            Body=data,
+            ContentType=content_type,
+        )
+    except (BotoCoreError, ClientError) as exc:
+        logger.error(
+            "Failed to upload %s '%s' to bucket '%s': %s",
+            description,
+            filename,
+            s3_bucket,
+            exc,
+            exc_info=True,
+        )
+        raise RuntimeError(f"Failed to upload {description} to S3") from exc
+
+    _ensure_s3_object_available(s3_client, s3_bucket, object_key, description)
+
+    public_url = f"{public_base_url}{object_key}"
+    return public_url, object_key
+
+
 # Try relative import first, fall back to absolute import
 try:
-    from .settings import load_settings
-    from .filesystem import init_filesystems
+    from .settings import load_settings, get_settings
+    from .filesystem import init_filesystems, get_output_fs
     from .tools import (
         list_resume_versions_tool,
         load_complete_resume_tool,
         load_resume_section_tool,
         update_resume_section_tool,
-        analyze_jd_tool,
         create_new_version_tool,
         delete_resume_version_tool,
         update_main_resume_tool,
         list_modules_in_version_tool,
-        tailor_section_for_jd_tool,
-        read_jd_file_tool,
         summarize_resumes_to_index_tool,
         read_resume_summary_tool,
         render_resume_to_latex_tool,
         compile_resume_pdf_tool,
     )
 except ImportError:
-    from myagent.settings import load_settings
-    from myagent.filesystem import init_filesystems
+    from myagent.settings import load_settings, get_settings
+    from myagent.filesystem import init_filesystems, get_output_fs
     from myagent.tools import (
         list_resume_versions_tool,
         load_complete_resume_tool,
         load_resume_section_tool,
         update_resume_section_tool,
-        analyze_jd_tool,
         create_new_version_tool,
         delete_resume_version_tool,
         update_main_resume_tool,
         list_modules_in_version_tool,
-        tailor_section_for_jd_tool,
-        read_jd_file_tool,
         summarize_resumes_to_index_tool,
         read_resume_summary_tool,
         render_resume_to_latex_tool,
         compile_resume_pdf_tool,
     )
 
-settings = None
-def init():
-    global logger, settings
-    """Initialize settings and filesystems."""
-    # Initialize filesystem before starting server
-    logger.info("=" * 80)
-    logger.info("Starting MCP Server for Resume Agent Tools")
-    logger.info(f"Log file: {mcp_log_file}")
-    logger.info("=" * 80)
+def _initialize_logging() -> Path:
+    settings = get_settings()
+    logs_dir = settings.logs_dir
+    logs_dir.mkdir(parents=True, exist_ok=True)
 
-    settings = load_settings()
-    init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
+    log_path = logs_dir / "mcp_server.log"
 
-    logger.info("Filesystems initialized")
-    logger.info("MCP Server ready to accept connections")
-    logger.info("=" * 80 + "\n")
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    logger.handlers.clear()
+
+    file_handler = logging.FileHandler(log_path, encoding="utf-8")
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(formatter)
+
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+
+    return log_path
+
+
+mcp_log_file = _initialize_logging()
 
 # Create FastMCP instance
 mcp = FastMCP("Resume Agent Tools")
-init()
+
+
+# Define server-level prompt to guide AI assistants
+@mcp.prompt()
+def resume_agent_prompt() -> list[dict]:
+    """
+    System prompt for the Resume Agent MCP Server.
+    
+    This prompt guides AI assistants on how to use this server effectively
+    for resume management and job application optimization.
+    """
+    return [
+        {
+            "role": "system",
+            "content": """You are a professional Resume Management Assistant powered by the Resume Agent MCP Server.
+
+Your primary responsibilities include:
+1. **Resume Version Management**: Help users create, manage, and organize multiple versions of their resumes
+2. **Content Optimization**: Tailor resume content to match specific job descriptions
+3. **Resume Rendering**: Generate professional PDF resumes from YAML data
+4. **Job Description Analysis**: Analyze job postings to identify key requirements and keywords
+
+Available Capabilities:
+- List and load resume versions from the data directory
+- Create new resume versions or update existing ones
+- Analyze job descriptions (JD) and extract key requirements
+- Update resume sections to match job requirements
+- Render resumes to LaTeX and compile to PDF
+- Manage resume summaries and indexes
+- Read and compare multiple resume versions
+
+Best Practices:
+- Always list available resume versions before loading
+- When tailoring resumes, analyze the JD first to understand requirements
+- **IMPORTANT**: You CANNOT update the entire resume at once. You MUST update one section at a time using `update_resume_section`
+- Only update specific sections (e.g., 'resume/summary', 'resume/experience', 'resume/skills', 'resume/projects')
+- Never attempt to replace the complete resume YAML in a single operation
+- Minimize repetitive confirmations—if the user has requested help across multiple sections, acknowledge once and proceed section-by-section without asking for permission each time (unless the user explicitly requests step-by-step approval)
+- Keep resume content concise, professional, and achievement-focused
+- Use action verbs and quantifiable results when possible
+- Maintain consistent formatting across sections
+- Save different versions for different job applications
+
+Workflow Example:
+1. User provides a job description → analyze_jd to extract requirements
+2. List available resume versions → list_resume_versions
+3. Load relevant sections → load_resume_section or load_complete_resume
+4. Manually review and optimize content based on JD analysis
+5. **Update ONE section at a time** → update_resume_section for each section (summary, experience, skills, etc.)
+6. Repeat step 5 for other sections that need updates, narrating progress periodically without over-asking for confirmation
+7. Generate PDF → render_resume_to_latex + compile_resume_pdf
+    - The render_resume_pdf tool uploads the generated PDF to configured object storage and returns a dictionary with a time-limited `signed_url` and `filename`. Download the file using the signed URL when a local copy is required.
+
+**Critical Reminder**: 
+- The system does NOT support updating the entire resume in one call
+- You must break down resume updates into individual section updates
+- Each section update is a separate tool call to `update_resume_section`
+- Common sections: 'resume/summary', 'resume/experience', 'resume/projects', 'resume/skills', 'resume/header'
+
+Always be helpful, professional, and focused on creating compelling resume content that highlights the user's strengths."""
+        }
+    ]
 
 
 @mcp.custom_route("/health", methods=["GET"])
@@ -241,7 +433,8 @@ async def read_data_file(path: str) -> Union[str, bytes]:
         return file_path.read_bytes()
 
 
-@mcp.tool()
+@mcp.tool(
+annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
 def list_data_directory(path: str = "") -> str:
     """
@@ -300,14 +493,18 @@ def list_data_directory(path: str = "") -> str:
 
 
 # Resume Version Management Tools
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
 def list_resume_versions() -> str:
-    """Lists all available resume versions stored as YAML files."""
+    """Lists all available resume versions stored as YAML files.
+
+    Returns:
+        JSON string containing the version names and total count.
+    """
     return list_resume_versions_tool()
 
 
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
 def load_complete_resume(filename: str) -> str:
     """
@@ -319,7 +516,7 @@ def load_complete_resume(filename: str) -> str:
     return load_complete_resume_tool(filename)
 
 
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
 def load_resume_section(module_path: str) -> str:
     """
@@ -429,7 +626,7 @@ def delete_resume_version(version_name: str) -> str:
     return delete_resume_version_tool(version_name)
 
 
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
 def list_modules_in_version(filename: str) -> str:
     """
@@ -439,51 +636,6 @@ def list_modules_in_version(filename: str) -> str:
         filename: Resume filename (e.g., 'resume.yaml')
     """
     return list_modules_in_version_tool(filename)
-
-
-# Job Description Analysis Tools
-@mcp.tool()
-@log_mcp_tool_call
-def analyze_jd(jd_text: str) -> str:
-    """
-    Analyzes job description text to extract key information.
-
-    Args:
-        jd_text: Job description text to analyze
-
-    Returns:
-        Structured analysis including job title, company, responsibilities, skills, etc.
-    """
-    return analyze_jd_tool(jd_text)
-
-
-@mcp.tool()
-@log_mcp_tool_call
-def read_jd_file(filename: str) -> str:
-    """
-    Reads a job description file from the data/jd directory.
-
-    Args:
-        filename: JD filename (e.g., 'job1.txt'). Only .txt files are supported.
-    """
-    return read_jd_file_tool(filename)
-
-
-@mcp.tool()
-@log_mcp_tool_call
-def tailor_section_for_jd(
-    module_path: str, section_content: str, jd_analysis: str
-) -> str:
-    """
-    Tailors the content of a specific resume section based on Job Description analysis.
-
-    Args:
-        module_path: Resume section path using 'version/section' format
-        section_content: Current Markdown content of the section
-        jd_analysis: The job description analysis result
-    """
-    return tailor_section_for_jd_tool(module_path, section_content, jd_analysis)
-
 
 # Resume Summary and Index Tools
 @mcp.tool()
@@ -499,7 +651,7 @@ def summarize_resumes_to_index() -> dict:
     return {"yaml_path": result.yaml_path, "message": result.message}
 
 
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
 def read_resume_summary() -> str:
     """
@@ -510,7 +662,7 @@ def read_resume_summary() -> str:
 
 
 # Resume Format Documentation Tools
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
 def get_resume_yaml_format() -> str:
     """
@@ -680,18 +832,25 @@ The following JSON schema defines the validation rules:
 # Resume Rendering Tools
 @mcp.tool()
 @log_mcp_tool_call
-def render_resume_pdf(version: str) -> str:
+def render_resume_pdf(version: str) -> dict[str, str]:
     """
-    Render a resume version directly to PDF file.
+    Render a resume version directly to PDF file. **This is a WRITE tool** because it
+    generates a new PDF under data/output.
 
-    This function combines LaTeX generation and PDF compilation in one step
-    and saves the PDF to the data/output directory with a meaningful filename.
+    This function combines LaTeX generation and PDF compilation in one step,
+    persists the PDF to the configured output filesystem, uploads the file to
+    the configured S3-compatible storage, and returns a public download link
+    for downstream clients.
 
     Args:
         version: Resume version name without extension (e.g., 'resume')
 
     Returns:
-        Filesystem path to the generated PDF file in data/output directory
+        Dictionary with keys:
+        - `public_url`: Direct URL to download the uploaded PDF.
+        - `filename`: Suggested filename (including `.pdf` extension) for the rendered resume.
+        - `pdf_path`: Filesystem URI for the saved PDF.
+        - `latex_assets_dir`: Optional directory containing LaTeX sources for debugging.
     """
     # First render to LaTeX
     latex_result = render_resume_to_latex_tool(version)
@@ -699,17 +858,185 @@ def render_resume_pdf(version: str) -> str:
 
     # Then compile to PDF - the tool now saves to data/output directory
     pdf_result = compile_resume_pdf_tool(latex_content, version)
-    return pdf_result.pdf_path
+    output_fs = get_output_fs()
+
+    # Extract filename from returned resource path (e.g., data://resumes/output/foo.pdf)
+    pdf_path = pdf_result.pdf_path
+    filename = pdf_path.split("/")[-1]
+
+    try:
+        with output_fs.open(filename, "rb") as pdf_file:
+            pdf_bytes = pdf_file.read()
+    except Exception as exc:
+        logger.error("Failed to read generated PDF '%s': %s", filename, exc, exc_info=True)
+        raise RuntimeError(f"Failed to read generated PDF '{filename}'") from exc
+
+    public_url, _ = _upload_bytes_to_s3(
+        pdf_bytes,
+        filename,
+        "application/pdf",
+        "resume PDF",
+    )
+
+    response: dict[str, str] = {
+        "public_url": public_url,
+        "filename": filename,
+    }
+    if pdf_result.latex_assets_dir:
+        response["latex_assets_dir"] = pdf_result.latex_assets_dir
+    response["pdf_path"] = pdf_result.pdf_path
+    return response
+
+
+@mcp.tool()
+@log_mcp_tool_call
+def render_resume_to_overleaf(version: str) -> dict[str, str]:
+    """
+    Render a resume version to a LaTeX project suitable for Overleaf import.
+
+    This tool generates the LaTeX sources without compiling them, bundles the
+    assets into a ZIP archive, uploads the archive to S3-compatible storage, and
+    returns an Overleaf import URL.
+
+    Args:
+        version: Resume version name without extension (e.g., 'resume')
+
+    Returns:
+        Dictionary with keys:
+        - `overleaf_url`: Direct link that opens the project in Overleaf via snip URI.
+        - `public_url`: Public URL of the uploaded ZIP archive.
+        - `filename`: Name of the ZIP archive stored in output storage.
+        - `zip_path`: Filesystem URI for the saved ZIP archive.
+        - `latex_assets_dir`: Directory containing the LaTeX sources for debugging.
+    """
+
+    latex_result = render_resume_to_latex_tool(version)
+    latex_content = latex_result.latex
+
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    zip_filename = f"{version}_{timestamp}_overleaf.zip"
+    latex_dir_name = f"{version}_{timestamp}_latex"
+
+    template_root = Path(__file__).resolve().parents[2] / "templates"
+    output_fs = get_output_fs()
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+
+        tex_path = tmp_path / "main.tex"
+        tex_path.write_text(latex_content, encoding="utf-8")
+
+        essential_files = ["awesome-cv.cls", "profile.png"]
+        for filename in essential_files:
+            src_file = template_root / filename
+            if src_file.exists():
+                shutil.copy(src_file, tmp_path / filename)
+
+        fonts_src = template_root / "fonts"
+        if fonts_src.exists() and fonts_src.is_dir():
+            shutil.copytree(fonts_src, tmp_path / "fonts")
+
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            for path in tmp_path.rglob("*"):
+                if path.is_file():
+                    zip_file.write(path, arcname=str(path.relative_to(tmp_path)))
+
+        zip_bytes = zip_buffer.getvalue()
+
+        if output_fs.exists(latex_dir_name):
+            output_fs.removetree(latex_dir_name)
+        latex_subfs = output_fs.makedir(latex_dir_name, recreate=True)
+        try:
+            with OSFS(tmp_path) as tmp_fs:
+                copy_fs(tmp_fs, latex_subfs)
+        finally:
+            latex_subfs.close()
+
+    output_fs.writebytes(zip_filename, zip_bytes)
+
+    zip_path = f"data://resumes/output/{zip_filename}"
+    latex_assets_dir = f"data://resumes/output/{latex_dir_name}"
+
+    public_url, _ = _upload_bytes_to_s3(
+        zip_bytes,
+        zip_filename,
+        "application/zip",
+        "resume Overleaf package",
+    )
+
+    overleaf_url = f"https://www.overleaf.com/docs?snip_uri={quote(public_url, safe='')}&engine=xelatex"
+
+    response: dict[str, str] = {
+        "overleaf_url": overleaf_url,
+        "public_url": public_url,
+        "filename": zip_filename,
+        "zip_path": zip_path,
+        "latex_assets_dir": latex_assets_dir,
+    }
+    return response
+
+
+def _resolve_transport(default_transport: str, default_port: int) -> tuple[str, int]:
+    env_transport = (
+        os.getenv("FASTMCP_TRANSPORT")
+        or os.getenv("MCP_TRANSPORT")
+        or os.getenv("TRANSPORT")
+    )
+    transport = (env_transport or default_transport).lower()
+    if transport not in {"http", "stdio"}:
+        logger.warning(
+            "Unknown transport '%s' specified via environment; falling back to '%s'",
+            transport,
+            default_transport,
+        )
+        transport = default_transport
+
+    env_port = (
+        os.getenv("FASTMCP_PORT")
+        or os.getenv("MCP_PORT")
+        or os.getenv("PORT")
+    )
+    port = default_port
+    if env_port:
+        try:
+            port = int(env_port)
+        except ValueError:
+            logger.warning(
+                "Invalid port value '%s'; using default %d",
+                env_port,
+                default_port,
+            )
+            port = default_port
+
+    return transport, port
 
 
 def main(transport="stdio", port=8000):
     """Main entry point for the MCP server."""
+    transport, port = _resolve_transport(transport, port)
+
+    # Initialize filesystem before starting server
+    logger.info("=" * 80)
+    logger.info("Starting MCP Server for Resume Agent Tools")
+    logger.info(f"Transport: {transport}")
+    if transport == "http":
+        logger.info(f"Port: {port}")
+    logger.info(f"Log file: {mcp_log_file}")
+    logger.info("=" * 80)
+
+    settings = load_settings()
+    init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
+
+    logger.info("Filesystems initialized")
+    logger.info("MCP Server ready to accept connections")
+    logger.info("=" * 80 + "\n")
+
     if transport == "http":
         mcp.run(transport="http", port=port, log_level="DEBUG")
     else:
-        mcp.run(log_level="DEBUG")
+        mcp.run()
 
 
 if __name__ == "__main__":
-    # Default to HTTP server when run directly
     main(transport="http", port=8000)

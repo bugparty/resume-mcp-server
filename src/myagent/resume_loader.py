@@ -13,6 +13,7 @@ import yaml
 from langchain_core.messages import HumanMessage
 
 from .llm_config import get_llm
+# Load settings early to determine log directory before configuring handlers
 from .settings import get_settings
 from .filesystem import get_resume_fs
 import rapidfuzz
@@ -26,8 +27,9 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 # Create logs directory if it doesn't exist
-LOGS_DIR = Path(__file__).resolve().parents[2] / "logs"
-LOGS_DIR.mkdir(exist_ok=True)
+SETTINGS = get_settings()
+LOGS_DIR = SETTINGS.logs_dir
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
 # File handler for markdown parse logs
 markdown_log_file = LOGS_DIR / "markdown_parsing.log"
@@ -444,14 +446,78 @@ def _render_resume(version: str) -> str:
     return "\n\n".join(filter(None, parts))
 
 
+HEADER_SECTION_TEMPLATE = """Header Section:
+        ## Header
+        first_name: John
+        last_name: Doe
+        position: Senior Software Engineer
+        address: San Francisco, CA
+        mobile: +1-234-567-8900
+        email: john.doe@example.com
+        github: github.com/johndoe
+        linkedin: linkedin.com/in/johndoe"""
+
+SECTION_HINTS_BY_TYPE: Dict[str, str] = {
+    "summary": """Summary Section:
+        ## Summary
+        - 8+ years driving impact across cloud-first products
+        - Highlight 3 quantifiable, recruiter-friendly achievements""",
+    "skills": """Skills Section:
+        ## Skills
+        - Programming: Python, TypeScript, Go
+        - Cloud Platforms: AWS, GCP, Kubernetes
+        - Tooling: Terraform, GitHub Actions, Datadog""",
+    "experience": """Experience Section:
+        ## Experience
+        ### Staff Software Engineer — Acme Corp (Remote) | 2021 - Present
+        - Quantify scope, systems owned, and measurable outcomes
+        - Lead with action verbs and include stack/tools""",
+    "projects": """Projects Section:
+        ## Projects
+        ### Generative AI Resume Agent — Personal (GitHub) | 2024
+        - One-line impact summary mentioning tech stack and result""",
+    "education": """Education Section:
+        ## Education
+        **M.S. Computer Science**, Stanford University | 2016 - 2018
+        - Coursework or honors relevant to the role""",
+    "raw": """Custom Section:
+        ## Section Title
+        Add concise paragraphs or bullets tailored to the role.""",
+}
+
+
 def list_modules_in_version(main_resume_filename: str) -> str:
     version = main_resume_filename.replace(".yaml", "")
     try:
         data = _load_resume(version)
     except FileNotFoundError:
         return f"[Error] Resume version not found: {version}"
-    section_ids = [section.get("id") for section in data.get("sections", [])]
-    return ", ".join(section_ids)
+
+    sections = data.get("sections", [])
+    section_ids = [section.get("id") for section in sections]
+
+    modules_listing = ", ".join(filter(None, section_ids))
+    header_hint = HEADER_SECTION_TEMPLATE
+
+    hints: List[str] = [header_hint]
+
+    for section in sections:
+        section_id = section.get("id", "section")
+        section_type = section.get("type", "raw")
+        hint = SECTION_HINTS_BY_TYPE.get(section_id) or SECTION_HINTS_BY_TYPE.get(section_type)
+        if hint:
+            hints.append(f"Module '{section_id}' Hint:\n{hint}")
+        else:
+            hints.append(
+                f"Module '{section_id}' Hint:\n        ## {section.get('title', section_id.title())}\n        Follow the existing structure and keep bullets outcome-focused."
+            )
+
+    hints.append(
+        "Available modules: "
+        + ("header, " + modules_listing if modules_listing else "header")
+    )
+
+    return "\n\n".join(hints)
 
 
 def load_resume_section(module_path: str) -> str:

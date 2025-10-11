@@ -107,7 +107,7 @@
 % Leave any of these blank if they are not needed
 \makecvfooter
   {\today}
-  {((( metadata.first_name | default('') ))) ((( metadata.last_name | default('') )))~~~·~~~Résumé}
+  {((( (((metadata.first_name | default('')) ~ (' ' if (metadata.first_name and metadata.last_name) else '') ~ (metadata.last_name | default(''))) | trim | escape_tex) )))~~~\textperiodcentered~~~Résumé}
   {\thepage}
 
 %-------------------------------------------------------------------------------
