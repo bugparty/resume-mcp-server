@@ -40,25 +40,7 @@
 \setCJKmainfont{Droid Sans Fallback}
 \setCJKsansfont{Droid Sans Fallback}
 \setCJKmonofont{Droid Sans Fallback}
-
-%-------------------------------------------------------------------------------
-%       SPACING ADJUSTMENTS
-%       Add some spacing between job titles and descriptions
-%-------------------------------------------------------------------------------
-% Redefine cventry to add more spacing before description
-\let\oldcventry\cventry
-\renewcommand*{\cventry}[5]{%
-  \vspace{-2.0mm}
-  \setlength\tabcolsep{0pt}
-  \setlength{\extrarowheight}{0pt}
-  \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}} L{\textwidth - 4.5cm} R{4.5cm}}
-    \ifempty{#2#3}
-      {\entrypositionstyle{#1} & \entrydatestyle{#4} \\}
-      {\entrytitlestyle{#2} & \entrylocationstyle{#3} \\
-      \entrypositionstyle{#1} & \entrydatestyle{#4} \\[0.3em]}  % Add spacing here
-    \multicolumn{2}{L{\textwidth}}{\descriptionstyle{#5}}
-  \end{tabular*}%
-}
+----------------------------------------------------------------------------
 
 %-------------------------------------------------------------------------------
 %	PERSONAL INFORMATION
