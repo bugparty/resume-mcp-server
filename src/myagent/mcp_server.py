@@ -148,8 +148,26 @@ except ImportError:
         compile_resume_pdf_tool,
     )
 
+settings = None
+def init():
+    global logger, settings
+    """Initialize settings and filesystems."""
+    # Initialize filesystem before starting server
+    logger.info("=" * 80)
+    logger.info("Starting MCP Server for Resume Agent Tools")
+    logger.info(f"Log file: {mcp_log_file}")
+    logger.info("=" * 80)
+
+    settings = load_settings()
+    init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
+
+    logger.info("Filesystems initialized")
+    logger.info("MCP Server ready to accept connections")
+    logger.info("=" * 80 + "\n")
+
 # Create FastMCP instance
 mcp = FastMCP("Resume Agent Tools")
+init()
 
 
 @mcp.custom_route("/health", methods=["GET"])
@@ -686,22 +704,6 @@ def render_resume_pdf(version: str) -> str:
 
 def main(transport="stdio", port=8000):
     """Main entry point for the MCP server."""
-    # Initialize filesystem before starting server
-    logger.info("=" * 80)
-    logger.info("Starting MCP Server for Resume Agent Tools")
-    logger.info(f"Transport: {transport}")
-    if transport == "http":
-        logger.info(f"Port: {port}")
-    logger.info(f"Log file: {mcp_log_file}")
-    logger.info("=" * 80)
-
-    settings = load_settings()
-    init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
-
-    logger.info("Filesystems initialized")
-    logger.info("MCP Server ready to accept connections")
-    logger.info("=" * 80 + "\n")
-
     if transport == "http":
         mcp.run(transport="http", port=port, log_level="DEBUG")
     else:
