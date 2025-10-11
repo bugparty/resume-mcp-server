@@ -122,7 +122,7 @@ dependencies = [
     "xxhash==3.5.0",
     "yarl==1.20.0",
     "zstandard==0.23.0",
-    "fastmcp>=0.1.0",
+    "fastmcp>=2.12.0",
     "fs>=2.4.16",
     "rapidfuzz>=3.14.1",
 ]

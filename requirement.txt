@@ -82,6 +82,12 @@ cloudpickle==3.1.1
     # via
     #   myagent (pyproject.toml)
     #   langgraph-api
+colorama==0.4.6
+    # via
+    #   click
+    #   loguru
+    #   pytest
+    #   tqdm
 coverage==7.8.0
     # via
     #   myagent (pyproject.toml)
@@ -577,6 +583,8 @@ watchfiles==1.0.5
     # via
     #   myagent (pyproject.toml)
     #   langgraph-api
+win32-setctime==1.2.0
+    # via loguru
 xxhash==3.5.0
     # via
     #   myagent (pyproject.toml)
