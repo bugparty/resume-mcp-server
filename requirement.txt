@@ -634,8 +634,6 @@ watchfiles==1.0.5
     # via
     #   myagent (pyproject.toml)
     #   langgraph-api
-werkzeug==3.1.1
-    # via openapi-core
 win32-setctime==1.2.0
     # via loguru
 xxhash==3.5.0

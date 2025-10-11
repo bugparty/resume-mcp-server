@@ -295,6 +295,8 @@ def _initialize_logging() -> Path:
 
 
 mcp_log_file = _initialize_logging()
+settings = load_settings()
+init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
 
 # Create FastMCP instance
 mcp = FastMCP("Resume Agent Tools")
@@ -1025,9 +1027,7 @@ def main(transport="stdio", port=8000):
     logger.info(f"Log file: {mcp_log_file}")
     logger.info("=" * 80)
 
-    settings = load_settings()
-    init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
-
+    
     logger.info("Filesystems initialized")
     logger.info("MCP Server ready to accept connections")
     logger.info("=" * 80 + "\n")
