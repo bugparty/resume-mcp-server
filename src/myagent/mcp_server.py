@@ -588,13 +588,13 @@ def update_resume_section(module_path: str, new_content: str) -> str:
         - Developed data processing pipeline for NLP tasks
         - Achieved 95% accuracy on sentiment analysis
     
-    Education Section (Raw format):
+    Education Section:
         ## Education
         **Master of Science in Computer Science**
         Stanford University | 2016 - 2018
         
         **Bachelor of Science in Computer Engineering**
-        UC Berkeley | 2012 - 2016
+        Stanford University (Palo Alto, CA) | 2012 - 2016
     """
     return update_resume_section_tool(module_path, new_content)
 

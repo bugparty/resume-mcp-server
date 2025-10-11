@@ -170,7 +170,17 @@ class TestResumeAddSkills(unittest.TestCase):
         # Verify projects section was updated correctly
         self.assertIn("Projects", result)
         self.assertIn("Intelligent Recommendation Engine Optimization", result)
-
+    def test_add_education(self):
+        module_path = f"{self.version}/education"
+        new_content = """ ## Education
+        **Master of Science in Computer Science**
+        Stanford University | 2016 - 2018"""
+        result = update_resume_section(module_path, new_content)
+        self.assertIn("[Success]", result)
+        self.assertIn("Master of Science in Computer Science", result)
+        self.assertIn("Stanford University", result)
+        self.assertIn("2016 - 2018", result)
+    
 
 if __name__ == "__main__":
     unittest.main()
