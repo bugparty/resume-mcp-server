@@ -29,7 +29,7 @@
 #))
 \cvsection{((( title | escape_tex )))}
 \begin{cventries}
-((*- for entry in entries *))
+((* for entry in entries *))
   \cventry
     {((( entry.title | escape_tex )))}           % Project Name
   {((( entry.organization | markdown_to_latex )))}    % Context (Personal/Academic/etc.)
@@ -38,12 +38,12 @@
     {
     ((*- if entry.bullets *))
       \begin{cvitems}
-      ((*- for bullet in entry.bullets *))
+      ((* for bullet in entry.bullets *))
         \item {((( bullet | markdown_to_latex )))}
-      ((*- endfor *))
+      ((* endfor *))
       \end{cvitems}
     ((*- endif *))
     }
-((*- endfor *))
+((* endfor *))
 \end{cventries}
 
