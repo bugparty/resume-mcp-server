@@ -12,8 +12,8 @@ from fs.copy import copy_fs
 from fs.osfs import OSFS
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
-from src.myagent.models.agent_resume import SectionType
-from .resume_loader import load_complete_resume_as_dict
+from myagent.models.agent_resume import SectionType
+from myagent.resume_loader import load_complete_resume_as_dict
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = PACKAGE_ROOT.parent.parent
