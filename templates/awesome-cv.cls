@@ -481,8 +481,14 @@
     \ifthenelse{\equal{#1}{L}}{\raggedright}{\ifthenelse{\equal{#1}{R}}{\raggedleft}{\centering}}
     \headerfirstnamestyle{\@firstname}\headerlastnamestyle{{}\acvHeaderNameDelim\@lastname}%
     \\[\acvHeaderAfterNameSkip]%
-    \ifthenelse{\isundefined{\@position}}{}{\headerpositionstyle{\@position\\[\acvHeaderAfterPositionSkip]}}%
-    \ifthenelse{\isundefined{\@address}}{}{\headeraddressstyle{\@address\\[\acvHeaderAfterAddressSkip]}}%
+    \ifthenelse{\isundefined{\@position}}{}{\headerpositionstyle{\@position}\\[\acvHeaderAfterPositionSkip]}%
+    \ifthenelse{\isundefined{\@address}}{}{\headeraddressstyle{\@address}\\[\acvHeaderAfterAddressSkip]}%
+    \newbool{hassocialinfo}%
+    \setbool{hassocialinfo}{false}%
+    \ifthenelse{\isundefined{\@mobile}\AND\isundefined{\@email}\AND\isundefined{\@dateofbirth}\AND\isundefined{\@homepage}\AND\isundefined{\@github}\AND\isundefined{\@gitlab}\AND\isundefined{\@bitbucket}\AND\isundefined{\@stackoverflowid}\AND\isundefined{\@linkedin}\AND\isundefined{\@orcid}\AND\isundefined{\@twitter}\AND\isundefined{\@x}\AND\isundefined{\@mastodonname}\AND\isundefined{\@skype}\AND\isundefined{\@reddit}\AND\isundefined{\@researchgate}\AND\isundefined{\@xing}\AND\isundefined{\@medium}\AND\isundefined{\@kaggle}\AND\isundefined{\@hackerrank}\AND\isundefined{\@telegram}\AND\isundefined{\@googlescholarid}\AND\isundefined{\@extrainfo}}%
+      {}%
+      {\setbool{hassocialinfo}{true}}%
+    \ifbool{hassocialinfo}{%
     \headersocialstyle{%
       \newbool{isstart}%
       \setbool{isstart}{true}%
@@ -625,7 +631,9 @@
           \ifbool{isstart}{\setbool{isstart}{false}}{\acvHeaderSocialSep}%
           \@extrainfo%
         }%
-    } \\[\acvHeaderAfterSocialSkip]%
+    }%
+    \\[\acvHeaderAfterSocialSkip]%
+    }{}%
     \ifthenelse{\isundefined{\@quote}}%
       {}%
       {\headerquotestyle{\@quote\\}\vspace{\acvHeaderAfterQuoteSkip}}%
@@ -692,7 +700,7 @@
       \entrypositionstyle{#1} & \entrydatestyle{#4} \\}
     \ifstrempty{#5}
       {}
-      {\multicolumn{2}{L{\textwidth}}{\descriptionstyle{#5}} \\}
+      {\multicolumn{2}{L{\textwidth}}{\descriptionstyle{\def\@incventry{true}#5}} \\}
   \end{tabular*}%
 }
 
@@ -758,7 +766,14 @@
 
 % Define an environment for cvitems(for cventry)
 \newenvironment{cvitems}{%
-  \vspace{-4.0mm}
+  % Check if we're inside a cventry by testing for the flag
+  \@ifundefined{@incventry}{%
+    % Not in cventry, add positive spacing for standalone use
+    \vspace{\acvSectionContentTopSkip}%
+  }{%
+    % Inside cventry, use negative spacing as before
+    \vspace{-4.0mm}%
+  }%
   \begin{justify}
   \begin{itemize}[leftmargin=2ex, nosep, noitemsep]
     \setlength{\parskip}{0pt}
