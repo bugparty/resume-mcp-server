@@ -1,0 +1,8 @@
+Tesla Internship - ML Performance
+
+We are seeking interns to optimize training performance on the Dojo supercomputer.
+Responsibilities include profiling PyTorch models, improving distributed training pipelines,
+and collaborating with hardware teams.
+
+Required skills: C++, Python, CUDA, performance analysis, distributed systems.
+Preferred experience: Deep learning frameworks, parallel programming, benchmarking tools.
