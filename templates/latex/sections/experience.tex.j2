@@ -29,21 +29,21 @@
 #))
 \cvsection{((( title | escape_tex )))}
 \begin{cventries}
-((*- for entry in entries *))
+((* for entry in entries *))
   \cventry
     {((( entry.title | escape_tex )))}           % Position/Job Title
   {((( entry.organization | markdown_to_latex )))}    % Company Name
     {((( entry.location | escape_tex )))}        % Location
     {((( entry.period | escape_tex )))}          % Time Period
     {
-    ((*- if entry.bullets *))
+    ((* if entry.bullets *))
       \begin{cvitems}
-      ((*- for bullet in entry.bullets *))
+      ((* for bullet in entry.bullets *))
         \item {((( bullet | markdown_to_latex )))}
-      ((*- endfor *))
+      ((* endfor *))
       \end{cvitems}
-    ((*- endif *))
+    ((* endif *))
     }
-((*- endfor *))
+((* endfor *))
 \end{cventries}
 

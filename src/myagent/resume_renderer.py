@@ -10,11 +10,10 @@ from urllib.parse import urlparse
 
 from fs.copy import copy_fs
 from fs.osfs import OSFS
-
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
-from .resume_loader import load_complete_resume_as_dict
-
+from myagent.models.agent_resume import SectionType
+from myagent.resume_loader import load_complete_resume_as_dict
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = PACKAGE_ROOT.parent.parent
@@ -268,6 +267,7 @@ def render_section_with_template(section: Dict[str, any]) -> str:
         TemplateNotFound: If template doesn't exist (falls back to entries.tex.j2)
     """
     section_type = section.get("type", "entries")
+    section_type = section_type_normalize_str(section_type)
     template_name = f"sections/{section_type}.tex.j2"
 
     try:
@@ -313,7 +313,9 @@ def render_entries(section: Dict[str, any]) -> str:
     lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cventries}"]
     for entry in section.get("entries", []):
         role = escape_tex(entry.get("title", "Role"))
-        organization = markdown_inline_to_latex(entry.get("organization", "Organization"))
+        organization = markdown_inline_to_latex(
+            entry.get("organization", "Organization")
+        )
         location = escape_tex(entry.get("location", ""))
         period = escape_tex(entry.get("period", ""))
         bullet_lines = []
@@ -430,10 +432,23 @@ LEGACY_RENDERERS = {
     "projects": render_projects,
     "education": render_education,
 }
+def section_type_normalize_str(section_type: SectionType | str) -> str:
+    """Normalize section type."""
+    type_str = ''
+    if section_type  in SectionType.__members__.values():
+        type_str = section_type.value
+    elif isinstance(section_type, str):
+        type_str = section_type
+    else:
+        raise TypeError(f"Unknown section type: {section_type}")
+    return type_str
 
 
 def render_section(section: Dict[str, any]) -> str:
-    renderer = SECTION_RENDERERS.get(section.get("type"))
+    section_type = section.get("type")
+    section_type = section_type_normalize_str(section_type)
+
+    renderer = SECTION_RENDERERS.get(section_type)
     if renderer:
         return renderer(section)
     title = escape_tex(section.get("title", section.get("id", "Section")))
@@ -479,9 +494,7 @@ def render_resume_legacy(version: str, metadata: Dict, sections: List) -> str:
     """
     header = resolve_template()
     header_lines = [line for line in header.splitlines() if line.strip()]
-    header_lines = [
-        line for line in header_lines if line.strip() != "\\end{document}"
-    ]
+    header_lines = [line for line in header_lines if line.strip() != "\\end{document}"]
 
     # Replace metadata placeholders
     def replace_or_append(command: str, value: str) -> None:
@@ -563,6 +576,54 @@ def render_resume(version: str) -> str:
     # Get metadata and sections
     metadata = _normalize_metadata(data.get("metadata", {}))
     sections = data.get("sections", [])
+
+    # Render all sections
+    sections_content = "\n".join(render_section(section) for section in sections)
+
+    # Render main template with metadata and sections
+    try:
+        main_template = jinja_env.get_template("resume_main.tex.j2")
+        return main_template.render(
+            metadata=metadata, sections_content=sections_content, version=version
+        )
+    except TemplateNotFound:
+        # Fallback to legacy rendering if new template doesn't exist
+        logger.warning(
+            "Main template resume_main.tex.j2 not found, using legacy rendering"
+        )
+        return render_resume_legacy(version, metadata, sections)
+
+
+def render_resume_from_dict(resume_dict: dict, version: str = "resume") -> str:
+    """
+    Render a complete resume from a dictionary (e.g., from Resume JSON).
+
+    This function accepts a resume dictionary (such as from Resume.to_dict())
+    and renders it to LaTeX using Jinja2 templates.
+
+    Args:
+        resume_dict: Resume data as dictionary with 'metadata' and 'sections'
+        version: Resume version name for reference (default: "resume")
+
+    Returns:
+        Complete LaTeX document as string
+
+    Raises:
+        ValueError: If data is not a dictionary or missing required fields
+        TemplateNotFound: If main template is missing
+    """
+    if not isinstance(resume_dict, dict):
+        raise ValueError(f"Expected dictionary, got {type(resume_dict).__name__}")
+
+    if "metadata" not in resume_dict:
+        raise ValueError("Resume dictionary must contain 'metadata' field")
+
+    if "sections" not in resume_dict:
+        raise ValueError("Resume dictionary must contain 'sections' field")
+
+    # Get metadata and sections
+    metadata = _normalize_metadata(resume_dict.get("metadata", {}))
+    sections = resume_dict.get("sections", [])
 
     # Render all sections
     sections_content = "\n".join(render_section(section) for section in sections)
