@@ -1,7 +1,7 @@
-# Python 3.12 + Debian Bookworm 的 VS Code Dev Container 基础镜像
+# Base VS Code Dev Container image for Python 3.12 on Debian Bookworm
 FROM mcr.microsoft.com/devcontainers/python:3.12-bookworm
 
-# 基础工具
+# Base tools
 USER root
 RUN set -eux; \
     apt-get update; \
@@ -11,7 +11,7 @@ RUN set -eux; \
       fonts-noto-cjk; \
     rm -rf /var/lib/apt/lists/*
 
-# 设置TeX Live环境变量
+# Configure TeX Live environment variables
 ENV TL_YEAR=2024
 ENV TL_ROOT=/usr/local/texlive/${TL_YEAR}
 ENV TL_BIN=${TL_ROOT}/bin/x86_64-linux
@@ -19,7 +19,7 @@ ENV PATH=${TL_BIN}:$PATH
 
 ENV CTAN_MIRROR=https://ctan.math.utah.edu/ctan/tex-archive/
 
-# 创建TeX Live配置文件
+# Create TeX Live profile
 RUN mkdir -p /tmp/tlinst && \
     echo 'selected_scheme scheme-full' > /tmp/texlive.profile && \
     echo 'TEXDIR /usr/local/texlive/2024' >> /tmp/texlive.profile && \
@@ -37,7 +37,7 @@ RUN mkdir -p /tmp/tlinst && \
     echo 'option_desktop_integration 0' >> /tmp/texlive.profile && \
     echo 'option_file_assocs 0' >> /tmp/texlive.profile
 
-# 安装 TeX Live 2024
+# Install TeX Live 2024
 RUN cd /tmp/tlinst && \
     echo "Downloading TeX Live installer..." && \
     wget --progress=dot:giga ${CTAN_MIRROR}/systems/texlive/tlnet/install-tl-unx.tar.gz && \
@@ -47,7 +47,7 @@ RUN cd /tmp/tlinst && \
     cd / && \
     rm -rf /tmp/tlinst /tmp/texlive.profile
 
-# 安装额外的LaTeX包
+# Install additional LaTeX packages
 RUN tlmgr option repository ${CTAN_MIRROR}/systems/texlive/tlnet && \
     tlmgr update --self --all && \
     tlmgr install \
@@ -73,7 +73,7 @@ RUN mkdir -p /usr/local/share/fonts/fandol && \
            /usr/local/share/fonts/fandol && \
     fc-cache -fv
 
-# 设置环境变量
+# Set environment variables
 ENV MANPATH=/usr/local/texlive/2024/texmf-dist/doc/man:$MANPATH
 ENV INFOPATH=/usr/local/texlive/2024/texmf-dist/doc/info:$INFOPATH
 
@@ -81,7 +81,7 @@ USER vscode
 ENV UV_LINK_MODE=copy UV_SYSTEM_PYTHON=1
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 切换回vscode用户
+# Switch back to vscode user
 USER vscode
 WORKDIR /workspace
 
