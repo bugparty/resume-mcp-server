@@ -61,7 +61,6 @@ The container will automatically create a public URL for ChatGPT integration. Se
    ```bash
    git clone <repository-url>
    cd resume_mcp
-   uv venv && source .venv/bin/activate
    uv sync
    ```
 
@@ -77,13 +76,32 @@ The container will automatically create a public URL for ChatGPT integration. Se
    - See full instructions in [MCP Setup Guide](./MCP_SETUP.md)
 
 4. **Start the MCP server**
+
+   **For Claude Desktop (STDIO mode):**
    ```bash
-   # HTTP mode (for testing)
-   uv run python scripts/start_mcp_server.py --transport http --port 8000
-   
-   # STDIO mode (for Claude Desktop)
    uv run python scripts/start_mcp_server.py --transport stdio
    ```
+
+   **For HTTP mode (testing/ChatGPT):**
+   ```bash
+   uv run python scripts/start_mcp_server.py --transport http --port 8000
+   ```
+
+5. **Expose via Cloudflare Tunnel (optional, for ChatGPT)**
+   
+   If using HTTP mode and want to access from ChatGPT:
+   
+   ```bash
+   # In another terminal, start Cloudflare tunnel
+   cloudflared tunnel --url http://localhost:8000
+   ```
+   
+   Cloudflare will return a URL like `https://xxx.trycloudflare.com`
+   
+   **ChatGPT client configuration:**
+   - Server URL: use the HTTPS URL from Cloudflare
+   - Authentication: None
+   - Protocol: HTTP/HTTPS
 
 ## 📚 Documentation
 
