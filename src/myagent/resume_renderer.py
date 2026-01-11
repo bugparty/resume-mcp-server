@@ -435,7 +435,7 @@ LEGACY_RENDERERS = {
 def section_type_normalize_str(section_type: SectionType | str) -> str:
     """Normalize section type."""
     type_str = ''
-    if section_type  in SectionType.__members__.values():
+    if isinstance(section_type, SectionType):
         type_str = section_type.value
     elif isinstance(section_type, str):
         type_str = section_type
