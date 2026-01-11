@@ -6,7 +6,7 @@
 
 ```bash
 cd resume_mcp
-python src/myagent/mcp_server.py
+uv run python src/myagent/mcp_server.py
 ```
 
 The server will start at http://localhost:8000 and expose an HTTP API.

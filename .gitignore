@@ -11,6 +11,6 @@ wheels/
 .env
 .DS_Store
 data/resumes/output/**/*
-samples/server-info.json
+server-info.json
 logs/*.log
-samples/
+samples/**/*
