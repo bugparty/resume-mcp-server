@@ -247,6 +247,9 @@ try:
         read_resume_summary_tool,
         render_resume_to_latex_tool,
         compile_resume_pdf_tool,
+        set_section_visibility_tool,
+        set_section_order_tool,
+        get_section_style_tool,
     )
 except ImportError:
     from myagent.settings import load_settings, get_settings
@@ -264,6 +267,9 @@ except ImportError:
         read_resume_summary_tool,
         render_resume_to_latex_tool,
         compile_resume_pdf_tool,
+        set_section_visibility_tool,
+        set_section_order_tool,
+        get_section_style_tool,
     )
 
 def _initialize_logging() -> Path:
@@ -597,6 +603,72 @@ def update_resume_section(module_path: str, new_content: str) -> str:
         Stanford University (Palo Alto, CA) | 2012 - 2016
     """
     return update_resume_section_tool(module_path, new_content)
+
+
+@mcp.tool()
+@log_mcp_tool_call
+def set_section_visibility(version: str, section_id: str, enabled: bool = True) -> str:
+    """
+    Enable or disable rendering of a specific section in a resume version.
+
+    Args:
+        version: Resume version name (without .yaml)
+        section_id: Section id to toggle (e.g., 'summary', 'experience')
+        enabled: True to show, False to hide
+    """
+    try:
+        result = set_section_visibility_tool(version, section_id, enabled)
+        payload = {"version": version, "section_id": section_id, "enabled": enabled}
+        try:
+            payload.update(result if isinstance(result, dict) else {})
+        except Exception:
+            pass
+        return json.dumps(payload)
+    except Exception as exc:
+        return json.dumps({"error": str(exc)})
+
+
+@mcp.tool()
+@log_mcp_tool_call
+def set_section_order(version: str, order: list[str]) -> str:
+    """
+    Set the rendering order of sections for a resume version.
+
+    Args:
+        version: Resume version name (without .yaml)
+        order: List of section ids in desired order; unknown ids are skipped and remaining sections are appended automatically.
+    """
+    try:
+        result = set_section_order_tool(version, order)
+        payload = {"version": version, "order": order}
+        try:
+            payload.update(result if isinstance(result, dict) else {})
+        except Exception:
+            pass
+        return json.dumps(payload)
+    except Exception as exc:
+        return json.dumps({"error": str(exc)})
+
+
+@mcp.tool(annotations=dict(readOnlyHint=True))
+@log_mcp_tool_call
+def get_section_style(version: str) -> str:
+    """
+    Get current section order and disabled flags for a resume version.
+
+    Args:
+        version: Resume version name (without .yaml)
+    """
+    try:
+        result = get_section_style_tool(version)
+        payload = {"version": version}
+        try:
+            payload.update(json.loads(result)) if isinstance(result, str) else payload.update(result)
+        except Exception:
+            payload["raw"] = result
+        return json.dumps(payload)
+    except Exception as exc:
+        return json.dumps({"error": str(exc)})
 
 
 @mcp.tool()

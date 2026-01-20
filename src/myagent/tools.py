@@ -19,6 +19,9 @@ from .resume_loader import (
     load_complete_resume,
     summarize_resumes_to_index,
     read_resume_summary,
+    set_section_visibility,
+    set_section_order,
+    get_section_style,
 )
 from .resume_renderer import render_resume, compile_tex
 from langchain.tools import StructuredTool
@@ -285,6 +288,33 @@ def read_resume_summary_tool() -> ReadResumeSummaryOutput:
     return ReadResumeSummaryOutput(**result)
 
 
+def set_section_visibility_tool(version: str, section_id: str, enabled: bool = True) -> str:
+    """Enable or disable a section by updating style.section_disabled."""
+    try:
+        result = set_section_visibility(version, section_id, enabled)
+        return json.dumps({"version": version, "section_id": section_id, "enabled": enabled, **result})
+    except Exception as exc:
+        return json.dumps({"error": str(exc)})
+
+
+def set_section_order_tool(version: str, order: list[str]) -> str:
+    """Set preferred section ordering for rendering."""
+    try:
+        result = set_section_order(version, order)
+        return json.dumps({"version": version, "order": order, **result})
+    except Exception as exc:
+        return json.dumps({"error": str(exc)})
+
+
+def get_section_style_tool(version: str) -> str:
+    """Get current section order and disabled map for a version."""
+    try:
+        result = get_section_style(version)
+        return json.dumps({"version": version, **result})
+    except Exception as exc:
+        return json.dumps({"error": str(exc)})
+
+
 def render_resume_to_latex_tool(version: str) -> RenderResumeOutput:
     """Render a resume version to LaTeX string."""
     latex = render_resume(version)
@@ -438,6 +468,24 @@ tools = [
         name="ReadResumeSummary",
         description="Reads the lightweight resume summary YAML and returns it as text.",
         args_schema=EmptyInput,
+        return_direct=False,
+    ),
+    StructuredTool.from_function(
+        func=set_section_visibility_tool,
+        name="SetSectionVisibility",
+        description="Enable or disable a section for rendering. Input: version (no extension), section_id, enabled (true/false).",
+        return_direct=False,
+    ),
+    StructuredTool.from_function(
+        func=set_section_order_tool,
+        name="SetSectionOrder",
+        description="Set preferred section order for a resume version. Input: version (no extension), order (list of section ids).",
+        return_direct=False,
+    ),
+    StructuredTool.from_function(
+        func=get_section_style_tool,
+        name="GetSectionStyle",
+        description="Get current section order and disabled flags for a resume version.",
         return_direct=False,
     ),
     StructuredTool.from_function(

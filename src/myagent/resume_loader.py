@@ -209,6 +209,75 @@ def _get_section(
     raise KeyError(error_message)
 
 
+def set_section_visibility(version: str, section_id: str, enabled: bool) -> Dict[str, Any]:
+    """Update style.section_disabled for a given section id.
+
+    Returns a dict with updated style block for callers to format.
+    """
+
+    data = _load_resume(version)
+    sections = data.get("sections") or []
+    if not any(isinstance(s, dict) and s.get("id") == section_id for s in sections):
+        raise KeyError(f"Section '{section_id}' not found in version '{version}'")
+
+    style = data.get("style") or {}
+    if not isinstance(style, dict):
+        style = {}
+
+    disabled = style.get("section_disabled") if isinstance(style.get("section_disabled"), dict) else {}
+    if enabled:
+        disabled.pop(section_id, None)
+    else:
+        disabled[section_id] = True
+
+    if disabled:
+        style["section_disabled"] = disabled
+    elif "section_disabled" in style:
+        style.pop("section_disabled", None)
+
+    data["style"] = style
+    _save_resume(version, data)
+    return {"style": style}
+
+
+def set_section_order(version: str, order: List[str]) -> Dict[str, Any]:
+    """Replace style.section_order with the provided list (filtered to known ids)."""
+
+    data = _load_resume(version)
+    sections = [s for s in data.get("sections") or [] if isinstance(s, dict)]
+    known_ids = [s.get("id") for s in sections if isinstance(s.get("id"), str)]
+    known_set = set(known_ids)
+
+    filtered_order = [sid for sid in order if isinstance(sid, str) and sid in known_set]
+
+    style = data.get("style") or {}
+    if not isinstance(style, dict):
+        style = {}
+
+    if filtered_order:
+        style["section_order"] = filtered_order
+    elif isinstance(style, dict):
+        style.pop("section_order", None)
+
+    data["style"] = style
+    _save_resume(version, data)
+    return {"style": style, "skipped_ids": [sid for sid in order if sid not in known_set]}
+
+
+def get_section_style(version: str) -> Dict[str, Any]:
+    """Return the current style settings (order/disabled) for a resume version."""
+
+    data = _load_resume(version)
+    style = data.get("style") if isinstance(data.get("style"), dict) else {}
+
+    order = style.get("section_order") if isinstance(style.get("section_order"), list) else []
+    disabled = (
+        style.get("section_disabled") if isinstance(style.get("section_disabled"), dict) else {}
+    )
+
+    return {"style": {"section_order": order, "section_disabled": disabled}}
+
+
 def _sanitize_title(section: Dict[str, Any]) -> str:
     title = section.get("title")
     if title:

@@ -134,6 +134,71 @@ def _normalize_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
     return normalized
 
 
+def _apply_section_style(
+    sections: List[Dict[str, Any]], style: Dict[str, Any]
+) -> List[Dict[str, Any]]:
+    """Reorder and filter sections based on optional style config.
+
+    - section_order: preferred list of section ids; missing ones are appended
+      in their original order
+    - section_disabled: map of id -> bool; listed True entries are omitted
+    """
+
+    if not sections:
+        return []
+
+    if not isinstance(style, dict):
+        return sections
+
+    order = style.get("section_order") if isinstance(style.get("section_order"), list) else []
+    disabled_map = (
+        style.get("section_disabled")
+        if isinstance(style.get("section_disabled"), dict)
+        else {}
+    )
+
+    def is_enabled(section: Dict[str, Any]) -> bool:
+        section_id = section.get("id")
+        disabled = disabled_map.get(section_id)
+        return False if disabled is True else True
+
+    section_by_id = {
+        section.get("id"): section
+        for section in sections
+        if isinstance(section, dict) and isinstance(section.get("id"), str)
+    }
+
+    ordered: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for section_id in order:
+        if not isinstance(section_id, str):
+            continue
+        section = section_by_id.get(section_id)
+        if section is None:
+            continue
+        if not is_enabled(section):
+            seen.add(section_id)
+            continue
+        ordered.append(section)
+        seen.add(section_id)
+
+    for section in sections:
+        if not isinstance(section, dict):
+            continue
+        section_id = section.get("id")
+        if section_id in seen:
+            continue
+        if not is_enabled(section):
+            seen.add(section_id)
+            continue
+        ordered.append(section)
+        if isinstance(section_id, str):
+            seen.add(section_id)
+
+    return ordered
+
+
 def escape_tex(text: str) -> str:
     text = _preprocess_unicode(str(text))
     substitutions = {
@@ -575,7 +640,8 @@ def render_resume(version: str) -> str:
 
     # Get metadata and sections
     metadata = _normalize_metadata(data.get("metadata", {}))
-    sections = data.get("sections", [])
+    style = data.get("style") or {}
+    sections = _apply_section_style(data.get("sections", []), style)
 
     # Render all sections
     sections_content = "\n".join(render_section(section) for section in sections)
@@ -623,7 +689,8 @@ def render_resume_from_dict(resume_dict: dict, version: str = "resume") -> str:
 
     # Get metadata and sections
     metadata = _normalize_metadata(resume_dict.get("metadata", {}))
-    sections = resume_dict.get("sections", [])
+    style = resume_dict.get("style") or {}
+    sections = _apply_section_style(resume_dict.get("sections", []), style)
 
     # Render all sections
     sections_content = "\n".join(render_section(section) for section in sections)

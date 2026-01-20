@@ -24,6 +24,23 @@
       },
       "additionalProperties": true
     },
+    "style": {
+      "type": "object",
+      "description": "Optional rendering preferences for section order and visibility",
+      "properties": {
+        "section_order": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Preferred ordering of section ids; missing sections are appended in original order"
+        },
+        "section_disabled": {
+          "type": "object",
+          "additionalProperties": {"type": "boolean"},
+          "description": "Map of section id to disable flag; listed true values are omitted"
+        }
+      },
+      "additionalProperties": false
+    },
     "sections": {
       "type": "array",
       "minItems": 1,
