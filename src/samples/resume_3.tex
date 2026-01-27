@@ -1,0 +1,99 @@
+\documentclass[11pt, a4paper]{awesome-cv}
+
+% Configure page margins with geometry
+\geometry{left=1.4cm, top=.8cm, right=1.4cm, bottom=1.8cm, footskip=.5cm}
+\fontdir[fonts/]
+\colorlet{awesome}{awesome-red}
+
+% Set false if you don't want to highlight section with awesome color
+\setbool{acvSectionColorHighlight}{true}
+
+% If you would like to change the social information separator from a pipe (|) to something else
+\renewcommand{\acvHeaderSocialSep}{\quad\textbar\quad}
+
+%-------------------------------------------------------------------------------
+%       CJK (Chinese/Japanese/Korean) Font Support
+%-------------------------------------------------------------------------------
+% Add Chinese font support using xeCJK
+\usepackage{xeCJK}
+% Set Chinese fonts (fallback to available system fonts)
+\setCJKmainfont{Droid Sans Fallback}
+\setCJKsansfont{Droid Sans Fallback}
+\setCJKmonofont{Droid Sans Fallback}
+
+%-------------------------------------------------------------------------------
+%	PERSONAL INFORMATION
+%	Comment any of the lines below if they are not required
+%-------------------------------------------------------------------------------
+% Available options: circle|rectangle,edge/noedge,left/right
+\name{徐**}{-}
+\position{大模型算法}
+
+%-------------------------------------------------------------------------------
+\begin{document}
+
+% Print the header with above personal informations
+% Give optional argument to change alignment(C: center, L: left, R: right)
+\makecvheader[C]
+
+% Print the footer with 3 arguments(<left>, <center>, <right>)
+% Leave any of these blank if they are not needed
+\makecvfooter
+  {\today}
+  {徐** -~~~\textperiodcentered~~~Résumé}
+  {\thepage}
+
+%-------------------------------------------------------------------------------
+%	CV/RESUME CONTENT
+%	Each section is imported separately, open each file in turn to modify content
+%-------------------------------------------------------------------------------
+\cvsection{Summary}
+\begin{cvitems}  \item {聚焦于dev infra 领域智能化。 熟悉大模型应用，agent， aiOps ，数据库平台}  \item {期望职位: 大模型算法 @ 南京, 70-100K}  \item {期望职位: 大模型算法 @ 上海, 90-120K}  \item {期望职位: 大模型算法 @ 杭州, 80-110K}\end{cvitems}
+
+
+\cvsection{Professional Experience}
+\begin{cventries}  \cventry
+    {高级算法专家}
+  {北京字节跳动科技有限公司}
+    {None}
+    {2024.04 - 至今}
+    {      \begin{cvitems}        \item {LLM应用，agent，豆包}      \end{cvitems}    }  \cventry
+    {算法专家}
+  {北京三快在线科技有限公司}
+    {None}
+    {2021.08 - 至今}
+    {      \begin{cvitems}        \item {数据库自治，LLM 应用}      \end{cvitems}    }  \cventry
+    {算法工程师}
+  {华为}
+    {None}
+    {2017.04 - 2021.08}
+    {      \begin{cvitems}        \item {从事 aiOps 、广告、用户体验相关算法的研究和落地，包括:}        \item {指标异常检测：使用时间序列处理、IForest 、概率分布建模等算法，基于时序特征，构建异常检测能力，支撑现网数百万 KPI 分钟级实时异常检测，为华为消费者云服务100+业务提供质量保障。}        \item {广告人群扩展：基于 GBDT 进行特征筛选，使用 LR/Linear SVM 进行分类建模，对广告主选定人群进行相似人群扩展，提高投放转化效果，1：1扩散转化率提升200\%+。}        \item {广告故障定位：基于广告业务流程和指标关联，使用 MDRCA 、对比分析、变更关联等算子，构建广告业务智能化故障定位能力，支持流程图注入及在线学习专家经验。这段准确率70\%+，部署于2个业务。}        \item {舆情监控：使用 BERT 算法，对 APP 反馈、电话工单、互联网等来源的用户舆情数据做 NLP 分类、标签化。基于标签化数据进行实时检测，发现舆情问题；挖掘热点话题，追踪舆情问题；覆盖10+APP。}        \item {灰度评估：使用分布建模、假设检验方法，对灰度上线过程中的用户体验、核心接口成功率、机器负载等指标进行灰度-现网对比评分，并对问题指标进行下钻分析，给出根因。已接入云服务10+业务。}        \item {用户体验分析：根据用户调查问卷，分析各业务指标与 NPS 的关系及权重，对产品改进提供方向及优先级建议，部署于云服务2个业务。}      \end{cvitems}    }  \cventry
+    {算法工程师}
+  {中国银联技术开发中心}
+    {None}
+    {2016.07 - 2016.10}
+    {      \begin{cvitems}        \item {实习经历：在银联技术清算室实习，团队负责利用机器学习从历史清算数据预测未来清算交易额，用来对未}        \item {来运营、清算配置规划提供数据支持。项目使用了 SVM、LSTM 算法。此外还负责部分清算交易}        \item {数据分析、统计报表工作。}      \end{cvitems}    }\end{cventries}
+
+
+\cvsection{Education}
+\begin{cventries}  \cventry
+    {博士}
+  {华东师范大学}
+    {None}
+    {2023 - 2027}
+    {      \begin{cvitems}        \item {专业: 电子与信息技术}      \end{cvitems}    }  \cventry
+    {硕士}
+  {南京航空航天大学}
+    {None}
+    {2014 - 2017}
+    {      \begin{cvitems}        \item {专业: 电子与通信工程}        \item {国家奖学金}        \item {全国研究生数学建模竞赛一等奖}      \end{cvitems}    }  \cventry
+    {本科}
+  {南京航空航天大学}
+    {None}
+    {2010 - 2014}
+    {      \begin{cvitems}        \item {专业: 信息工程}        \item {美国大学生数学建模竞赛（MCM）一等奖}      \end{cvitems}    }\end{cventries}
+
+
+%-------------------------------------------------------------------------------
+\end{document}
+

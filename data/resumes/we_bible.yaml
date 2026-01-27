@@ -1,0 +1,219 @@
+source: resume.tex
+metadata:
+  first_name: Bowen
+  last_name: Han
+  position: AI Infrastructure Engineer
+  address: Riverside, CA
+  mobile: +1-310-254-0932
+  email: fancycode@gmail.com
+  github: github.com/bugparty
+  linkedin: ''
+  stackoverflow: stackoverflow.com/users/502648
+style:
+  section_order:
+  - summary
+  - skills
+  - projects
+  - experience
+  - education
+sections:
+- type: summary
+  title: Summary
+  id: summary
+  bullets:
+  - AI Infrastructure Engineer with 9+ years of experience in AI and software systems,
+    from early Android/Android OS work at Baidu/Meituan to modern LLM fine-tuning
+    and reinforcement learning.
+  - Specialized in building intelligent agent systems using LLM-based architectures
+    (DeepSeek, LLaMA), RL algorithms (PPO, DQN), and frameworks like FastMCP, LangChain,
+    LangGraph, and FastAPI.
+  - Enable enterprises to deploy cost-efficient local agent systems by fine-tuning
+    smaller models (8B-32B) with RL, eliminating expensive ChatGPT API dependencies
+    and reducing inference costs by orders of magnitude; currently pursuing Master's
+    in Computer Engineering at UC Riverside.
+- type: entries
+  entries:
+  - title: Master of Science in Computer Engineering
+    organization: University of California Riverside
+    location: ''
+    period: Sep 2024 - Jun 2026
+    bullets: []
+  - title: Extension in Computer Science
+    organization: University of California Riverside
+    location: ''
+    period: Sep 2023 - Jun 2024
+    bullets: []
+  - title: Bachelor's Degree in Software Engineering
+    organization: HEUET (Harbin Engineering University of Technology), College of
+      Engineering
+    location: ''
+    period: Sep 2011 - Jun 2015
+    bullets: []
+  title: Education
+  id: education
+- type: skills
+  title: Technical Skills
+  id: skills
+  groups:
+  - category: Programming Languages
+    items:
+    - C++
+    - Java
+    - Python
+    - JavaScript
+    - Rust
+    - Go
+  - category: Frameworks & Tools
+    items:
+    - PyTorch
+    - LLaMA
+    - FastMCP
+    - LangChain
+    - LangGraph
+    - FastAPI
+    - Docker
+    - Android Studio
+    - React
+    - Git
+  - category: Technologies
+    items:
+    - RL (PPO
+    - DQN)
+    - LLM Fine-tuning
+    - NLP
+    - Android OS
+    - WebAssembly
+    - CI/CD
+- type: experience
+  title: Experience
+  id: experience
+  entries:
+  - title: Infrastructure / ML Systems Engineer
+    organization: Brix
+    location: San Francisco, USA
+    period: Jan 2025 - Present
+    bullets:
+    - Identified latency bottleneck in production LLM inference pipeline; optimized
+      through CUDA kernel optimization on NVIDIA GPUs, reducing inference latency
+      by 35% and enabling massive scale-out for production workloads.
+    - Architected distributed inference pipeline supporting 1000+ concurrent requests
+      with sub-second response time, enabling multi-tenant deployment at enterprise
+      scale.
+    - Developed automated data acquisition pipelines by reverse engineering competitor
+      APIs and analyzing network protocols, reducing manual data collection effort
+      by 80% and enabling continuous model retraining loops.
+    - Implemented end-to-end MLOps workflow using Kubernetes and CI/CD, automating
+      continuous training and deployment of AI models and reducing deployment time
+      from hours to minutes.
+    - Open-source contributor to llama.cpp ggml CUDA kernels; optimized key operators
+      achieving 35% speedup, improving inference performance across thousands of users.
+  - title: Senior Technical Lead
+    organization: AparaVR
+    location: ''
+    period: Jan 2022 - May 2023
+    bullets:
+    - Led Android OS development for Li Auto in-vehicle infotainment system across
+      a team of 5; managed ARM-based Android board bring-up from bootloader to production,
+      reducing time-to-market by 3 months.
+    - Customized Android framework and Display layer for in-vehicle rendering requirements;
+      developed C++ services to optimize graphics performance for real-time 3D rendering
+      in automotive environment.
+  - title: Luci Glasses - Android System Developer
+    organization: ShadowCreator
+    location: ''
+    period: May 2021 - Aug 2021
+    bullets:
+    - Wrote user space drivers for USB IMU sensors and developed Android virtual mouse
+      driver.
+    - Worked on Android system framework, implementing dynamic switching between system
+      and USB sensors.
+    - Performed Android and C++ reverse engineering to analyze competitor implementations;
+      tuned sensor fusion algorithms using Matlab.
+    - 'Technologies: AOSP, Android OS, C++, Java, Matlab, USB, sensor fusion.'
+  - title: Full Stack Engineer
+    organization: Rolling Blocks
+    location: Startup
+    period: Jun 2018 - Jan 2020
+    bullets:
+    - Developed Ethereum smart contracts and dApps; worked on secondary development
+      of a distributed exchange.
+    - Built and maintained a CDN cluster, reducing traffic costs by tenfold; developed
+      content factory, WeChat crawler, and WordPress load-balancing.
+    - 'Technologies: React, Ethereum, Docker, Nginx, Minio, RabbitMQ, Scrapy, Node.js,
+      Express, MongoDB.'
+  - title: Android Developer
+    organization: Meituan.com
+    location: Finance
+    period: Nov 2016 - Mar 2018
+    bullets:
+    - Led development of POS machine launcher and participated in core cashier client
+      serving 100K+ merchants; implemented fast boot and low-latency payment processing
+      for high-transaction-volume scenarios.
+    - Diagnosed performance bottleneck in barcode scanning module causing checkout
+      delays; migrated image encoding/decoding from CPU to GPU using RenderScript,
+      achieving 5x performance improvement and reducing per-transaction processing
+      time from 3s to <1s.
+    - Performed reverse engineering of competitor Android and Windows POS implementations
+      to analyze encryption algorithms and business logic, enabling feature parity
+      and security hardening.
+  - title: C++ Engineer
+    organization: Meituan.com
+    location: Innovation Business Department
+    period: Sep 2015 - Nov 2016
+    bullets:
+    - Developed core components of cross-platform cloud storage SDK in C++ with high
+      reliability requirements; implemented intelligent file segmentation, corruption
+      verification, and resume-interrupted-transfer logic, reducing failed upload
+      rate by 30%.
+    - Contributed to Windows graphical client for cloud storage serving 100K+ enterprise
+      users (company employees); implemented file browsing, upload/download queue
+      management, and intuitive UI for large-scale internal deployment.
+  - title: Prototype Engineer
+    organization: Baidu
+    location: IDL Human-Computer Interaction
+    period: Apr 2014 - Jul 2014
+    bullets:
+    - Assisted human-computer interaction researchers in developing interaction prototypes
+      for smart devices and Android devices.
+  - title: Test Development Intern
+    organization: Baidu
+    location: Search Department
+    period: Jul 2013 - Oct 2013
+    bullets:
+    - Assisted in developing front and back end of Baidu's mobile search using PHP;
+      submitted patches to ThinkPHP.
+    - Wrote e2e automation test scripts in JavaScript and Linux shell; mentored other
+      interns and contractors.
+- type: projects
+  title: Projects
+  id: projects
+  entries:
+  - title: Fine-tuning LLMs as RL Agents for Input Synthesis
+    organization: LLM Fine Tune Research Project
+    location: ''
+    period: '2025'
+    bullets:
+    - Developed an RL system that fine-tunes DeepSeek-8B (LoRA) as a PPO policy network
+      to automatically generate inputs that reach arbitrary target lines in C/C++
+      code for security analysis.
+    - 'Designed a custom execution environment that traces branch conditions and provides
+      granular reward signals: +1 per correctly predicted branch, +5 for reaching
+      target line, capped branch bonus at +3, -1 penalty for invalid predictions.'
+    - Achieved 50% success rate on medium-complexity code samples (up from 30% baseline),
+      with PPO converging in ~500 steps using 16 code samples to generate large-scale
+      training data.
+  - title: Resume Editing MCP Server & Agent
+    organization: MCP Framework & LLM Agent
+    location: ''
+    period: 2024–Present
+    bullets:
+    - Designed and implemented a Model Context Protocol (MCP) server specialized for
+      structured resume editing and transformation.
+    - Built a task-oriented agent capable of understanding resume semantics (projects,
+      skills, timelines) instead of treating resumes as plain text.
+    - Implemented LaTeX-aware editing ([github.com/bugparty/resume-mcp-server](https://github.com/bugparty/resume-mcp-server)),
+      ensuring commands and formatting remain valid during automated transformations.
+    - The agent plans multi-step edits (analyze → rewrite → validate → format) and
+      executes them through MCP tools rather than ad-hoc text generation.
+    - '**This resume was generated using the agent system itself**, demonstrating
+      practical end-to-end capabilities.'

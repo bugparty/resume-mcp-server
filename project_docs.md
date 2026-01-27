@@ -88,3 +88,19 @@ Agent 调用流程：
 ## 依赖管理
 
 本项目使用 uv 进行包管理，请使用 `uv pip install` 安装依赖。
+
+## 新增环境变量（异步 PDF 编译）
+
+- `CELERY_BROKER_URL`: Celery broker 地址（默认 `redis://localhost:6379/0`）
+- `CELERY_RESULT_BACKEND`: Celery 结果后端（默认 `redis://localhost:6379/1`）
+- `CELERY_TASK_TIME_LIMIT`: 编译任务硬超时（秒，默认 120）
+- `CELERY_TASK_SOFT_TIME_LIMIT`: 编译任务软超时（秒，默认 90）
+- `RESUME_PDF_JOB_PREFIX`: S3 job 目录前缀（默认 `resume-jobs/`）
+
+S3 相关配置仍使用现有变量：
+- `RESUME_S3_BUCKET_NAME` / `RESUME_S3_BUCKET`
+- `RESUME_S3_ENDPOINT_URL`
+- `RESUME_S3_REGION`
+- `RESUME_S3_ACCESS_KEY_ID` / `RESUME_S3_SECRET_ACCESS_KEY`
+- `RESUME_S3_PUBLIC_BASE_URL`
+- `RESUME_S3_KEY_PREFIX`

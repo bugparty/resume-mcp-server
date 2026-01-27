@@ -24,6 +24,7 @@ from .resume_loader import (
     get_section_style,
 )
 from .resume_renderer import render_resume, compile_tex
+from .latex_jobs import submit_resume_pdf_job, get_resume_pdf_job_status
 from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
 from .settings import get_settings
@@ -53,6 +54,10 @@ class CreateNewVersionInput(BaseModel):
 
 class DeleteResumeVersionInput(BaseModel):
     version_name: str = Field(..., description="The name of the resume version to delete, e.g., 'resume_for_google'")
+
+class CopyResumeVersionInput(BaseModel):
+    source_version: str = Field(..., description="The name of the source resume version to copy from, e.g., 'resume'")
+    target_version: str = Field(..., description="The name of the target resume version to copy to, e.g., 'resume_for_google'")
 
 class UpdateMainResumeInput(BaseModel):
     file_name: str = Field(..., description="The resume filename (e.g., 'resume.yaml')")
@@ -93,6 +98,27 @@ class CompileResumeOutput(BaseModel):
         default=None,
         description="Filesystem path to the directory containing LaTeX sources and assets used for compilation.",
     )
+
+
+class SubmitResumePdfJobInput(BaseModel):
+    version: str = Field(..., description="Resume version name without extension, e.g., 'resume'")
+
+
+class SubmitResumePdfJobOutput(BaseModel):
+    job_id: str = Field(..., description="Unique job identifier for this render request.")
+    task_id: str = Field(..., description="Celery task identifier for the compile job.")
+    status: str = Field(..., description="Queued status for the submitted job.")
+
+
+class ResumePdfJobStatusInput(BaseModel):
+    task_id: str = Field(..., description="Celery task identifier returned at submission time.")
+
+
+class ResumePdfJobStatusOutput(BaseModel):
+    task_id: str = Field(..., description="Celery task identifier returned at submission time.")
+    state: str = Field(..., description="Celery task state.")
+    pdf_url: str | None = Field(default=None, description="Public URL to the PDF if available.")
+    error: str | None = Field(default=None, description="Failure reason if the task failed.")
 
 # --- Tool Implementation Functions ---
 def list_resume_versions_tool() -> str:
@@ -219,6 +245,47 @@ def delete_resume_version_tool(version_name: str) -> str:
         return f"[Success] Resume version '{version_name}' has been deleted successfully."
     except Exception as e:
         return f"[Error] Failed to delete resume version '{version_name}': {str(e)}"
+
+def copy_resume_version_tool(source_version: str, target_version: str) -> str:
+    """
+    Copy a resume version to a new version.
+    Input:
+    - source_version: The name of the source resume version to copy from (without .yaml extension)
+    - target_version: The name of the target resume version to copy to (without .yaml extension)
+    """
+    from .filesystem import get_resume_fs
+    
+    # Validate input
+    source_version = source_version.strip()
+    target_version = target_version.strip()
+    
+    if not source_version:
+        return "[Error] Source version name cannot be empty."
+    if not target_version:
+        return "[Error] Target version name cannot be empty."
+    if source_version == target_version:
+        return "[Error] Source and target version names must be different."
+    
+    # Get filenames and filesystem
+    source_filename = f"{source_version}.yaml"
+    target_filename = f"{target_version}.yaml"
+    resume_fs = get_resume_fs()
+    
+    # Check if source version exists
+    if not resume_fs.exists(source_filename):
+        return f"[Error] Source resume version '{source_version}' does not exist."
+    
+    # Check if target version already exists
+    if resume_fs.exists(target_filename):
+        return f"[Error] Target resume version '{target_version}' already exists. Delete it first or choose a different name."
+    
+    try:
+        # Copy the file
+        content = resume_fs.readtext(source_filename)
+        resume_fs.writetext(target_filename, content)
+        return f"[Success] Resume version '{source_version}' has been copied to '{target_version}' successfully."
+    except Exception as e:
+        return f"[Error] Failed to copy resume version '{source_version}' to '{target_version}': {str(e)}"
 
 def list_modules_in_version_tool(filename: str) -> str:
     """
@@ -377,6 +444,16 @@ def compile_resume_pdf_tool(tex_content: str, version_name: str = "resume") -> C
         latex_assets_dir="data://resumes/output/" + latex_dir_name,
     )
 
+
+def submit_resume_pdf_job_tool(version: str) -> SubmitResumePdfJobOutput:
+    payload = submit_resume_pdf_job(version)
+    return SubmitResumePdfJobOutput(**payload)
+
+
+def get_resume_pdf_job_status_tool(task_id: str) -> ResumePdfJobStatusOutput:
+    payload = get_resume_pdf_job_status(task_id)
+    return ResumePdfJobStatusOutput(**payload)
+
 # --- Tool Definitions ---
 tools = [
     StructuredTool.from_function(
@@ -426,6 +503,13 @@ tools = [
         name="DeleteResumeVersion",
         description="Permanently deletes a resume version. Cannot delete the base 'resume' version. This operation cannot be undone.",
         args_schema=DeleteResumeVersionInput,
+        return_direct=False,
+    ),
+    StructuredTool.from_function(
+        func=copy_resume_version_tool,
+        name="CopyResumeVersion",
+        description="Copies an existing resume version to a new version. Input: source_version (the version to copy from), target_version (the new version name to create).",
+        args_schema=CopyResumeVersionInput,
         return_direct=False,
     ),
     StructuredTool.from_function(
@@ -500,6 +584,20 @@ tools = [
         name="CompileResumePDF",
         description="Compile LaTeX content into a PDF using xelatex. Input: - tex_content: Full LaTeX document string.",
         args_schema=CompileResumeInput,
+        return_direct=False,
+    ),
+    StructuredTool.from_function(
+        func=submit_resume_pdf_job_tool,
+        name="SubmitResumePDFJob",
+        description="Submit a resume render+compile job; returns job/task ids.",
+        args_schema=SubmitResumePdfJobInput,
+        return_direct=False,
+    ),
+    StructuredTool.from_function(
+        func=get_resume_pdf_job_status_tool,
+        name="GetResumePDFJobStatus",
+        description="Check the status of a resume PDF compilation job.",
+        args_schema=ResumePdfJobStatusInput,
         return_direct=False,
     ),
 ]

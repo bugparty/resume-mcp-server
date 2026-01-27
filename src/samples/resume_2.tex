@@ -1,0 +1,103 @@
+\documentclass[11pt, a4paper]{awesome-cv}
+
+% Configure page margins with geometry
+\geometry{left=1.4cm, top=.8cm, right=1.4cm, bottom=1.8cm, footskip=.5cm}
+\fontdir[fonts/]
+\colorlet{awesome}{awesome-red}
+
+% Set false if you don't want to highlight section with awesome color
+\setbool{acvSectionColorHighlight}{true}
+
+% If you would like to change the social information separator from a pipe (|) to something else
+\renewcommand{\acvHeaderSocialSep}{\quad\textbar\quad}
+
+%-------------------------------------------------------------------------------
+%       CJK (Chinese/Japanese/Korean) Font Support
+%-------------------------------------------------------------------------------
+% Add Chinese font support using xeCJK
+\usepackage{xeCJK}
+% Set Chinese fonts (fallback to available system fonts)
+\setCJKmainfont{Droid Sans Fallback}
+\setCJKsansfont{Droid Sans Fallback}
+\setCJKmonofont{Droid Sans Fallback}
+
+%-------------------------------------------------------------------------------
+%	PERSONAL INFORMATION
+%	Comment any of the lines below if they are not required
+%-------------------------------------------------------------------------------
+% Available options: circle|rectangle,edge/noedge,left/right
+\name{E**}{-}
+\position{Python}
+
+%-------------------------------------------------------------------------------
+\begin{document}
+
+% Print the header with above personal informations
+% Give optional argument to change alignment(C: center, L: left, R: right)
+\makecvheader[C]
+
+% Print the footer with 3 arguments(<left>, <center>, <right>)
+% Leave any of these blank if they are not needed
+\makecvfooter
+  {\today}
+  {E** -~~~\textperiodcentered~~~Résumé}
+  {\thepage}
+
+%-------------------------------------------------------------------------------
+%	CV/RESUME CONTENT
+%	Each section is imported separately, open each file in turn to modify content
+%-------------------------------------------------------------------------------
+\cvsection{Summary}
+\begin{cvitems}  \item {计算机科学与技术硕士在读，喜欢钻研新技术，常见编程语言都有了解，如Java、Python、C++等。英语已过六级、一般英文文献阅读可胜任。了解深度学习基础知识，基于Tensorflow编码完成过CNN、RNN等网络。}  \item {期望职位: Python @ 南京, 30-35K}  \item {期望职位: Golang @ 南京, 30-35K}  \item {期望职位: Java @ 南京, 30-35K}\end{cvitems}
+
+
+\cvsection{Professional Experience}
+\begin{cventries}  \cventry
+    {Java}
+  {阿里巴巴（北京）软件服务有限公司}
+    {None}
+    {2022.06 - 至今}
+    {      \begin{cvitems}        \item {1. 模型数据管理服务开发}        \item {1.1 Python SDK  开发。}        \item {1.2 模型数据回收策略开发。}        \item {1.3 模型指标收集。}        \item {2. 基于 Ctypes  开发内部分布式文件系统 Python SDK。}        \item {3. ai  平台训练调度管控系统开发}        \item {3.1 支持任务自动弹性伸缩。}        \item {3.2 多优先级体系，支持 Min-Max  保障及高优抢占。}        \item {3.3 任务状态更新展示、日志展示、训练进度等。}      \end{cvitems}    }  \cventry
+    {后端开发}
+  {阿里巴巴（中国）有限公司}
+    {None}
+    {2021.05 - 至今}
+    {      \begin{cvitems}        \item {基于Java、Mysql、Flink参与特征中心开发，主要工作如下：}        \item {负责样本特征的元信息管理功能开发，将散落在不同模块的特征元信息统一管理并向外提供接口。}        \item {负责实时样本生产中间结果预览功能开发，根据前端配置裁剪样本生产流程并输出样本生产信息，该功能有效提高算法同学自主迭代能力。}      \end{cvitems}    }  \cventry
+    {Python}
+  {百度在线网络技术（北京）有限公司}
+    {None}
+    {2020.12 - 2021.03}
+    {      \begin{cvitems}        \item {实习项目：百度地图推荐卡片头图优选，主要工作如下：}        \item {使用公司图片特征算子批量计算千万级图片的特征，并基于图片特征迭代图片优选策略；基于Hadoop streaming执行优选策略，优选策略已经上线，图片美观度评估收到15\%的提升；完善图片优选例行流程，实现增量图片的自动化优选。}        \item {基于Python、Flask、Javascript、Docker开发图片评选web工具，主要功能包括图片特征评估、优选结果SGB评估（支持生成评估结果csv表格），提高了优选策略的评估过程，加速策略迭代。}      \end{cvitems}    }  \cventry
+    {Python}
+  {北京字节跳动科技有限公司}
+    {None}
+    {2020.06 - 2020.08}
+    {      \begin{cvitems}        \item {基于Flask、Vue、MySQL等参与公司推荐系统平台开发，主要工作如下：}        \item {实现平台模型打标签功能（可根据标签名搜索模型）。根据功能需求，设计并扩展原有数据库；编写后端逻辑提供RESTful接口；编写前端页面，调用接口完成模型标签的CRUD。}        \item {实现平台模型跳转AB实验功能。根据功能需求设计数据库；编写模型AB信息预填及跳转实验平台RESTful接口；编写前端页面，调用接口实现功能。}      \end{cvitems}    }\end{cventries}
+
+
+\cvsection{Projects}
+\begin{cventries}  \cventry
+    {主要负责人}
+  {课后问答系统}
+    {None}
+    {2017.06 - 2018.06}
+    {      \begin{cvitems}        \item {基于Django、Jquery、Bootstrap、MySQL等实现问答系统，主要实职责：}        \item {在线问答模块的前端页面设计与实现；}        \item {编写后端逻辑，实现提问、回答问题、评论、收藏问题、邀请回答等功能。}      \end{cvitems}    }\end{cventries}
+
+
+\cvsection{Education}
+\begin{cventries}  \cventry
+    {硕士}
+  {北京邮电大学}
+    {None}
+    {2019 - 2022}
+    {      \begin{cvitems}        \item {专业: 计算机科学与技术}      \end{cvitems}    }  \cventry
+    {本科}
+  {南京邮电大学}
+    {None}
+    {2015 - 2019}
+    {      \begin{cvitems}        \item {专业: 计算机科学与技术}      \end{cvitems}    }\end{cventries}
+
+
+%-------------------------------------------------------------------------------
+\end{document}
+

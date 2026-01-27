@@ -1,0 +1,194 @@
+source: resume.tex
+metadata:
+  first_name: Bowen
+  last_name: Han
+  position: Backend & Mobile Engineer
+  address: Riverside, CA
+  mobile: +1-310-254-0932
+  email: fancycode@gmail.com
+  github: github.com/bugparty
+  linkedin: ''
+  stackoverflow: stackoverflow.com/users/502648
+style:
+  section_order:
+  - summary
+  - skills
+  - projects
+  - experience
+  - education
+  section_disabled:
+    projects: true
+    summary: true
+sections:
+- type: summary
+  title: Summary
+  id: summary
+  bullets:
+  - Software Engineer with 3 years of experience building distributed systems, backend
+    services, and mobile applications; relocated from China to US for Master's degree
+    and seeking long-term product engineering role at established tech company.
+  - 'Strong foundation in backend development (Python, C++, Java), cloud infrastructure
+    (AWS: EC2, S3, Lambda, RDS, ALB, CloudWatch), and Android systems programming;
+    proven ability to build scalable applications and optimize system performance.'
+  - Currently pursuing Master's in Computer Engineering at UC Riverside with focus
+    on distributed systems and software engineering; passionate about building consumer-facing
+    products that directly impact millions of users.
+- type: entries
+  entries:
+  - title: Master of Science in Computer Engineering
+    organization: University of California Riverside
+    location: ''
+    period: Sep 2024 - Jun 2026
+    bullets: []
+  - title: Bachelor's Degree in Software Engineering
+    organization: Hebei University of Economics and Business
+    location: ''
+    period: Sep 2011 - Jun 2015
+    bullets: []
+  title: Education
+  id: education
+- type: skills
+  title: Technical Skills
+  id: skills
+  groups:
+  - category: Programming Languages
+    items:
+    - Python
+    - Java
+    - C++
+    - JavaScript
+    - SQL
+  - category: Backend & Distributed Systems
+    items:
+    - FastAPI
+    - REST APIs
+    - RabbitMQ
+    - Redis
+    - asyncio
+    - microservices architecture
+    - distributed web scraping
+  - category: Cloud & Infrastructure
+    items:
+    - AWS (EC2
+    - S3
+    - Lambda
+    - RDS
+    - ALB
+    - CloudFront
+    - CloudWatch)
+    - Docker
+    - Kubernetes
+    - CI/CD
+    - monitoring (Prometheus
+    - Grafana)
+  - category: Mobile Development
+    items:
+    - Android (Java)
+    - WebView
+    - Chromium browser kernel
+    - hybrid app architecture
+    - JNI (Java Native Interface)
+  - category: Web Technologies
+    items:
+    - JavaScript
+    - React
+    - HTML/CSS
+    - web performance optimization
+  - category: Databases
+    items:
+    - PostgreSQL
+    - MySQL
+    - Redis
+    - SQLite
+  - category: Tools & Practices
+    items:
+    - Git
+    - Linux
+    - Nginx
+    - system-level debugging
+    - performance optimization
+- type: experience
+  title: Experience
+  id: experience
+  entries:
+  - title: Intern Backend Engineer
+    organization: Brix
+    location: San Francisco, CA
+    period: Jan 2025 - Present
+    bullets:
+    - Developed Gmail integration service using Python and FastAPI with OAuth 2.0
+      authentication and Gmail API; implemented real-time email notification system
+      using Gmail push notifications and Cloud Pub/Sub webhooks to deliver instant
+      updates for incoming messages.
+    - Architected background job processing system with RabbitMQ for handling async
+      email operations (search, send, label management); designed rate limiting and
+      quota management to stay within Gmail API limits while maintaining responsive
+      user experience.
+    - Optimized database query performance by redesigning PostgreSQL schema and adding
+      strategic indexes; reduced average query latency from 2s to 200ms and improved
+      system responsiveness.
+    - Deployed services using Docker and Kubernetes with automated CI/CD pipelines;
+      implemented monitoring and alerting with Prometheus and Grafana for production
+      system health tracking.
+    - 'Technologies: Python, FastAPI, Gmail API, OAuth 2.0, Cloud Pub/Sub, Docker,
+      Kubernetes, PostgreSQL, Redis, RabbitMQ, REST APIs, asyncio.'
+  - title: Mobile Engineer
+    organization: AparaVR
+    location: Hybrid App Platform
+    period: Jan 2022 - May 2023
+    bullets:
+    - Developed hybrid mobile application framework by customizing Android WebView
+      and browser kernel (Chromium-based); implemented JavaScript-to-native bridge
+      for seamless communication between web content and native Android features.
+    - Debugged critical production bug causing 100% black screen crashes in customer's
+      VR application; traced issue through entire stack from JavaScript API layer
+      through bridge layer to C++ kernel implementation, identifying race condition
+      in resource initialization that occurred only under specific timing conditions.
+    - Optimized WebView rendering performance and memory usage for complex web applications;
+      reduced initial load time by 40% through asset preloading, lazy loading strategies,
+      and intelligent caching mechanisms.
+    - Built native Android modules in Java and C++ for camera access, file system
+      operations, and device sensors; exposed these capabilities to web layer through
+      secure bridge APIs with permission management.
+    - Collaborated with frontend team to design hybrid architecture supporting both
+      web-based UI and native components; enabled rapid iteration on features while
+      maintaining native app performance and user experience.
+    - 'Technologies: Android (Java), WebView, Chromium, JavaScript bridge, C++ (JNI),
+      AOSP, hybrid app architecture, cross-layer debugging.'
+  - title: Backend Engineer
+    organization: Rolling Blocks
+    location: Startup
+    period: 2021 - 2022
+    bullets:
+    - Built and maintained high-availability content delivery infrastructure on AWS,
+      serving 10M+ monthly requests; designed auto-scaling architecture using EC2,
+      CloudFront CDN, and S3 for static assets, reducing hosting costs by 10x through
+      intelligent caching and load distribution.
+    - Developed distributed web crawling system using Python and RabbitMQ on AWS Lambda
+      for serverless task processing; implemented rate limiting and proxy rotation
+      to handle 100K+ daily crawl requests while maintaining compliance.
+    - Architected WordPress multi-site deployment with Application Load Balancer (ALB)
+      distributing traffic across multiple EC2 instances and RDS (MySQL) for database
+      persistence; configured auto-scaling policies and CloudWatch monitoring for
+      99.9% uptime.
+    - 'Technologies: AWS (EC2, S3, CloudFront, Lambda, RDS, ALB, CloudWatch), Docker,
+      Nginx, RabbitMQ, Python (Scrapy), Node.js, Express, React.'
+- type: projects
+  title: Projects
+  id: projects
+  entries:
+  - title: Resume Editing MCP Server & Agent
+    organization: MCP Framework & LLM Agent
+    location: ''
+    period: 2024–Present
+    bullets:
+    - Designed and implemented a Model Context Protocol (MCP) server specialized for
+      structured resume editing and transformation.
+    - Built a task-oriented agent capable of understanding resume semantics (projects,
+      skills, timelines) instead of treating resumes as plain text.
+    - Implemented LaTeX-aware editing ([github.com/bugparty/resume-mcp-server](https://github.com/bugparty/resume-mcp-server)),
+      ensuring commands and formatting remain valid during automated transformations.
+    - The agent plans multi-step edits (analyze → rewrite → validate → format) and
+      executes them through MCP tools rather than ad-hoc text generation.
+    - '**This resume was generated using the agent system itself**, demonstrating
+      practical end-to-end capabilities.'

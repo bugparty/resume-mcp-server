@@ -17,17 +17,15 @@ import tempfile
 import zipfile
 from pathlib import Path
 import mimetypes
-from urllib.parse import urlparse, quote
+from urllib.parse import quote
 from typing import Union, Any, Callable
 from functools import wraps
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
-import boto3
-from botocore.config import Config
-from botocore.exceptions import BotoCoreError, ClientError
 from dotenv import load_dotenv
 from fs.copy import copy_fs
 from fs.osfs import OSFS
+
 
 # Ensure src-based imports resolve when running via `fastmcp inspect`
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -97,143 +95,13 @@ def log_mcp_tool_call(func: Callable) -> Callable:
     return wrapper
 
 
-# ---------------------------------------------------------------------------
-# S3 helpers
-# ---------------------------------------------------------------------------
-def _get_s3_client_and_settings() -> tuple[Any, str, str, str]:
-    """Create an S3 client using resume-related environment variables."""
-
-    s3_bucket = (
-        os.getenv("RESUME_S3_BUCKET_NAME")
-        or os.getenv("RESUME_S3_BUCKET")
-        or os.getenv("S3_BUCKET_NAME")
-    )
-    if not s3_bucket:
-        raise RuntimeError(
-            "Resume S3 bucket not configured. Set RESUME_S3_BUCKET_NAME or S3_BUCKET_NAME."
-        )
-
-    s3_endpoint = os.getenv("RESUME_S3_ENDPOINT_URL") or os.getenv("S3_ENDPOINT_URL")
-    s3_region = os.getenv("RESUME_S3_REGION") or os.getenv("AWS_REGION")
-    access_key = (
-        os.getenv("RESUME_S3_ACCESS_KEY_ID")
-        or os.getenv("RESUME_S3_ACCESS_KEY")
-        or os.getenv("S3_ACCESS_KEY_ID")
-        or os.getenv("AWS_ACCESS_KEY_ID")
-    )
-    secret_key = (
-        os.getenv("RESUME_S3_SECRET_ACCESS_KEY")
-        or os.getenv("RESUME_S3_SECRET_KEY")
-        or os.getenv("S3_SECRET_ACCESS_KEY")
-        or os.getenv("AWS_SECRET_ACCESS_KEY")
-    )
-
-    client_kwargs: dict[str, Any] = {}
-    if s3_endpoint:
-        client_kwargs["endpoint_url"] = s3_endpoint
-    if s3_region:
-        client_kwargs["region_name"] = s3_region
-    if access_key and secret_key:
-        client_kwargs["aws_access_key_id"] = access_key
-        client_kwargs["aws_secret_access_key"] = secret_key
-
-    s3_config_kwargs: dict[str, Any] = {"signature_version": "s3v4"}
-    addressing_style = os.getenv("RESUME_S3_ADDRESSING_STYLE")
-    if not addressing_style and s3_endpoint:
-        endpoint_host = urlparse(s3_endpoint).hostname or ""
-        if endpoint_host and not endpoint_host.endswith("amazonaws.com"):
-            addressing_style = "path"
-    if addressing_style:
-        s3_config_kwargs["s3"] = {"addressing_style": addressing_style}
-    client_kwargs["config"] = Config(**s3_config_kwargs)
-
-    try:
-        s3_client = boto3.client("s3", **client_kwargs)
-    except Exception as exc:  # pragma: no cover - boto3 can raise various subclasses
-        logger.error("Failed to create S3 client: %s", exc, exc_info=True)
-        raise RuntimeError("Failed to create S3 client for resume uploads") from exc
-
-    key_prefix = os.getenv("RESUME_S3_KEY_PREFIX", "resumes/")
-    if key_prefix and not key_prefix.endswith("/"):
-        key_prefix = f"{key_prefix}/"
-
-    public_base_url = os.getenv("RESUME_S3_PUBLIC_BASE_URL")
-    if not public_base_url:
-        raise RuntimeError(
-            "RESUME_S3_PUBLIC_BASE_URL must be set to the public R2 domain "
-            "(e.g., https://pub-xxxxx.r2.dev or your custom domain)"
-        )
-    if not public_base_url.endswith("/"):
-        public_base_url += "/"
-
-    return s3_client, s3_bucket, key_prefix, public_base_url
-
-
-def _build_object_key(filename: str, key_prefix: str) -> str:
-    return f"{key_prefix}{filename}" if key_prefix else filename
-
-
-def _ensure_s3_object_available(
-    s3_client: Any, bucket: str, object_key: str, description: str
-) -> None:
-    max_attempts = 5
-    for attempt in range(1, max_attempts + 1):
-        try:
-            s3_client.head_object(Bucket=bucket, Key=object_key)
-            return
-        except (BotoCoreError, ClientError) as exc:
-            error_code = getattr(exc, "response", {}).get("Error", {}).get("Code")
-            if error_code in {"404", "NoSuchKey"} and attempt < max_attempts:
-                time.sleep(0.4 * attempt)
-                continue
-            logger.error(
-                "Failed to verify availability for '%s' in bucket '%s' after attempt %d/%d: %s",
-                object_key,
-                bucket,
-                attempt,
-                max_attempts,
-                exc,
-                exc_info=True,
-            )
-            raise RuntimeError(
-                f"Uploaded {description} is not yet available for download"
-            ) from exc
-
-
-def _upload_bytes_to_s3(
-    data: bytes, filename: str, content_type: str, description: str
-) -> tuple[str, str]:
-    s3_client, s3_bucket, key_prefix, public_base_url = _get_s3_client_and_settings()
-    object_key = _build_object_key(filename, key_prefix)
-
-    try:
-        s3_client.put_object(
-            Bucket=s3_bucket,
-            Key=object_key,
-            Body=data,
-            ContentType=content_type,
-        )
-    except (BotoCoreError, ClientError) as exc:
-        logger.error(
-            "Failed to upload %s '%s' to bucket '%s': %s",
-            description,
-            filename,
-            s3_bucket,
-            exc,
-            exc_info=True,
-        )
-        raise RuntimeError(f"Failed to upload {description} to S3") from exc
-
-    _ensure_s3_object_available(s3_client, s3_bucket, object_key, description)
-
-    public_url = f"{public_base_url}{object_key}"
-    return public_url, object_key
 
 
 # Try relative import first, fall back to absolute import
 try:
     from .settings import load_settings, get_settings
     from .filesystem import init_filesystems, get_output_fs
+    from .s3_utils import upload_bytes_to_s3
     from .tools import (
         list_resume_versions_tool,
         load_complete_resume_tool,
@@ -241,12 +109,15 @@ try:
         update_resume_section_tool,
         create_new_version_tool,
         delete_resume_version_tool,
+        copy_resume_version_tool,
         update_main_resume_tool,
         list_modules_in_version_tool,
         summarize_resumes_to_index_tool,
         read_resume_summary_tool,
         render_resume_to_latex_tool,
         compile_resume_pdf_tool,
+        submit_resume_pdf_job_tool,
+        get_resume_pdf_job_status_tool,
         set_section_visibility_tool,
         set_section_order_tool,
         get_section_style_tool,
@@ -254,6 +125,7 @@ try:
 except ImportError:
     from myagent.settings import load_settings, get_settings
     from myagent.filesystem import init_filesystems, get_output_fs
+    from myagent.s3_utils import upload_bytes_to_s3
     from myagent.tools import (
         list_resume_versions_tool,
         load_complete_resume_tool,
@@ -261,12 +133,15 @@ except ImportError:
         update_resume_section_tool,
         create_new_version_tool,
         delete_resume_version_tool,
+        copy_resume_version_tool,
         update_main_resume_tool,
         list_modules_in_version_tool,
         summarize_resumes_to_index_tool,
         read_resume_summary_tool,
         render_resume_to_latex_tool,
         compile_resume_pdf_tool,
+        submit_resume_pdf_job_tool,
+        get_resume_pdf_job_status_tool,
         set_section_visibility_tool,
         set_section_order_tool,
         get_section_style_tool,
@@ -700,6 +575,23 @@ def delete_resume_version(version_name: str) -> str:
     return delete_resume_version_tool(version_name)
 
 
+@mcp.tool()
+@log_mcp_tool_call
+def copy_resume_version(source_version: str, target_version: str) -> str:
+    """
+    Copies an existing resume version to a new version.
+
+    Args:
+        source_version: The name of the source resume version to copy from (without .yaml extension)
+        target_version: The name of the target resume version to copy to (without .yaml extension)
+
+    Note:
+        - The source version must exist
+        - The target version must not already exist
+    """
+    return copy_resume_version_tool(source_version, target_version)
+
+
 @mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
 def list_modules_in_version(filename: str) -> str:
@@ -945,7 +837,7 @@ def render_resume_pdf(version: str) -> dict[str, str]:
         logger.error("Failed to read generated PDF '%s': %s", filename, exc, exc_info=True)
         raise RuntimeError(f"Failed to read generated PDF '{filename}'") from exc
 
-    public_url, _ = _upload_bytes_to_s3(
+    public_url, _ = upload_bytes_to_s3(
         pdf_bytes,
         filename,
         "application/pdf",
@@ -960,6 +852,27 @@ def render_resume_pdf(version: str) -> dict[str, str]:
         response["latex_assets_dir"] = pdf_result.latex_assets_dir
     response["pdf_path"] = pdf_result.pdf_path
     return response
+
+
+@mcp.tool()
+@log_mcp_tool_call
+def submit_resume_pdf_job(version: str) -> dict[str, str]:
+    """
+    Submit an async resume render+compile job.
+
+    This tool renders LaTeX, uploads the LaTeX and assets bundle to S3, and
+    enqueues a Celery job for PDF compilation. It returns job/task identifiers.
+    """
+    return submit_resume_pdf_job_tool(version).model_dump()
+
+
+@mcp.tool(annotations=dict(readOnlyHint=True))
+@log_mcp_tool_call
+def get_resume_pdf_job_status(task_id: str) -> dict[str, str | None]:
+    """
+    Query the status of an async resume PDF job by Celery task id.
+    """
+    return get_resume_pdf_job_status_tool(task_id).model_dump()
 
 
 @mcp.tool()
@@ -1032,7 +945,7 @@ def render_resume_to_overleaf(version: str) -> dict[str, str]:
     zip_path = f"data://resumes/output/{zip_filename}"
     latex_assets_dir = f"data://resumes/output/{latex_dir_name}"
 
-    public_url, _ = _upload_bytes_to_s3(
+    public_url, _ = upload_bytes_to_s3(
         zip_bytes,
         zip_filename,
         "application/zip",

@@ -1,8 +1,9 @@
 {
   "name": "Python + TeX Live (full)",
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "devcontainer",
+   "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
   "remoteUser": "vscode",
   "customizations": {
     "vscode": {
