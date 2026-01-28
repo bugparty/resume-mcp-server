@@ -11,7 +11,7 @@ services:
     depends_on:
       - redis
       - latex_compile_api
-    command: ./cloudflared tunnel  --config ./.cloudflared/config.yml run
+    command: ./cloudflared tunnel  --config ./.cloudflared/config.yml  -origincert /workspace/.cloudflared/cert.pem run
 
   redis:
     image: redis:7

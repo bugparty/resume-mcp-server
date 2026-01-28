@@ -89,6 +89,10 @@ ENV UV_LINK_MODE=copy UV_SYSTEM_PYTHON=1
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Switch back to vscode user
+
+ARG USERNAME=vscode
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
 USER vscode
 WORKDIR /workspace
 
