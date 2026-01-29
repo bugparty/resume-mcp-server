@@ -110,15 +110,18 @@ RUN mkdir -p /usr/local/share/fonts/fandol && \
            /usr/local/share/fonts/fandol && \
     fc-cache -fv
 
-# Create non-root user
+# Create non-root user with home directory
 RUN addgroup --system --gid 1000 appuser && \
-    adduser --system --uid 1000 --gid 1000 --no-create-home appuser
+    adduser --system --uid 1000 --gid 1000 --home /home/appuser --shell /bin/bash appuser
 
 WORKDIR /app
 COPY . /app
 
-# Ensure ownership for the app directory
+# Ensure ownership
 RUN chown -R appuser:appuser /app
+
+# Set HOME environment variable for TeX Live to find user directories
+ENV HOME=/home/appuser
 
 USER appuser
 EXPOSE 8080
