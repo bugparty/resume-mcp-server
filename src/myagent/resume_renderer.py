@@ -6,6 +6,8 @@ import re
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, List
+from myagent.settings import load_settings
+from myagent.filesystem import init_filesystems
 from urllib.parse import urlparse
 
 from fs.copy import copy_fs
@@ -150,7 +152,11 @@ def _apply_section_style(
     if not isinstance(style, dict):
         return sections
 
-    order = style.get("section_order") if isinstance(style.get("section_order"), list) else []
+    order = (
+        style.get("section_order")
+        if isinstance(style.get("section_order"), list)
+        else []
+    )
     disabled_map = (
         style.get("section_disabled")
         if isinstance(style.get("section_disabled"), dict)
@@ -497,9 +503,11 @@ LEGACY_RENDERERS = {
     "projects": render_projects,
     "education": render_education,
 }
+
+
 def section_type_normalize_str(section_type: SectionType | str) -> str:
     """Normalize section type."""
-    type_str = ''
+    type_str = ""
     if isinstance(section_type, SectionType):
         type_str = section_type.value
     elif isinstance(section_type, str):
@@ -723,6 +731,86 @@ def compile_tex(tex_path: Path) -> None:
     )
 
 
+def compile_tex_remote(
+    tex_path: Path,
+    output_path: Path | None = None,
+    api_base_url: str | None = None,
+    timeout: float = 120.0,
+) -> Path:
+    """
+    Compile LaTeX to PDF using the remote latex_compile_api service.
+
+    This function sends the tex file and assets directly via HTTP multipart upload
+    to the remote API, which compiles and returns the PDF immediately.
+
+    Args:
+        tex_path: Path to the .tex file to compile
+        output_path: Path where to save the PDF (default: same as tex_path with .pdf extension)
+        api_base_url: Override for API base URL (default: from env or docker-compose)
+        timeout: Request timeout in seconds (default: 120.0)
+
+    Returns:
+        Path to the generated PDF file
+
+    Raises:
+        RuntimeError: If compilation fails
+        requests.RequestException: If API communication fails
+    """
+    import os
+
+    import requests
+
+    # Determine API base URL
+    if api_base_url is None:
+        api_base_url = os.getenv(
+            "LATEX_COMPILE_API_URL", "http://latex_compile_api:8080"
+        )
+    api_base_url = api_base_url.rstrip("/")
+
+    # Determine output path
+    if output_path is None:
+        output_path = tex_path.with_suffix(".pdf")
+
+    # Build files list for multipart upload
+    files = []
+    tex_dir = tex_path.parent
+    
+    # Iterate to find all files in the directory recursively
+    for item in tex_dir.rglob("*"):
+        if item.is_file():
+            # Calculate relative path to preserve directory structure (e.g. fonts/foo.ttf)
+            rel_path = item.relative_to(tex_dir).as_posix()
+            
+            # Read content
+            content = item.read_bytes()
+            
+            # Add to files list: ('files', (filename, content))
+            files.append(('files', (rel_path, content)))
+            
+    # Submit compile request via multipart upload
+    compile_url = f"{api_base_url}/v1/compile"
+    data = {"main_file": tex_path.name}
+    
+    try:
+        response = requests.post(
+            compile_url, 
+            files=files, 
+            data=data,
+            timeout=timeout
+        )
+        response.raise_for_status()
+        
+        output_path.write_bytes(response.content)
+        return output_path
+        
+
+    except requests.RequestException as e:
+        logger.error(f"Remote compilation failed: {e}")
+        if hasattr(e, 'response') and e.response is not None:
+             logger.error(f"Response: {e.response.text}")
+        raise RuntimeError(f"Remote compilation failed: {e}") from e
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Render resume YAML into LaTeX and optionally PDF"
@@ -737,13 +825,24 @@ def main() -> None:
     parser.add_argument(
         "--compile", action="store_true", help="Compile the generated TeX using xelatex"
     )
+    parser.add_argument(
+        "--remote-compile",
+        action="store_true",
+        help="Compile the generated TeX using remote service",
+    )
     args = parser.parse_args()
+
+    settings = load_settings()
+    init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
 
     tex = render_resume(args.version)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(tex, encoding="utf-8")
     if args.compile:
         compile_tex(args.output)
+    if args.remote_compile:
+        pdf_path = compile_tex_remote(args.output)
+        print(f"PDF compiled remotely: {pdf_path}")
 
 
 if __name__ == "__main__":

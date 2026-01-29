@@ -23,7 +23,7 @@ from .resume_loader import (
     set_section_order,
     get_section_style,
 )
-from .resume_renderer import render_resume, compile_tex
+from .resume_renderer import render_resume, compile_tex_remote
 from .latex_jobs import submit_resume_pdf_job, get_resume_pdf_job_status
 from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
@@ -414,8 +414,7 @@ def compile_resume_pdf_tool(tex_content: str, version_name: str = "resume") -> C
         if fonts_src.exists() and fonts_src.is_dir():
             shutil.copytree(fonts_src, tmp_path / "fonts")
 
-        compile_tex(tex_path)
-        pdf_path = tex_path.with_suffix(".pdf")
+        pdf_path = compile_tex_remote(tex_path)
 
         # Generate filename with version name and timestamp
         from datetime import datetime

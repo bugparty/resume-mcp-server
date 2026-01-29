@@ -22,7 +22,7 @@
 - Templates: LaTeX assets under `templates/` and `templates/latex`; resume template `templates/resume_template.tex`.
 
 ## Environment & Secrets
-- Copy `sample.env` to `.env`; required: `GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`. Optional overrides: `RESUME_DATA_DIR`, `RESUME_SUMMARY_PATH` (or `RESUME_AGGREGATE_PATH`), `RESUME_JD_DIR`, `LOGS_DIR`, `DEEPSEEK_BASE_URL`, filesystem URLs `RESUME_FS_URL` and `JD_FS_URL`.
+- Copy `sample.env` to `.env`; required: `GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`. Optional overrides: `RESUME_DATA_DIR`, `RESUME_SUMMARY_PATH` (or `RESUME_AGGREGATE_PATH`), `RESUME_JD_DIR`, `LOGS_DIR`, `DEEPSEEK_BASE_URL`, filesystem URLs `RESUME_FS_URL` and `JD_FS_URL`, `LATEX_COMPILE_API_URL`.
 - Never commit secrets; prefer environment vars for CI. Document new keys in `project_docs.md`.
 
 ## Code Style (Python)
