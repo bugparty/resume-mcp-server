@@ -1,53 +1,48 @@
-FROM python:3.12-slim
+# Stage 1: Install TeX Live
+FROM python:3.12-slim AS tex-installer
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive
 
-RUN set -eux; \
-    apt-get update; \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      ca-certificates wget curl xz-utils perl make git ghostscript \
-      fontconfig fonts-droid-fallback \
-      fonts-noto-cjk; \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    perl \
+    xz-utils \
+    && rm -rf /var/lib/apt/lists/*
 
-# Configure TeX Live environment variables
+# Configure TeX Live environment variables for installation
 ENV TL_YEAR=2024
 ENV TL_ROOT=/usr/local/texlive/${TL_YEAR}
-ENV TL_BIN=${TL_ROOT}/bin/x86_64-linux
-ENV PATH=${TL_BIN}:$PATH
-
 ENV CTAN_MIRROR=https://ctan.math.utah.edu/ctan/tex-archive/
 
 # Create TeX Live profile
-RUN mkdir -p /tmp/tlinst && \
-    echo 'selected_scheme scheme-full' > /tmp/texlive.profile && \
-    echo 'TEXDIR /usr/local/texlive/2024' >> /tmp/texlive.profile && \
-    echo 'TEXMFCONFIG ~/.texlive2024/texmf-config' >> /tmp/texlive.profile && \
-    echo 'TEXMFHOME ~/.texlive2024/texmf' >> /tmp/texlive.profile && \
-    echo 'TEXMFLOCAL /usr/local/texlive/texmf-local' >> /tmp/texlive.profile && \
-    echo 'TEXMFSYSCONFIG /usr/local/texlive/2024/texmf-config' >> /tmp/texlive.profile && \
-    echo 'TEXMFSYSVAR /usr/local/texlive/2024/texmf-var' >> /tmp/texlive.profile && \
-    echo 'TEXMFVAR ~/.texlive2024/texmf-var' >> /tmp/texlive.profile && \
-    echo 'binary_x86_64-linux 1' >> /tmp/texlive.profile && \
-    echo 'collection-langchinese 1' >> /tmp/texlive.profile && \
-    echo 'option_doc 0' >> /tmp/texlive.profile && \
-    echo 'option_src 0' >> /tmp/texlive.profile && \
-    echo 'option_autobackup 0' >> /tmp/texlive.profile && \
-    echo 'option_desktop_integration 0' >> /tmp/texlive.profile && \
-    echo 'option_file_assocs 0' >> /tmp/texlive.profile
+WORKDIR /tmp/tlinst
+RUN echo 'selected_scheme scheme-full' > texlive.profile && \
+    echo "TEXDIR ${TL_ROOT}" >> texlive.profile && \
+    echo 'TEXMFCONFIG ~/.texlive2024/texmf-config' >> texlive.profile && \
+    echo 'TEXMFHOME ~/.texlive2024/texmf' >> texlive.profile && \
+    echo 'TEXMFLOCAL /usr/local/texlive/texmf-local' >> texlive.profile && \
+    echo "TEXMFSYSCONFIG ${TL_ROOT}/texmf-config" >> texlive.profile && \
+    echo "TEXMFSYSVAR ${TL_ROOT}/texmf-var" >> texlive.profile && \
+    echo 'TEXMFVAR ~/.texlive2024/texmf-var' >> texlive.profile && \
+    echo 'binary_x86_64-linux 1' >> texlive.profile && \
+    echo 'collection-langchinese 1' >> texlive.profile && \
+    echo 'option_doc 0' >> texlive.profile && \
+    echo 'option_src 0' >> texlive.profile && \
+    echo 'option_autobackup 0' >> texlive.profile && \
+    echo 'option_desktop_integration 0' >> texlive.profile && \
+    echo 'option_file_assocs 0' >> texlive.profile
 
-# Install TeX Live 2024
-RUN cd /tmp/tlinst && \
-    echo "Downloading TeX Live installer..." && \
-    wget --progress=dot:giga ${CTAN_MIRROR}/systems/texlive/tlnet/install-tl-unx.tar.gz && \
+# Download and Install TeX Live
+RUN wget --progress=dot:giga ${CTAN_MIRROR}/systems/texlive/tlnet/install-tl-unx.tar.gz && \
     tar -xzf install-tl-unx.tar.gz --strip-components=1 && \
-    echo "Installing TeX Live (this will take 10-20 minutes)..." && \
-    ./install-tl -profile /tmp/texlive.profile -repository ${CTAN_MIRROR}/systems/texlive/tlnet && \
-    cd / && \
-    rm -rf /tmp/tlinst /tmp/texlive.profile
+    ./install-tl -profile texlive.profile -repository ${CTAN_MIRROR}/systems/texlive/tlnet
 
-# Install additional LaTeX packages
+# Add to PATH for tlmgr
+ENV PATH="${TL_ROOT}/bin/x86_64-linux:${PATH}"
+
+# Install additional packages
 RUN tlmgr option repository ${CTAN_MIRROR}/systems/texlive/tlnet && \
     tlmgr update --self --all && \
     tlmgr install \
@@ -66,24 +61,66 @@ RUN tlmgr option repository ${CTAN_MIRROR}/systems/texlive/tlnet && \
         sourcesanspro \
         tcolorbox \
         environ \
-        trimspaces xstring unicode-math fontawesome6 roboto tikzfill  bookmark
- 
+        trimspaces xstring unicode-math fontawesome6 roboto tikzfill bookmark
+
+# Stage 2: Python Dependencies
+FROM python:3.12-slim AS venv-builder
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+COPY requirements.txt .
+RUN python -m venv /opt/venv && \
+    /opt/venv/bin/pip install --no-cache-dir -U pip && \
+    /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
+
+# Stage 3: Final Runtime
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    TL_YEAR=2024
+
+# Runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ghostscript \
+    fontconfig \
+    fonts-droid-fallback \
+    fonts-noto-cjk \
+    perl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set TeX Live ENV
+ENV TL_ROOT=/usr/local/texlive/${TL_YEAR}
+ENV PATH="${TL_ROOT}/bin/x86_64-linux:/opt/venv/bin:${PATH}"
+ENV MANPATH="${TL_ROOT}/texmf-dist/doc/man:${MANPATH}"
+ENV INFOPATH="${TL_ROOT}/texmf-dist/doc/info:${INFOPATH}"
+
+# Copy TeX Live from installer
+COPY --from=tex-installer ${TL_ROOT} ${TL_ROOT}
+
+# Copy Venv from builder
+COPY --from=venv-builder /opt/venv /opt/venv
+
+# Setup Fandol fonts
 RUN mkdir -p /usr/local/share/fonts/fandol && \
-    ln -s /usr/local/texlive/2024/texmf-dist/fonts/opentype/public/fandol/*.otf \
+    ln -s ${TL_ROOT}/texmf-dist/fonts/opentype/public/fandol/*.otf \
            /usr/local/share/fonts/fandol && \
     fc-cache -fv
 
-# Set environment variables
-ENV MANPATH=/usr/local/texlive/2024/texmf-dist/doc/man:$MANPATH
-ENV INFOPATH=/usr/local/texlive/2024/texmf-dist/doc/info:$INFOPATH
+# Create non-root user
+RUN addgroup --system --gid 1000 appuser && \
+    adduser --system --uid 1000 --gid 1000 --no-create-home appuser
 
 WORKDIR /app
-
-COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
-
 COPY . /app
 
+# Ensure ownership for the app directory
+RUN chown -R appuser:appuser /app
+
+USER appuser
 EXPOSE 8080
 
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]
