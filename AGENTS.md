@@ -45,6 +45,7 @@
 - Add coverage for resume parsing/manipulation first (`tests/test_resume_operations.py` suggested location). Mirror layout of new code: unit tests near helpers, e2e for CLI flows.
 - Use fixtures in `tests/__init__.py` or `conftest.py` when shared. Avoid global state; reset module-level singletons or use monkeypatch for `_SETTINGS`/LLM caches.
 - To iterate quickly: `uv run pytest tests/path -k keyword -vv` and `-s` for printouts (discouraged in code, fine in tests).
+- **MANDATORY**: Run `./run_tests.sh` after any code modification to verify standard and integration tests pass.
 
 ## Runtime / CLI Notes
 - `load_settings` caches settings; prefer `get_settings()` where possible. If you override paths, pass explicit args to `load_settings` and respect fallback logic.
@@ -72,6 +73,6 @@
 ## Support Checklist
 - Env ready (`.venv` active, .env populated).
 - Dependencies installed (`uv sync`).
-- Run targeted tests for changed areas (`uv run pytest tests/...`).
+- Run all tests: `./run_tests.sh`.
 - Format code (`uv run black .`).
 - Update docs/config samples if new env vars or templates are added.

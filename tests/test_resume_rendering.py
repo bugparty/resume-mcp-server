@@ -78,8 +78,9 @@ def test_compile_exports_latex_assets(monkeypatch, tmp_path):
     def fake_compile(tex_path):
         pdf_path = tex_path.with_suffix(".pdf")
         pdf_path.write_bytes(b"%PDF-1.4\n% fake\n")
+        return pdf_path
 
-    monkeypatch.setattr("myagent.tools.compile_tex", fake_compile)
+    monkeypatch.setattr("myagent.tools.compile_tex_remote", fake_compile)
 
     tex_content = r"\documentclass{article}\begin{document}Hello\end{document}"
     result = compile_resume_pdf_tool(tex_content, "debug")
