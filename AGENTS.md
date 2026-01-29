@@ -2,7 +2,7 @@
 
 ## Quick Start
 - From repo root, create/activate env: `uv venv && source .venv/bin/activate` (Python 3.12). Cursor rule also says `cd /home/bowman/myagent && source .venv/bin/activate`; prefer repo root but honor that if Cursor shells are pinned there.
-- Install deps: `uv sync` (locked) or `uv pip install -r requirement.txt` (production mirror).
+- Install deps: `uv sync` (locked).
 - Run the CLI agent: `uv run python main.py [--data-dir DATA_DIR --aggregate-path AGG_PATH]`.
 - Core layout: `src/myagent/` code; `data/` assets ( `jd/`); `templates/` mail-merge and LaTeX; tests under `tests/` and `tests/e2e/`.
 

@@ -317,7 +317,9 @@ async def read_data_file(path: str) -> Union[str, bytes]:
 
 
 @mcp.tool(
-annotations=dict(readOnlyHint=True))
+annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
 @log_mcp_tool_call
 def list_data_directory(path: str = "") -> str:
     """
@@ -376,7 +378,9 @@ def list_data_directory(path: str = "") -> str:
 
 
 # Resume Version Management Tools
-@mcp.tool(annotations=dict(readOnlyHint=True))
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
 @log_mcp_tool_call
 def list_resume_versions() -> str:
     """Lists all available resume versions stored as YAML files.
@@ -387,7 +391,9 @@ def list_resume_versions() -> str:
     return list_resume_versions_tool()
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True))
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
 @log_mcp_tool_call
 def load_complete_resume(filename: str) -> str:
     """
@@ -399,7 +405,9 @@ def load_complete_resume(filename: str) -> str:
     return load_complete_resume_tool(filename)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True))
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
 @log_mcp_tool_call
 def load_resume_section(module_path: str) -> str:
     """
@@ -411,7 +419,9 @@ def load_resume_section(module_path: str) -> str:
     return load_resume_section_tool(module_path)
 
 
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
 @log_mcp_tool_call
 def update_resume_section(module_path: str, new_content: str) -> str:
     """
@@ -480,7 +490,9 @@ def update_resume_section(module_path: str, new_content: str) -> str:
     return update_resume_section_tool(module_path, new_content)
 
 
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
 @log_mcp_tool_call
 def set_section_visibility(version: str, section_id: str, enabled: bool = True) -> str:
     """
@@ -503,7 +515,9 @@ def set_section_visibility(version: str, section_id: str, enabled: bool = True) 
         return json.dumps({"error": str(exc)})
 
 
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
 @log_mcp_tool_call
 def set_section_order(version: str, order: list[str]) -> str:
     """
@@ -525,7 +539,9 @@ def set_section_order(version: str, order: list[str]) -> str:
         return json.dumps({"error": str(exc)})
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True))
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
 @log_mcp_tool_call
 def get_section_style(version: str) -> str:
     """
@@ -546,7 +562,9 @@ def get_section_style(version: str) -> str:
         return json.dumps({"error": str(exc)})
 
 
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
 @log_mcp_tool_call
 def create_new_version(new_version_name: str) -> str:
     """
@@ -558,7 +576,9 @@ def create_new_version(new_version_name: str) -> str:
     return create_new_version_tool(new_version_name)
 
 
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
 @log_mcp_tool_call
 def delete_resume_version(version_name: str) -> str:
     """
@@ -575,7 +595,9 @@ def delete_resume_version(version_name: str) -> str:
     return delete_resume_version_tool(version_name)
 
 
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
 @log_mcp_tool_call
 def copy_resume_version(source_version: str, target_version: str) -> str:
     """
@@ -592,7 +614,9 @@ def copy_resume_version(source_version: str, target_version: str) -> str:
     return copy_resume_version_tool(source_version, target_version)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True))
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
 @log_mcp_tool_call
 def list_modules_in_version(filename: str) -> str:
     """
@@ -604,7 +628,9 @@ def list_modules_in_version(filename: str) -> str:
     return list_modules_in_version_tool(filename)
 
 # Resume Summary and Index Tools
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
 @log_mcp_tool_call
 def summarize_resumes_to_index() -> dict:
     """
@@ -617,7 +643,9 @@ def summarize_resumes_to_index() -> dict:
     return {"yaml_path": result.yaml_path, "message": result.message}
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True))
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        openWorldHint=False,
+        idempotentHint=True))
 @log_mcp_tool_call
 def read_resume_summary() -> str:
     """
@@ -628,7 +656,9 @@ def read_resume_summary() -> str:
 
 
 # Resume Format Documentation Tools
-@mcp.tool(annotations=dict(readOnlyHint=True))
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        openWorldHint=False,
+        idempotentHint=True))
 @log_mcp_tool_call
 def get_resume_yaml_format() -> str:
     """
@@ -796,7 +826,9 @@ The following JSON schema defines the validation rules:
 
 
 # Resume Rendering Tools
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
 @log_mcp_tool_call
 def render_resume_pdf(version: str) -> dict[str, str]:
     """
@@ -854,7 +886,9 @@ def render_resume_pdf(version: str) -> dict[str, str]:
     return response
 
 
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
 @log_mcp_tool_call
 def submit_resume_pdf_job(version: str) -> dict[str, str]:
     """
@@ -866,7 +900,9 @@ def submit_resume_pdf_job(version: str) -> dict[str, str]:
     return submit_resume_pdf_job_tool(version).model_dump()
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True))
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
 @log_mcp_tool_call
 def get_resume_pdf_job_status(task_id: str) -> dict[str, str | None]:
     """
@@ -875,7 +911,9 @@ def get_resume_pdf_job_status(task_id: str) -> dict[str, str | None]:
     return get_resume_pdf_job_status_tool(task_id).model_dump()
 
 
-@mcp.tool()
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=True))
 @log_mcp_tool_call
 def render_resume_to_overleaf(version: str) -> dict[str, str]:
     """
