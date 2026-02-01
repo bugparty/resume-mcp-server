@@ -20,6 +20,7 @@ import mimetypes
 from urllib.parse import quote
 from typing import Union, Any, Callable
 from functools import wraps
+from enum import Enum
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 from dotenv import load_dotenv
@@ -41,6 +42,33 @@ from fastmcp import FastMCP
 # Configure logging for MCP server
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+
+def log_mcp_tool_call(func: Callable) -> Callable:
+    """
+    Decorator to log MCP tool calls with arguments and results.
+    """
+
+class ResumeSectionId(str, Enum):
+    """Enumeration of valid resume section identifiers.
+    
+    Available sections:
+        HEADER: Personal information (name, contact, links)
+        SUMMARY: Professional summary/bio
+        SKILLS: Technical skills organized by category
+        EXPERIENCE: Work history
+        PROJECTS: Personal or open-source projects
+        EDUCATION: Academic background
+        CUSTOM: Custom/free-form content (e.g., languages, interests)
+    """
+    
+    HEADER = "header"
+    SUMMARY = "summary"
+    SKILLS = "skills"
+    EXPERIENCE = "experience"
+    PROJECTS = "projects"
+    EDUCATION = "education"
+    CUSTOM = "raw"  # Maps to 'raw' type in YAML schema
 
 
 def log_mcp_tool_call(func: Callable) -> Callable:
@@ -401,83 +429,51 @@ def load_complete_resume(filename: str) -> str:
 
 @mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
-def load_resume_section(module_path: str) -> str:
+def get_resume_section(version_name: str, section_id: ResumeSectionId) -> str:
     """
-    Loads the Markdown content of a specific resume section.
-
+    Load a specific section from a resume file.
+    
     Args:
-        module_path: Version/section identifier (e.g., 'resume/summary')
+        version_name: Resume file name WITHOUT .yaml extension (e.g., 'resume')
+        section_id: Section identifier to load (must be one of: header, summary, 
+                   skills, experience, projects, education, custom)
+    
+    Returns:
+        Markdown content of the requested section
+        
+    Example:
+        get_resume_section(version_name="resume", section_id=ResumeSectionId.SUMMARY)
     """
-    return load_resume_section_tool(module_path)
+    return load_resume_section_tool(f"{version_name}/{section_id.value}")
 
 
 @mcp.tool()
 @log_mcp_tool_call
-def update_resume_section(module_path: str, new_content: str) -> str:
+def update_resume_section(
+    version_name: str,
+    section_id: ResumeSectionId,
+    new_content: str
+) -> str:
     """
-    Overwrite a resume section with new Markdown content.
-
+    Update a specific section in a resume file with new Markdown content.
+    
     Args:
-        module_path: Version/section identifier (e.g., 'resume/summary', 'resume/experience', 'resume/projects', 'resume/skills', 'resume/header')
-        new_content: Replacement Markdown preserving headings and bullet lists
+        version_name: Resume file name WITHOUT .yaml extension (e.g., 'resume')
+        section_id: Section identifier to update (must be one of: header, summary,
+                   skills, experience, projects, education, custom)
+        new_content: New Markdown content for the section
     
-    Format Examples:
-    
-    Header Section:
-        ## Header
-        first_name: John
-        last_name: Doe
-        position: Senior Software Engineer
-        address: San Francisco, CA
-        mobile: +1-234-567-8900
-        email: john.doe@example.com
-        github: github.com/johndoe
-        linkedin: linkedin.com/in/johndoe
-    
-    Summary Section:
-        ## Summary
-        - 8+ years of experience in full-stack development and cloud architecture
-        - Expert in Python, JavaScript, and distributed systems
-        - Led teams of 5-10 engineers to deliver scalable products
-    
-    Skills Section:
-        ## Skills
-        - Programming: Python, JavaScript, Go, SQL
-        - Cloud Platforms: AWS, GCP, Docker, Kubernetes
-        - Tools & Practices: Git, Jenkins, Terraform, Agile/Scrum
-        - Databases: PostgreSQL, MongoDB, Redis
-    
-    Experience Section:
-        ## Experience
-        ### Software Engineer — TechCorp Inc (San Francisco, CA) | Jan 2020 - Present
-        - Developed microservices using Python and Go
-        - Led team of 5 engineers in agile sprints
-        - Improved system performance by 40%
+    Returns:
+        Success or error message
         
-        ### Junior Developer — StartupXYZ (Remote) | Jun 2018 - Dec 2019
-        - Built REST APIs with Node.js and Express
-        - Implemented CI/CD pipelines using Jenkins
-    
-    Projects Section:
-        ## Projects
-        ### E-Commerce Platform — Personal Project (GitHub) | 2023
-        - Built full-stack web app with React and Django
-        - Integrated Stripe payment processing
-        - Deployed on AWS with Docker and Kubernetes
+    Important:
+        - Input must be in Markdown format
+        - Cannot update entire resume at once
+        - Must update ONE section at a time
         
-        ### Machine Learning Pipeline — University Research | 2022
-        - Developed data processing pipeline for NLP tasks
-        - Achieved 95% accuracy on sentiment analysis
-    
-    Education Section:
-        ## Education
-        **Master of Science in Computer Science**
-        Stanford University | 2016 - 2018
-        
-        **Bachelor of Science in Computer Engineering**
-        Stanford University (Palo Alto, CA) | 2012 - 2016
+    See get_resume_yaml_format() for content format examples.
     """
-    return update_resume_section_tool(module_path, new_content)
+    return update_resume_section_tool(f"{version_name}/{section_id.value}", new_content)
 
 
 @mcp.tool()
@@ -594,12 +590,29 @@ def copy_resume_version(source_version: str, target_version: str) -> str:
 
 @mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
-def list_modules_in_version(filename: str) -> str:
+def list_resume_sections(filename: str) -> str:
     """
-    Lists all section identifiers defined in a resume YAML file.
+    List all section identifiers available in a resume file.
 
     Args:
-        filename: Resume filename (e.g., 'resume.yaml')
+        filename: Resume file name (e.g., 'resume.yaml')
+    
+    Returns:
+        JSON string containing section identifiers and their types
+        
+    Example output:
+        {
+            "sections": [
+                {"id": "header", "type": "header"},
+                {"id": "summary", "type": "summary"},
+                {"id": "skills", "type": "skills"},
+                {"id": "experience", "type": "entries"},
+                {"id": "projects", "type": "entries"},
+                {"id": "education", "type": "entries"},
+                {"id": "additional", "type": "raw"}
+            ],
+            "total": 7
+        }
     """
     return list_modules_in_version_tool(filename)
 
