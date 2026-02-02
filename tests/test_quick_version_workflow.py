@@ -17,7 +17,7 @@ init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
 from myagent.resume_loader import (
     create_new_version,
     list_modules_in_version,
-    load_resume_section,
+    get_resume_section,
     update_resume_section,
 )
 
@@ -32,23 +32,25 @@ class TestQuickVersionWorkflow(unittest.TestCase):
         if resume_fs.exists(target_filename):
             resume_fs.remove(target_filename)
 
-        result = create_new_version(version)
-        self.assertIn("[Success]", result)
-        self.assertTrue(resume_fs.exists(target_filename))
+        try:
+            result = create_new_version(version)
+            self.assertIn("[Success]", result)
+            self.assertTrue(resume_fs.exists(target_filename))
 
-        modules = list_modules_in_version(f"{version}.yaml")
-        self.assertIn("summary", modules)
+            modules = list_modules_in_version(version)
+            self.assertIn("summary", modules)
 
-        section_output = load_resume_section(f"{version}/summary")
-        _, markdown = section_output.split("\n\n", 1)
-        self.assertIn("## Summary", markdown)
+            section_output = get_resume_section(version, "summary")
+            _, markdown = section_output.split("\n\n", 1)
+            self.assertIn("## Summary", markdown)
 
-        updated = update_resume_section(f"{version}/summary:## Summary\n- Updated bullet")
-        self.assertIn("[Success]", updated)
-
-        # Clean up
-        if resume_fs.exists(target_filename):
-            resume_fs.remove(target_filename)
+            updated_markdown = "## Summary\n- Updated bullet"
+            updated = update_resume_section(version, "summary", updated_markdown)
+            self.assertIn("[Success]", updated)
+        finally:
+            # Clean up even if assertions fail
+            if resume_fs.exists(target_filename):
+                resume_fs.remove(target_filename)
 
 
 if __name__ == "__main__":

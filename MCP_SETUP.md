@@ -24,7 +24,7 @@ If you want external clients like ChatGPT to access the server, use Cloudflare T
 
 1. **Start the MCP server:**
    ```bash
-   python src/myagent/mcp_server.py
+   uv run python src/myagent/mcp_server.py
    ```
 
 2. **Start the Cloudflare tunnel:**

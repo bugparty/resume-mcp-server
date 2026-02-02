@@ -209,6 +209,87 @@ def _get_section(
     raise KeyError(error_message)
 
 
+def set_section_visibility(version_name: str, section_id: str, enabled: bool) -> Dict[str, Any]:
+    """Update style.section_disabled for a given section id.
+
+    Returns a dict with updated style block for callers to format.
+    """
+
+    version_name = _require_version_name(version_name)
+    data = _load_resume(version_name)
+    sections = data.get("sections") or []
+    if not any(isinstance(s, dict) and s.get("id") == section_id for s in sections):
+        raise KeyError(f"Section '{section_id}' not found in version '{version_name}'")
+
+    style = data.get("style") or {}
+    if not isinstance(style, dict):
+        style = {}
+
+    disabled = style.get("section_disabled") if isinstance(style.get("section_disabled"), dict) else {}
+    if enabled:
+        disabled.pop(section_id, None)
+    else:
+        disabled[section_id] = True
+
+    if disabled:
+        style["section_disabled"] = disabled
+    elif "section_disabled" in style:
+        style.pop("section_disabled", None)
+
+    data["style"] = style
+    _save_resume(version_name, data)
+    return {"style": style}
+
+
+def set_section_order(version_name: str, order: List[str]) -> Dict[str, Any]:
+    """Replace style.section_order with the provided list (filtered to known ids)."""
+
+    version_name = _require_version_name(version_name)
+    data = _load_resume(version_name)
+    sections = [s for s in data.get("sections") or [] if isinstance(s, dict)]
+    known_ids = [s.get("id") for s in sections if isinstance(s.get("id"), str)]
+    known_set = set(known_ids)
+
+    filtered_order = [sid for sid in order if isinstance(sid, str) and sid in known_set]
+
+    style = data.get("style") or {}
+    if not isinstance(style, dict):
+        style = {}
+
+    if filtered_order:
+        style["section_order"] = filtered_order
+    elif isinstance(style, dict):
+        style.pop("section_order", None)
+
+    data["style"] = style
+    _save_resume(version_name, data)
+    return {"style": style, "skipped_ids": [sid for sid in order if sid not in known_set]}
+
+
+def _require_version_name(version_name: str) -> str:
+    version_name = (version_name or "").strip()
+    if not version_name:
+        raise ValueError("version_name cannot be empty")
+    if version_name.endswith(".yaml"):
+        raise ValueError("version_name must not include the .yaml suffix")
+    return version_name
+
+
+def get_resume_layout(version_name: str) -> Dict[str, Any]:
+    """Return the current layout settings (order/disabled) for a resume version."""
+
+    version_name = _require_version_name(version_name)
+    data = _load_resume(version_name)
+    style = data.get("style") if isinstance(data.get("style"), dict) else {}
+
+    order = style.get("section_order") if isinstance(style.get("section_order"), list) else []
+    disabled = (
+        style.get("section_disabled") if isinstance(style.get("section_disabled"), dict) else {}
+    )
+
+    return {"style": {"section_order": order, "section_disabled": disabled}}
+
+
 def _sanitize_title(section: Dict[str, Any]) -> str:
     title = section.get("title")
     if title:
@@ -385,8 +466,13 @@ SECTION_HINTS_BY_TYPE: Dict[str, str] = {
 }
 
 
-def list_modules_in_version(main_resume_filename: str) -> str:
-    version = main_resume_filename.replace(".yaml", "")
+def list_modules_in_version(version_name: str) -> str:
+    """Return section hints and a listing of section ids for a resume version."""
+
+    try:
+        version = _require_version_name(version_name)
+    except ValueError as exc:
+        return f"[Error] {exc}"
     try:
         data = _load_resume(version)
     except FileNotFoundError:
@@ -418,12 +504,18 @@ def list_modules_in_version(main_resume_filename: str) -> str:
 
     return "\n\n".join(hints)
 
+def get_resume_section(version_name: str, section_id: str) -> str:
+    """Load the Markdown content of a resume section by (version_name, section_id)."""
 
-def load_resume_section(module_path: str) -> str:
-    module_path = module_path.strip()
-    if "/" not in module_path:
-        return "[Error] Module path must follow 'version/section' format."
-    version, section_id = module_path.split("/", 1)
+    try:
+        version = _require_version_name(version_name)
+    except ValueError as exc:
+        return f"[Error] {exc}"
+
+    section_id = (section_id or "").strip()
+    if not section_id:
+        return "[Error] section_id cannot be empty."
+
     try:
         if section_id == HEADER_SECTION_ID:
             data = _load_resume(version)
@@ -451,54 +543,51 @@ def _update_section_from_markdown(
     parser(markdown, section, version, section_id)
 
 
-def update_resume_section(module_path: str, new_content: str | None = None) -> str:
+def update_resume_section(version_name: str, section_id: str, new_content: str) -> str:
     """
     Update a resume section with new Markdown content.
 
     Args:
-        module_path: Version/section identifier (e.g., 'resume/summary')
-        new_content: New Markdown content for the section. If omitted, allow
-            combined format 'version/section:markdown' in module_path.
+        version_name: Resume version name (e.g., 'resume')
+        section_id: Section identifier (e.g., 'summary', 'experience')
+        new_content: New Markdown content for the section
 
     Returns:
         Success or error message
     """
-    module_path = module_path.strip()
-
-    # Support combined one-argument format: 'version/section:markdown'
-    if new_content is None and ":" in module_path:
-        module_path, new_content = module_path.split(":", 1)
-
-    if new_content is None:
-        return "[Error] Missing new content for section update."
-
+    version_name = version_name.strip()
+    section_id = section_id.strip()
     new_content = new_content.strip()
-    if "/" not in module_path:
-        return "[Error] Module path must follow 'version/section' format."
-    version, section_id = module_path.split("/", 1)
+    
+    if not new_content:
+        return "[Error] Missing new content for section update."
+    
     try:
         if section_id == HEADER_SECTION_ID:
-            data = _load_resume(version)
+            data = _load_resume(version_name)
             metadata_updates = parse_header_markdown(new_content)
             if not metadata_updates:
                 return "[Error] Header content must contain at least one 'key: value' pair."
             data.setdefault("metadata", {}).update(metadata_updates)
-            _save_resume(version, data)
-            return (f"[Success] Updated {module_path}. updated metadata: {metadata_updates}")
+            _save_resume(version_name, data)
+            return (f"[Success] Updated {version_name}/{section_id}. updated metadata: {metadata_updates}")
         else:
-            data, section = _get_section(version, section_id)
+            data, section = _get_section(version_name, section_id)
             _update_section_from_markdown(
-                version, section_id, section, new_content
+                version_name, section_id, section, new_content
             )
             # Section is modified in-place by the parser
-            _save_resume(version, data)
-            return (f"[Success] Updated {module_path}. updated section: {section}")
+            _save_resume(version_name, data)
+            return (f"[Success] Updated {version_name}/{section_id}. updated section: {section}")
     except (FileNotFoundError, KeyError) as exc:
         return f"[Error] {exc}"
 
 
-def update_main_resume(file_name: str, file_content: str) -> str:
-    version = file_name.replace(".yaml", "")
+def update_main_resume(version_name: str, file_content: str) -> str:
+    try:
+        version = _require_version_name(version_name)
+    except ValueError as exc:
+        return f"[Error] {exc}"
     try:
         data = yaml.safe_load(file_content)
     except yaml.YAMLError as exc:
@@ -507,8 +596,13 @@ def update_main_resume(file_name: str, file_content: str) -> str:
     return f"[Success] Replaced resume definition for {version}."
 
 
-def load_complete_resume(main_resume_filename: str) -> str:
-    version = main_resume_filename.replace(".yaml", "")
+def load_complete_resume(version_name: str) -> str:
+    """Render a full resume version as Markdown."""
+
+    try:
+        version = _require_version_name(version_name)
+    except ValueError as exc:
+        return f"[Error] {exc}"
     try:
         return _render_resume(version)
     except FileNotFoundError as exc:
@@ -549,10 +643,22 @@ def create_new_version(new_version_name: str) -> str:
 
 
 def tailor_section_for_jd(
-    module_path: str, section_content: str, jd_analysis: str
+    version_name: str, section_id: str, section_content: str, jd_analysis: str
 ) -> str:
+    try:
+        version_name = _require_version_name(version_name)
+    except ValueError as exc:
+        return f"[Error] {exc}"
+
+    section_id = (section_id or "").strip()
+    if not section_id:
+        return "[Error] section_id cannot be empty."
+
     prompt = f"""
 You are updating a resume section stored as Markdown. Preserve the existing heading structure and bullet formatting while tailoring the content to match the job description analysis.
+
+Resume Version: {version_name}
+Section Id: {section_id}
 
 Current Section Markdown:
 ---

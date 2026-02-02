@@ -17,17 +17,16 @@ import tempfile
 import zipfile
 from pathlib import Path
 import mimetypes
-from urllib.parse import urlparse, quote
+from urllib.parse import quote
 from typing import Union, Any, Callable
 from functools import wraps
+from enum import Enum
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
-import boto3
-from botocore.config import Config
-from botocore.exceptions import BotoCoreError, ClientError
 from dotenv import load_dotenv
 from fs.copy import copy_fs
 from fs.osfs import OSFS
+
 
 # Ensure src-based imports resolve when running via `fastmcp inspect`
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -43,6 +42,27 @@ from fastmcp import FastMCP
 # Configure logging for MCP server
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+class ResumeSectionId(str, Enum):
+    """Enumeration of valid resume section identifiers.
+    
+    Available sections:
+        HEADER: Personal information (name, contact, links)
+        SUMMARY: Professional summary/bio
+        SKILLS: Technical skills organized by category
+        EXPERIENCE: Work history
+        PROJECTS: Personal or open-source projects
+        EDUCATION: Academic background
+        CUSTOM: Custom/free-form content (e.g., languages, interests)
+    """
+    
+    HEADER = "header"
+    SUMMARY = "summary"
+    SKILLS = "skills"
+    EXPERIENCE = "experience"
+    PROJECTS = "projects"
+    EDUCATION = "education"
+    CUSTOM = "raw"  # Maps to 'raw' type in YAML schema
 
 
 def log_mcp_tool_call(func: Callable) -> Callable:
@@ -97,173 +117,56 @@ def log_mcp_tool_call(func: Callable) -> Callable:
     return wrapper
 
 
-# ---------------------------------------------------------------------------
-# S3 helpers
-# ---------------------------------------------------------------------------
-def _get_s3_client_and_settings() -> tuple[Any, str, str, str]:
-    """Create an S3 client using resume-related environment variables."""
-
-    s3_bucket = (
-        os.getenv("RESUME_S3_BUCKET_NAME")
-        or os.getenv("RESUME_S3_BUCKET")
-        or os.getenv("S3_BUCKET_NAME")
-    )
-    if not s3_bucket:
-        raise RuntimeError(
-            "Resume S3 bucket not configured. Set RESUME_S3_BUCKET_NAME or S3_BUCKET_NAME."
-        )
-
-    s3_endpoint = os.getenv("RESUME_S3_ENDPOINT_URL") or os.getenv("S3_ENDPOINT_URL")
-    s3_region = os.getenv("RESUME_S3_REGION") or os.getenv("AWS_REGION")
-    access_key = (
-        os.getenv("RESUME_S3_ACCESS_KEY_ID")
-        or os.getenv("RESUME_S3_ACCESS_KEY")
-        or os.getenv("S3_ACCESS_KEY_ID")
-        or os.getenv("AWS_ACCESS_KEY_ID")
-    )
-    secret_key = (
-        os.getenv("RESUME_S3_SECRET_ACCESS_KEY")
-        or os.getenv("RESUME_S3_SECRET_KEY")
-        or os.getenv("S3_SECRET_ACCESS_KEY")
-        or os.getenv("AWS_SECRET_ACCESS_KEY")
-    )
-
-    client_kwargs: dict[str, Any] = {}
-    if s3_endpoint:
-        client_kwargs["endpoint_url"] = s3_endpoint
-    if s3_region:
-        client_kwargs["region_name"] = s3_region
-    if access_key and secret_key:
-        client_kwargs["aws_access_key_id"] = access_key
-        client_kwargs["aws_secret_access_key"] = secret_key
-
-    s3_config_kwargs: dict[str, Any] = {"signature_version": "s3v4"}
-    addressing_style = os.getenv("RESUME_S3_ADDRESSING_STYLE")
-    if not addressing_style and s3_endpoint:
-        endpoint_host = urlparse(s3_endpoint).hostname or ""
-        if endpoint_host and not endpoint_host.endswith("amazonaws.com"):
-            addressing_style = "path"
-    if addressing_style:
-        s3_config_kwargs["s3"] = {"addressing_style": addressing_style}
-    client_kwargs["config"] = Config(**s3_config_kwargs)
-
-    try:
-        s3_client = boto3.client("s3", **client_kwargs)
-    except Exception as exc:  # pragma: no cover - boto3 can raise various subclasses
-        logger.error("Failed to create S3 client: %s", exc, exc_info=True)
-        raise RuntimeError("Failed to create S3 client for resume uploads") from exc
-
-    key_prefix = os.getenv("RESUME_S3_KEY_PREFIX", "resumes/")
-    if key_prefix and not key_prefix.endswith("/"):
-        key_prefix = f"{key_prefix}/"
-
-    public_base_url = os.getenv("RESUME_S3_PUBLIC_BASE_URL")
-    if not public_base_url:
-        raise RuntimeError(
-            "RESUME_S3_PUBLIC_BASE_URL must be set to the public R2 domain "
-            "(e.g., https://pub-xxxxx.r2.dev or your custom domain)"
-        )
-    if not public_base_url.endswith("/"):
-        public_base_url += "/"
-
-    return s3_client, s3_bucket, key_prefix, public_base_url
-
-
-def _build_object_key(filename: str, key_prefix: str) -> str:
-    return f"{key_prefix}{filename}" if key_prefix else filename
-
-
-def _ensure_s3_object_available(
-    s3_client: Any, bucket: str, object_key: str, description: str
-) -> None:
-    max_attempts = 5
-    for attempt in range(1, max_attempts + 1):
-        try:
-            s3_client.head_object(Bucket=bucket, Key=object_key)
-            return
-        except (BotoCoreError, ClientError) as exc:
-            error_code = getattr(exc, "response", {}).get("Error", {}).get("Code")
-            if error_code in {"404", "NoSuchKey"} and attempt < max_attempts:
-                time.sleep(0.4 * attempt)
-                continue
-            logger.error(
-                "Failed to verify availability for '%s' in bucket '%s' after attempt %d/%d: %s",
-                object_key,
-                bucket,
-                attempt,
-                max_attempts,
-                exc,
-                exc_info=True,
-            )
-            raise RuntimeError(
-                f"Uploaded {description} is not yet available for download"
-            ) from exc
-
-
-def _upload_bytes_to_s3(
-    data: bytes, filename: str, content_type: str, description: str
-) -> tuple[str, str]:
-    s3_client, s3_bucket, key_prefix, public_base_url = _get_s3_client_and_settings()
-    object_key = _build_object_key(filename, key_prefix)
-
-    try:
-        s3_client.put_object(
-            Bucket=s3_bucket,
-            Key=object_key,
-            Body=data,
-            ContentType=content_type,
-        )
-    except (BotoCoreError, ClientError) as exc:
-        logger.error(
-            "Failed to upload %s '%s' to bucket '%s': %s",
-            description,
-            filename,
-            s3_bucket,
-            exc,
-            exc_info=True,
-        )
-        raise RuntimeError(f"Failed to upload {description} to S3") from exc
-
-    _ensure_s3_object_available(s3_client, s3_bucket, object_key, description)
-
-    public_url = f"{public_base_url}{object_key}"
-    return public_url, object_key
 
 
 # Try relative import first, fall back to absolute import
 try:
     from .settings import load_settings, get_settings
     from .filesystem import init_filesystems, get_output_fs
+    from .s3_utils import upload_bytes_to_s3
     from .tools import (
         list_resume_versions_tool,
         load_complete_resume_tool,
-        load_resume_section_tool,
+        get_resume_section_tool,
         update_resume_section_tool,
         create_new_version_tool,
         delete_resume_version_tool,
+        copy_resume_version_tool,
         update_main_resume_tool,
         list_modules_in_version_tool,
         summarize_resumes_to_index_tool,
         read_resume_summary_tool,
         render_resume_to_latex_tool,
         compile_resume_pdf_tool,
+        submit_resume_pdf_job_tool,
+        get_resume_pdf_job_status_tool,
+        set_section_visibility_tool,
+        set_section_order_tool,
+        get_resume_layout_tool,
     )
 except ImportError:
     from myagent.settings import load_settings, get_settings
     from myagent.filesystem import init_filesystems, get_output_fs
+    from myagent.s3_utils import upload_bytes_to_s3
     from myagent.tools import (
         list_resume_versions_tool,
         load_complete_resume_tool,
-        load_resume_section_tool,
+        get_resume_section_tool,
         update_resume_section_tool,
         create_new_version_tool,
         delete_resume_version_tool,
+        copy_resume_version_tool,
         update_main_resume_tool,
         list_modules_in_version_tool,
         summarize_resumes_to_index_tool,
         read_resume_summary_tool,
         render_resume_to_latex_tool,
         compile_resume_pdf_tool,
+        submit_resume_pdf_job_tool,
+        get_resume_pdf_job_status_tool,
+        set_section_visibility_tool,
+        set_section_order_tool,
+        get_resume_layout_tool,
     )
 
 def _initialize_logging() -> Path:
@@ -508,95 +411,132 @@ def list_resume_versions() -> str:
 
 @mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
-def load_complete_resume(filename: str) -> str:
+def load_complete_resume(version_name: str) -> str:
     """
     Renders the full resume as Markdown.
 
     Args:
-        filename: Resume YAML filename (e.g., 'resume.yaml')
+        version_name: Resume version name WITHOUT .yaml extension (e.g., 'resume')
     """
-    return load_complete_resume_tool(filename)
+    return load_complete_resume_tool(version_name)
 
 
 @mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
-def load_resume_section(module_path: str) -> str:
+def get_resume_section(version_name: str, section_id: str) -> str:
     """
-    Loads the Markdown content of a specific resume section.
-
+    Load a specific section from a resume file.
+    
     Args:
-        module_path: Version/section identifier (e.g., 'resume/summary')
+        version_name: Resume file name WITHOUT .yaml extension (e.g., 'resume')
+        section_id: Section identifier to load (must be one of: header, summary, 
+                   skills, experience, projects, education, custom)
+    
+    Returns:
+        Markdown content of the requested section
+        
+    Example:
+        get_resume_section(version_name="resume", section_id="summary")
     """
-    return load_resume_section_tool(module_path)
+    return get_resume_section_tool(version_name, section_id)
 
 
 @mcp.tool()
 @log_mcp_tool_call
-def update_resume_section(module_path: str, new_content: str) -> str:
+def update_resume_section(
+    version_name: str,
+    section_id: str,
+    new_content: str
+) -> str:
     """
-    Overwrite a resume section with new Markdown content.
+    Update a specific section in a resume file with new Markdown content.
+    
+    Args:
+        version_name: Resume file name WITHOUT .yaml extension (e.g., 'resume')
+        section_id: Section identifier to update (must be one of: header, summary,
+                   skills, experience, projects, education, custom)
+        new_content: New Markdown content for the section
+    
+    Returns:
+        Success or error message
+        
+    Important:
+        - Input must be in Markdown format
+        - Cannot update entire resume at once
+        - Must update ONE section at a time
+        
+    See get_resume_yaml_format() for content format examples.
+    """
+    return update_resume_section_tool(version_name, section_id, new_content)
+
+
+@mcp.tool()
+@log_mcp_tool_call
+def set_section_visibility(
+    version_name: str, section_id: str, enabled: bool = True
+) -> str:
+    """
+    Enable or disable rendering of a specific section in a resume version.
 
     Args:
-        module_path: Version/section identifier (e.g., 'resume/summary', 'resume/experience', 'resume/projects', 'resume/skills', 'resume/header')
-        new_content: Replacement Markdown preserving headings and bullet lists
-    
-    Format Examples:
-    
-    Header Section:
-        ## Header
-        first_name: John
-        last_name: Doe
-        position: Senior Software Engineer
-        address: San Francisco, CA
-        mobile: +1-234-567-8900
-        email: john.doe@example.com
-        github: github.com/johndoe
-        linkedin: linkedin.com/in/johndoe
-    
-    Summary Section:
-        ## Summary
-        - 8+ years of experience in full-stack development and cloud architecture
-        - Expert in Python, JavaScript, and distributed systems
-        - Led teams of 5-10 engineers to deliver scalable products
-    
-    Skills Section:
-        ## Skills
-        - Programming: Python, JavaScript, Go, SQL
-        - Cloud Platforms: AWS, GCP, Docker, Kubernetes
-        - Tools & Practices: Git, Jenkins, Terraform, Agile/Scrum
-        - Databases: PostgreSQL, MongoDB, Redis
-    
-    Experience Section:
-        ## Experience
-        ### Software Engineer — TechCorp Inc (San Francisco, CA) | Jan 2020 - Present
-        - Developed microservices using Python and Go
-        - Led team of 5 engineers in agile sprints
-        - Improved system performance by 40%
-        
-        ### Junior Developer — StartupXYZ (Remote) | Jun 2018 - Dec 2019
-        - Built REST APIs with Node.js and Express
-        - Implemented CI/CD pipelines using Jenkins
-    
-    Projects Section:
-        ## Projects
-        ### E-Commerce Platform — Personal Project (GitHub) | 2023
-        - Built full-stack web app with React and Django
-        - Integrated Stripe payment processing
-        - Deployed on AWS with Docker and Kubernetes
-        
-        ### Machine Learning Pipeline — University Research | 2022
-        - Developed data processing pipeline for NLP tasks
-        - Achieved 95% accuracy on sentiment analysis
-    
-    Education Section:
-        ## Education
-        **Master of Science in Computer Science**
-        Stanford University | 2016 - 2018
-        
-        **Bachelor of Science in Computer Engineering**
-        Stanford University (Palo Alto, CA) | 2012 - 2016
+        version: Resume version name (without .yaml)
+        section_id: Section id to toggle (e.g., 'summary', 'experience')
+        enabled: True to show, False to hide
     """
-    return update_resume_section_tool(module_path, new_content)
+    try:
+        result = set_section_visibility_tool(version_name, section_id, enabled)
+        payload = {
+            "version_name": version_name,
+            "section_id": section_id,
+            "enabled": enabled,
+        }
+        try:
+            payload.update(result if isinstance(result, dict) else {})
+        except Exception:
+            pass
+        return json.dumps(payload)
+    except Exception as exc:
+        return json.dumps({"error": str(exc)})
+
+
+@mcp.tool()
+@log_mcp_tool_call
+def set_section_order(version_name: str, order: list[str]) -> str:
+    """
+    Set the rendering order of sections for a resume version.
+
+    Args:
+        version: Resume version name (without .yaml)
+        order: List of section ids in desired order; unknown ids are skipped and remaining sections are appended automatically.
+    """
+    try:
+        result = set_section_order_tool(version_name, order)
+        payload = {"version_name": version_name, "order": order}
+        try:
+            payload.update(result if isinstance(result, dict) else {})
+        except Exception:
+            pass
+        return json.dumps(payload)
+    except Exception as exc:
+        return json.dumps({"error": str(exc)})
+
+
+@mcp.tool(annotations=dict(readOnlyHint=True))
+@log_mcp_tool_call
+def get_resume_layout(version_name: str) -> str:
+    """Get current section order and disabled flags for a resume version."""
+    try:
+        result = get_resume_layout_tool(version_name)
+        payload = {"version_name": version_name}
+        try:
+            payload.update(
+                json.loads(result) if isinstance(result, str) else (result or {})
+            )
+        except Exception:
+            payload["raw"] = result
+        return json.dumps(payload)
+    except Exception as exc:
+        return json.dumps({"error": str(exc)})
 
 
 @mcp.tool()
@@ -628,16 +568,50 @@ def delete_resume_version(version_name: str) -> str:
     return delete_resume_version_tool(version_name)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True))
+@mcp.tool()
 @log_mcp_tool_call
-def list_modules_in_version(filename: str) -> str:
+def copy_resume_version(source_version: str, target_version: str) -> str:
     """
-    Lists all section identifiers defined in a resume YAML file.
+    Copies an existing resume version to a new version.
 
     Args:
-        filename: Resume filename (e.g., 'resume.yaml')
+        source_version: The name of the source resume version to copy from (without .yaml extension)
+        target_version: The name of the target resume version to copy to (without .yaml extension)
+
+    Note:
+        - The source version must exist
+        - The target version must not already exist
     """
-    return list_modules_in_version_tool(filename)
+    return copy_resume_version_tool(source_version, target_version)
+
+
+@mcp.tool(annotations=dict(readOnlyHint=True))
+@log_mcp_tool_call
+def list_resume_sections(version_name: str) -> str:
+    """
+    List all section identifiers available in a resume file.
+
+    Args:
+        version_name: Resume version name WITHOUT .yaml extension (e.g., 'resume')
+    
+    Returns:
+        JSON string containing section identifiers and their types
+        
+    Example output:
+        {
+            "sections": [
+                {"id": "header", "type": "header"},
+                {"id": "summary", "type": "summary"},
+                {"id": "skills", "type": "skills"},
+                {"id": "experience", "type": "entries"},
+                {"id": "projects", "type": "entries"},
+                {"id": "education", "type": "entries"},
+                {"id": "additional", "type": "raw"}
+            ],
+            "total": 7
+        }
+    """
+    return list_modules_in_version_tool(version_name)
 
 # Resume Summary and Index Tools
 @mcp.tool()
@@ -834,7 +808,7 @@ The following JSON schema defines the validation rules:
 # Resume Rendering Tools
 @mcp.tool()
 @log_mcp_tool_call
-def render_resume_pdf(version: str) -> dict[str, str]:
+def render_resume_pdf(version_name: str) -> dict[str, str]:
     """
     Render a resume version directly to PDF file. **This is a WRITE tool** because it
     generates a new PDF under data/output.
@@ -845,7 +819,7 @@ def render_resume_pdf(version: str) -> dict[str, str]:
     for downstream clients.
 
     Args:
-        version: Resume version name without extension (e.g., 'resume')
+        version_name: Resume version name without extension (e.g., 'resume')
 
     Returns:
         Dictionary with keys:
@@ -855,11 +829,11 @@ def render_resume_pdf(version: str) -> dict[str, str]:
         - `latex_assets_dir`: Optional directory containing LaTeX sources for debugging.
     """
     # First render to LaTeX
-    latex_result = render_resume_to_latex_tool(version)
+    latex_result = render_resume_to_latex_tool(version_name)
     latex_content = latex_result.latex
 
     # Then compile to PDF - the tool now saves to data/output directory
-    pdf_result = compile_resume_pdf_tool(latex_content, version)
+    pdf_result = compile_resume_pdf_tool(latex_content, version_name)
     output_fs = get_output_fs()
 
     # Extract filename from returned resource path (e.g., data://resumes/output/foo.pdf)
@@ -873,7 +847,7 @@ def render_resume_pdf(version: str) -> dict[str, str]:
         logger.error("Failed to read generated PDF '%s': %s", filename, exc, exc_info=True)
         raise RuntimeError(f"Failed to read generated PDF '{filename}'") from exc
 
-    public_url, _ = _upload_bytes_to_s3(
+    public_url, _ = upload_bytes_to_s3(
         pdf_bytes,
         filename,
         "application/pdf",
@@ -892,7 +866,28 @@ def render_resume_pdf(version: str) -> dict[str, str]:
 
 @mcp.tool()
 @log_mcp_tool_call
-def render_resume_to_overleaf(version: str) -> dict[str, str]:
+def submit_resume_pdf_job(version_name: str) -> dict[str, str]:
+    """
+    Submit an async resume render+compile job.
+
+    This tool renders LaTeX, uploads the LaTeX and assets bundle to S3, and
+    enqueues a Celery job for PDF compilation. It returns job/task identifiers.
+    """
+    return submit_resume_pdf_job_tool(version_name).model_dump()
+
+
+@mcp.tool(annotations=dict(readOnlyHint=True))
+@log_mcp_tool_call
+def get_resume_pdf_job_status(task_id: str) -> dict[str, str | None]:
+    """
+    Query the status of an async resume PDF job by Celery task id.
+    """
+    return get_resume_pdf_job_status_tool(task_id).model_dump()
+
+
+@mcp.tool()
+@log_mcp_tool_call
+def render_resume_to_overleaf(version_name: str) -> dict[str, str]:
     """
     Render a resume version to a LaTeX project suitable for Overleaf import.
 
@@ -901,7 +896,7 @@ def render_resume_to_overleaf(version: str) -> dict[str, str]:
     returns an Overleaf import URL.
 
     Args:
-        version: Resume version name without extension (e.g., 'resume')
+        version_name: Resume version name without extension (e.g., 'resume')
 
     Returns:
         Dictionary with keys:
@@ -912,12 +907,12 @@ def render_resume_to_overleaf(version: str) -> dict[str, str]:
         - `latex_assets_dir`: Directory containing the LaTeX sources for debugging.
     """
 
-    latex_result = render_resume_to_latex_tool(version)
+    latex_result = render_resume_to_latex_tool(version_name)
     latex_content = latex_result.latex
 
     timestamp = time.strftime("%Y%m%d_%H%M%S")
-    zip_filename = f"{version}_{timestamp}_overleaf.zip"
-    latex_dir_name = f"{version}_{timestamp}_latex"
+    zip_filename = f"{version_name}_{timestamp}_overleaf.zip"
+    latex_dir_name = f"{version_name}_{timestamp}_latex"
 
     template_root = Path(__file__).resolve().parents[2] / "templates"
     output_fs = get_output_fs()
@@ -960,7 +955,7 @@ def render_resume_to_overleaf(version: str) -> dict[str, str]:
     zip_path = f"data://resumes/output/{zip_filename}"
     latex_assets_dir = f"data://resumes/output/{latex_dir_name}"
 
-    public_url, _ = _upload_bytes_to_s3(
+    public_url, _ = upload_bytes_to_s3(
         zip_bytes,
         zip_filename,
         "application/zip",

@@ -1,4 +1,5 @@
 import os
+import os
 import shutil
 import sys
 import tempfile
@@ -19,6 +20,7 @@ from myagent.resume_renderer import (
     markdown_inline_to_latex,
     escape_tex,
     _normalize_metadata,
+    render_resume_from_dict,
 )
 from myagent.tools import compile_resume_pdf_tool
 
@@ -122,3 +124,47 @@ def test_normalize_metadata_github_handle(raw, expected):
 def test_normalize_metadata_linkedin_slug(raw, expected):
     normalized = _normalize_metadata({"linkedin": raw})
     assert normalized["linkedin"] == expected
+
+
+def test_render_resume_respects_section_style_order_and_enabled():
+    resume_dict = {
+        "metadata": {"first_name": "Test", "last_name": "User"},
+        "style": {
+            "section_order": ["skills", "summary"],
+            "section_disabled": {"education": True},
+        },
+        "sections": [
+            {
+                "type": "summary",
+                "title": "Summary",
+                "id": "summary",
+                "bullets": ["First"],
+            },
+            {
+                "type": "skills",
+                "title": "Skills",
+                "id": "skills",
+                "groups": [{"category": "Languages", "items": ["Python"]}],
+            },
+            {
+                "type": "entries",
+                "title": "Education",
+                "id": "education",
+                "entries": [
+                    {
+                        "title": "B.S.",
+                        "organization": "Uni",
+                        "location": "",
+                        "period": "",
+                        "bullets": [],
+                    }
+                ],
+            },
+        ],
+    }
+
+    latex = render_resume_from_dict(resume_dict, version="styled")
+
+    assert "Education" not in latex
+    assert latex.find("Skills") != -1 and latex.find("Summary") != -1
+    assert latex.find("Skills") < latex.find("Summary")

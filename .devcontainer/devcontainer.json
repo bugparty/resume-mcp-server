@@ -1,15 +1,19 @@
 {
   "name": "Python + TeX Live (full)",
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "devcontainer",
+   "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
   "remoteUser": "vscode",
   "customizations": {
     "vscode": {
       "extensions": [
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "James-Yu.latex-workshop"
+        "ms-azuretools.vscode-docker",
+        "James-Yu.latex-workshop",
+        "github.copilot-chat",
+        "github.copilot"
       ]
     }
   }

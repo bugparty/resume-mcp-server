@@ -13,7 +13,7 @@ settings = load_settings(
 # Initialize filesystems for tests
 init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
 
-from myagent.resume_loader import find_resume_versions, load_complete_resume, load_resume_section
+from myagent.resume_loader import find_resume_versions, load_complete_resume, get_resume_section
 
 
 class TestResumeBasics(unittest.TestCase):
@@ -23,10 +23,10 @@ class TestResumeBasics(unittest.TestCase):
         self.assertIn("resume", versions)
 
     def test_load_resume_and_section(self):
-        rendered = load_complete_resume("resume.yaml")
+        rendered = load_complete_resume("resume")
         self.assertIn("## Summary", rendered)
 
-        section = load_resume_section("resume/education")
+        section = get_resume_section("resume", "education")
         self.assertIn("## Education", section)
 
 

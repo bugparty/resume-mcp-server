@@ -14,3 +14,8 @@ data/resumes/output/**/*
 server-info.json
 logs/*.log
 samples/**/*
+data/resumes/*.yaml
+
+# Cloudflare tunnel
+.cloudflared/
+cloudflared

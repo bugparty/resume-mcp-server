@@ -1,8 +1,8 @@
-# Base VS Code Dev Container image for Python 3.12 on Debian Bookworm
-FROM mcr.microsoft.com/devcontainers/python:3.12-bookworm
+FROM python:3.12-slim
 
-# Base tools
-USER root
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
 RUN set -eux; \
     apt-get update; \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -77,11 +77,13 @@ RUN mkdir -p /usr/local/share/fonts/fandol && \
 ENV MANPATH=/usr/local/texlive/2024/texmf-dist/doc/man:$MANPATH
 ENV INFOPATH=/usr/local/texlive/2024/texmf-dist/doc/info:$INFOPATH
 
-USER vscode
-ENV UV_LINK_MODE=copy UV_SYSTEM_PYTHON=1
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+WORKDIR /app
 
-# Switch back to vscode user
-USER vscode
-WORKDIR /workspace
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
 
+COPY . /app
+
+EXPOSE 8080
+
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]

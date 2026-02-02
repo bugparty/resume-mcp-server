@@ -1,7 +1,5 @@
 # Resume MCP Agent
 
-[中文版 README](./README-cn.md)
-
 ## 🤖 What is Resume MCP Agent?
 
 Resume MCP Agent is an intelligent resume assistant based on MCP (Model Context Protocol) that allows you to directly manage and optimize your resume within AI clients like Claude Desktop and ChatGPT.
@@ -61,7 +59,7 @@ The container will automatically create a public URL for ChatGPT integration. Se
    ```bash
    git clone <repository-url>
    cd resume_mcp
-   uv sync
+   ./setupenv.sh
    ```
 
 2. **Configure environment variables**

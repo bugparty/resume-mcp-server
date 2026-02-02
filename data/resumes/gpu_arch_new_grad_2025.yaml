@@ -1,0 +1,226 @@
+source: resume.tex
+metadata:
+  first_name: Bowen
+  last_name: Han
+  position: AI Infrastructure Engineer
+  address: Riverside, CA
+  mobile: +1-310-254-0932
+  email: fancycode@gmail.com
+  github: github.com/bugparty
+  linkedin: linkedin.com/in/bowenhan
+sections:
+- type: summary
+  title: Summary
+  id: summary
+  bullets:
+  - AI Infrastructure Engineer with 9+ years of experience in AI and software systems,
+    from early Android/Android OS work at Baidu/Meituan to modern LLM fine-tuning
+    and reinforcement learning.
+  - Specialized in building intelligent agent systems using LLM-based architectures
+    (DeepSeek, LLaMA), RL algorithms (PPO, DQN), and frameworks like FastMCP, LangChain,
+    LangGraph, and FastAPI.
+  - Enable enterprises to deploy cost-efficient local agent systems by fine-tuning
+    smaller models (8B-32B) with RL, eliminating expensive ChatGPT API dependencies
+    and reducing inference costs by orders of magnitude; currently pursuing Master's
+    in Computer Engineering at UC Riverside.
+- type: entries
+  entries:
+  - title: Master of Science in Computer Engineering
+    organization: University of California Riverside
+    location: ''
+    period: Sep 2024 - Jun 2026
+    bullets: []
+  - title: NVIDIA CUDA on ARM Certification
+    organization: NVIDIA China Official Certification
+    location: ''
+    period: '2020'
+    bullets:
+    - Earned official certification from NVIDIA China by passing the CUDA on ARM examination,
+      demonstrating proficiency in parallel computing and GPU optimization on ARM-based
+      heterogeneous systems.
+  title: Education
+  id: education
+- type: skills
+  title: Technical Skills
+  id: skills
+  groups:
+  - category: Programming Languages
+    items:
+    - C++
+    - Java
+    - Python
+    - JavaScript
+    - Rust
+    - Go
+  - category: Frameworks & Tools
+    items:
+    - PyTorch
+    - LLaMA
+    - FastMCP
+    - LangChain
+    - LangGraph
+    - FastAPI
+    - Docker
+    - Android Studio
+    - React
+    - Git
+  - category: Technologies
+    items:
+    - RL (PPO
+    - DQN)
+    - LLM Fine-tuning
+    - NLP
+    - Android OS
+    - WebAssembly
+    - CI/CD
+- type: experience
+  title: Experience
+  id: experience
+  entries:
+  - title: Infrastructure / ML Systems Engineer
+    organization: Brix
+    location: San Francisco, USA
+    period: Jan 2025 - Present
+    bullets:
+    - Identified latency bottleneck in production LLM inference pipeline; optimized
+      through CUDA kernel optimization on NVIDIA GPUs, reducing inference latency
+      by 35% and enabling massive scale-out for production workloads.
+    - Architected distributed inference pipeline supporting 1000+ concurrent requests
+      with sub-second response time, enabling multi-tenant deployment at enterprise
+      scale.
+    - Developed automated data acquisition pipelines by reverse engineering competitor
+      APIs and analyzing network protocols, reducing manual data collection effort
+      by 80% and enabling continuous model retraining loops.
+    - Implemented end-to-end MLOps workflow using Kubernetes and CI/CD, automating
+      continuous training and deployment of AI models and reducing deployment time
+      from hours to minutes.
+    - Open-source contributor to llama.cpp ggml CUDA kernels; optimized key operators
+      achieving 35% speedup, improving inference performance across thousands of users.
+  - title: Senior Technical Lead
+    organization: AparaVR
+    location: ''
+    period: Jan 2022 - May 2023
+    bullets:
+    - Led Android OS development for Li Auto in-vehicle infotainment system across
+      a team of 5; managed ARM-based Android board bring-up from bootloader to production,
+      reducing time-to-market by 3 months.
+    - Customized Android framework and Display layer for in-vehicle rendering requirements;
+      developed C++ services to optimize graphics performance for real-time 3D rendering
+      in automotive environment.
+  - title: Luci Glasses - Android System Developer
+    organization: ShadowCreator
+    location: ''
+    period: May 2021 - Aug 2021
+    bullets:
+    - Wrote user space drivers for USB IMU sensors and developed Android virtual mouse
+      driver.
+    - Worked on Android system framework, implementing dynamic switching between system
+      and USB sensors.
+    - Performed Android and C++ reverse engineering to analyze competitor implementations;
+      tuned sensor fusion algorithms using Matlab.
+    - 'Technologies: AOSP, Android OS, C++, Java, Matlab, USB, sensor fusion.'
+  - title: Full Stack Engineer
+    organization: Rolling Blocks
+    location: Startup
+    period: Jun 2018 - Jan 2020
+    bullets:
+    - Developed Ethereum smart contracts and dApps; worked on secondary development
+      of a distributed exchange.
+    - Built and maintained a CDN cluster, reducing traffic costs by tenfold; developed
+      content factory, WeChat crawler, and WordPress load-balancing.
+    - 'Technologies: React, Ethereum, Docker, Nginx, Minio, RabbitMQ, Scrapy, Node.js,
+      Express, MongoDB.'
+  - title: Android Developer
+    organization: Meituan.com
+    location: Finance
+    period: Nov 2016 - Mar 2018
+    bullets:
+    - Led development of POS machine launcher and participated in core cashier client
+      serving 100K+ merchants; implemented fast boot and low-latency payment processing
+      for high-transaction-volume scenarios.
+    - Diagnosed performance bottleneck in barcode scanning module causing checkout
+      delays; migrated image encoding/decoding from CPU to GPU using RenderScript,
+      achieving 5x performance improvement and reducing per-transaction processing
+      time from 3s to <1s.
+    - Performed reverse engineering of competitor Android and Windows POS implementations
+      to analyze encryption algorithms and business logic, enabling feature parity
+      and security hardening.
+  - title: C++ Engineer
+    organization: Meituan.com
+    location: Innovation Business Department
+    period: Sep 2015 - Nov 2016
+    bullets:
+    - Developed core components of cross-platform cloud storage SDK in C++ with high
+      reliability requirements; implemented intelligent file segmentation, corruption
+      verification, and resume-interrupted-transfer logic, reducing failed upload
+      rate by 30%.
+    - Contributed to Windows graphical client for cloud storage serving 100K+ enterprise
+      users (company employees); implemented file browsing, upload/download queue
+      management, and intuitive UI for large-scale internal deployment.
+  - title: Prototype Engineer
+    organization: Baidu
+    location: IDL Human-Computer Interaction
+    period: Apr 2014 - Jul 2014
+    bullets:
+    - Assisted human-computer interaction researchers in developing interaction prototypes
+      for smart devices and Android devices.
+  - title: Test Development Intern
+    organization: Baidu
+    location: Search Department
+    period: Jul 2013 - Oct 2013
+    bullets:
+    - Assisted in developing front and back end of Baidu's mobile search using PHP;
+      submitted patches to ThinkPHP.
+    - Wrote e2e automation test scripts in JavaScript and Linux shell; mentored other
+      interns and contractors.
+- type: projects
+  title: Projects
+  id: projects
+  entries:
+  - title: CPU L1 Cache Simulator for GEMM Performance Analysis
+    organization: Performance Optimization Research
+    location: ''
+    period: '2024'
+    bullets:
+    - Built a CPU L1 cache simulator to visualize memory access patterns and cache
+      behavior under different matrix multiplication algorithms and loop traversal
+      orders; deployed as interactive web demo ([huggingface.co/spaces/bowmanhan/gemm-visualizer](https://huggingface.co/spaces/bowmanhan/gemm-visualizer)).
+    - Implemented cache hit/miss rate tracking and memory access pattern analysis
+      for GEMM (General Matrix Multiplication) workloads, demonstrating how loop ordering
+      (row-major vs. column-major) significantly impacts cache locality and performance.
+    - Analyzed cache line contention, working set size, and data reuse patterns across
+      different GEMM implementations; generated detailed visualizations of cache state
+      evolution and memory access sequences.
+    - 'Insights directly applicable to GPU architecture optimization: understanding
+      memory hierarchy, cache line utilization, and prefetch behavior for designing
+      efficient GPU kernels and optimizing memory access in compute-intensive workloads.
+      ([github.com/bugparty/gemm_visualizations](https://github.com/bugparty/gemm_visualizations))'
+  - title: GPU Architecture Performance Analysis with GPGPU-Sim
+    organization: UC Riverside GPU Architecture Course
+    location: ''
+    period: '2024'
+    bullets:
+    - Profiled CUDA kernels using GPGPU-Sim architecture simulator to understand GPU
+      performance characteristics and identify optimization opportunities.
+    - Analyzed critical GPU performance metrics including SM occupancy (streaming
+      multiprocessor thread utilization), memory coalescing patterns (global memory
+      access efficiency), cache behavior (L1/L2 cache hit rates and contention), and
+      warp divergence (control flow divergence impact on thread execution).
+    - Measured and compared kernel execution across different block/thread configurations
+      and memory access patterns; identified bottlenecks in memory bandwidth utilization,
+      cache efficiency, and thread scheduling.
+    - Insights directly informed understanding of GPU hardware constraints and trade-offs
+      in kernel design, essential for optimizing CUDA code for production GPU systems.
+  - title: LLaMA.cpp GGML CUDA Kernel Optimization
+    organization: LLaMA.cpp Open Source Contribution
+    location: ''
+    period: 2024–2024
+    bullets:
+    - Identified performance bottleneck in GGML operators limiting GPU throughput;
+      optimized critical kernels through elegant index calculation strategies, efficient
+      division implementations, and SM occupancy tuning, achieving 35% speedup.
+    - Analyzed kernel launch configurations and thread scheduling; redesigned for
+      improved resource utilization, enabling higher GPU occupancy and throughput
+      across diverse NVIDIA architectures.
+    - Contributions merged to production LLaMA.cpp deployments, impacting inference
+      latency for thousands of users across GPU inference systems.

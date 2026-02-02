@@ -45,14 +45,28 @@ def test_render_resume_to_overleaf_exports_zip(monkeypatch):
 
     monkeypatch.setattr(mcp_server, "render_resume_to_latex_tool", fake_render_resume_to_latex_tool)
     monkeypatch.setattr(mcp_server, "get_output_fs", lambda: memory_fs)
-    monkeypatch.setattr(mcp_server.boto3, "client", fake_boto3_client)
+
+    uploaded: dict[str, object] = {}
+
+    def fake_upload_bytes_to_s3(
+        data: bytes, filename: str, content_type: str, description: str
+    ) -> tuple[str, str]:
+        assert filename.endswith("_overleaf.zip")
+        assert content_type == "application/zip"
+        uploaded["bytes"] = data
+        key = f"resumes/{filename}"
+        return f"https://cdn.example.com/base/{key}", key
+
+    monkeypatch.setattr(mcp_server, "upload_bytes_to_s3", fake_upload_bytes_to_s3)
 
     result = mcp_server.render_resume_to_overleaf.fn("resume")
 
     expected_filename = "resume_20250101_120000_overleaf.zip"
     expected_key = f"resumes/{expected_filename}"
     expected_public_url = f"https://cdn.example.com/base/{expected_key}"
-    expected_overleaf_url = f"https://www.overleaf.com/docs?snip_uri={quote(expected_public_url, safe='')}"
+    expected_overleaf_url = (
+        f"https://www.overleaf.com/docs?snip_uri={quote(expected_public_url, safe='')}&engine=xelatex"
+    )
     expected_zip_path = f"data://resumes/output/{expected_filename}"
     expected_latex_dir = "data://resumes/output/resume_20250101_120000_latex"
 
@@ -64,7 +78,7 @@ def test_render_resume_to_overleaf_exports_zip(monkeypatch):
         "latex_assets_dir": expected_latex_dir,
     }
 
-    stored_zip = fake_s3_client.stored_objects[("resume-bucket", expected_key)]
+    stored_zip = uploaded["bytes"]
     assert stored_zip == memory_fs.readbytes(expected_filename)
 
     assert memory_fs.isdir("resume_20250101_120000_latex")
