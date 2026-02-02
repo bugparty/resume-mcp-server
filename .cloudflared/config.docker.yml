@@ -1,5 +1,5 @@
 tunnel: resumemcp
-credentials-file: /etc/cloudflared/599718c3-ca5e-4347-8b65-2f80c1ef91cf.json
+credentials-file: /usr/local/etc/cloudflared/599718c3-ca5e-4347-8b65-2f80c1ef91cf.json
 
 ingress:
   - hostname: resumedev.0x1f0c.dev

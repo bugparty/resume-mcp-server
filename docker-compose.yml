@@ -7,11 +7,12 @@ services:
       dockerfile: Dockerfile.base
     volumes:
       - .:/workspace
+      - .cloudflared:/usr/local/etc/cloudflared
 
     depends_on:
       - redis
       - latex_compile_api
-    command: ./cloudflared tunnel  --config ./.cloudflared/config.yml run
+    command: ./cloudflared tunnel  --config /usr/local/etc/cloudflared/config.docker.yml run
 
   redis:
     image: redis:7
