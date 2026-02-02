@@ -1,0 +1,84 @@
+services:
+  redis:
+    image: redis:7
+
+  # Optional LaTeX compile backend stack.
+  # Enable with: docker compose -f .github/compose.ci.yml --profile latex up ...
+  minio:
+    image: minio/minio:RELEASE.2025-01-20T14-49-07Z
+    profiles: ["latex"]
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+  minio_init:
+    image: minio/mc:RELEASE.2025-01-18T00-57-44Z
+    profiles: ["latex"]
+    depends_on:
+      - minio
+    entrypoint: ["/bin/sh", "-lc"]
+    command: >-
+      mc alias set local http://minio:9000 minioadmin minioadmin &&
+      mc mb -p local/resume-bucket || true &&
+      mc anonymous set download local/resume-bucket || true
+
+  latex_compile_api:
+    build:
+      context: ./services/latex_compile_api
+    profiles: ["latex"]
+    depends_on:
+      - redis
+      - latex_compile_worker
+      - minio_init
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      RESUME_S3_ENDPOINT_URL: http://minio:9000
+      RESUME_S3_ADDRESSING_STYLE: path
+      RESUME_S3_BUCKET_NAME: resume-bucket
+      RESUME_S3_ACCESS_KEY_ID: minioadmin
+      RESUME_S3_SECRET_ACCESS_KEY: minioadmin
+      RESUME_S3_KEY_PREFIX: resumes/
+      RESUME_S3_PUBLIC_BASE_URL: http://minio:9000/resume-bucket/
+    ports:
+      - "8080:8080"
+    command: uvicorn app:app --host 0.0.0.0 --port 8080
+
+  latex_compile_worker:
+    build:
+      context: ./services/latex_compile_api
+    profiles: ["latex"]
+    depends_on:
+      - redis
+      - minio_init
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      RESUME_S3_ENDPOINT_URL: http://minio:9000
+      RESUME_S3_ADDRESSING_STYLE: path
+      RESUME_S3_BUCKET_NAME: resume-bucket
+      RESUME_S3_ACCESS_KEY_ID: minioadmin
+      RESUME_S3_SECRET_ACCESS_KEY: minioadmin
+      RESUME_S3_KEY_PREFIX: resumes/
+      RESUME_S3_PUBLIC_BASE_URL: http://minio:9000/resume-bucket/
+    command: celery -A celery_app worker --loglevel=info --uid=nobody
+
+  test:
+    image: resume-mcp:test
+    depends_on:
+      - redis
+    working_dir: /workspace
+    command: ["/bin/bash", "-c", "uv run python scripts/run_all_tests.py"]
+    environment:
+      # Provide empty/fake keys to avoid external calls; tests use fixtures
+      GOOGLE_API_KEY: ""
+      DEEPSEEK_API_KEY: ""
+      OPENAI_API_KEY: ""
+
+      # Make Celery defaults work in-container (localhost would be the container itself)
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1

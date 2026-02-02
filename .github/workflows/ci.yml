@@ -14,38 +14,58 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test image (cached)
+        uses: docker/build-push-action@v6
         with:
-          python-version: '3.12'
+          context: .
+          file: .github/Dockerfile.ci
+          tags: resume-mcp:test
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v5
-
-      - name: Cache uv and virtualenv
-        uses: actions/cache@v4
-        with:
-          path: |
-            .venv
-            ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml', 'uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-
-
-      - name: Create venv and install dependencies
+      - name: Run test suite via Docker Compose
         run: |
-          uv venv
-          source .venv/bin/activate
-          uv sync
+          docker compose -f .github/compose.ci.yml up --abort-on-container-exit --exit-code-from test
 
-      - name: Run test suite (schema, pytest, PDF-skippable)
-        env:
-          # Provide empty/fake keys to avoid external calls; tests use fixtures
-          GOOGLE_API_KEY: ''
-          DEEPSEEK_API_KEY: ''
-          OPENAI_API_KEY: ''
+      - name: Tear down Compose stack
+        if: always()
         run: |
-          source .venv/bin/activate
-          uv run python scripts/run_all_tests.py
+          docker compose -f .github/compose.ci.yml down -v
+
+  latex-backend-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Boot LaTeX backend (Compose profile)
+        run: |
+          docker compose -f .github/compose.ci.yml --profile latex up -d --build minio redis latex_compile_worker latex_compile_api
+
+      - name: Smoke check compile API
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://localhost:8080/healthz >/dev/null; then
+              echo "latex_compile_api is healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "latex_compile_api did not become healthy" >&2
+          docker compose -f .github/compose.ci.yml --profile latex ps
+          docker compose -f .github/compose.ci.yml --profile latex logs --no-color --tail=200 latex_compile_api latex_compile_worker
+          exit 1
+
+      - name: Tear down LaTeX backend
+        if: always()
+        run: |
+          docker compose -f .github/compose.ci.yml --profile latex down -v
 
 
