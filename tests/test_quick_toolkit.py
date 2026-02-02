@@ -19,7 +19,7 @@ init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
 from myagent.resume_loader import (
     summarize_resumes_to_index,
     read_resume_summary,
-    load_resume_section,
+    get_resume_section,
     tailor_section_for_jd,
 )
 
@@ -33,7 +33,7 @@ class TestQuickToolkit(unittest.TestCase):
         summary_content = read_resume_summary()["content"]
         self.assertIn("resume", summary_content)
 
-        section_output = load_resume_section("resume/summary")
+        section_output = get_resume_section("resume", "summary")
         _, markdown = section_output.split("\n\n", 1)
 
         fake_response = type("Response", (), {"content": "## Summary\n- Tailored bullet"})()
@@ -43,7 +43,7 @@ class TestQuickToolkit(unittest.TestCase):
                 return fake_response
 
         with patch("myagent.resume_loader.llm", new=_FakeLLM()):
-            tailored = tailor_section_for_jd("resume/summary", markdown, "JD Analysis")
+            tailored = tailor_section_for_jd("resume", "summary", markdown, "JD Analysis")
 
         self.assertIn("Tailored bullet", tailored)
 

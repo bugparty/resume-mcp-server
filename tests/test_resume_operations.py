@@ -27,14 +27,13 @@ init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
 from myagent.resume_loader import (
     find_resume_versions,
     load_complete_resume,
-    load_resume_section,
+    get_resume_section,
     update_resume_section,
     summarize_resumes_to_index,
     read_resume_summary,
     create_new_version,
     list_modules_in_version,
 )
-from myagent.mcp_server import ResumeSectionId
 from myagent.filesystem import get_resume_fs
 
 
@@ -44,22 +43,22 @@ class TestResumeOperations(unittest.TestCase):
         # Fixture provides a Tesla-themed resume variant
         self.assertIn("resume_tesla_ml_performance_intern", versions)
 
-        rendered = load_complete_resume("resume.yaml")
+        rendered = load_complete_resume("resume")
         self.assertIn("## Summary", rendered)
 
-        section = load_resume_section(f"resume/{ResumeSectionId.SUMMARY.value}")
+        section = get_resume_section("resume", "summary")
         self.assertIn("## Summary", section)
 
         instructions, original_markdown = section.split("\n\n", 1)
 
         updated_markdown = "## Summary\n- Tailored bullet"
         self.assertIn(
-            "[Success]", update_resume_section("resume", ResumeSectionId.SUMMARY, updated_markdown)
+            "[Success]", update_resume_section("resume", "summary", updated_markdown)
         )
 
         # restore original content to keep fixture clean
         self.assertIn(
-            "[Success]", update_resume_section("resume", ResumeSectionId.SUMMARY, original_markdown)
+            "[Success]", update_resume_section("resume", "summary", original_markdown)
         )
 
     def test_summary_generation_and_read_yaml(self):
@@ -99,12 +98,11 @@ class TestResumeOperationsE2E2(unittest.TestCase):
 
     def test_wrong_section_id(self):
         # Test with a valid enum but invalid content format
-        result = update_resume_section(self.version, ResumeSectionId.EXPERIENCE, "## Invalid Content")
+        result = update_resume_section(self.version, "experience", "## Invalid Content")
         # The function should handle validation internally and may return success or error
         self.assertTrue("[Success]" in result or "[Error]" in result)
 
     def test_create_and_delete_version(self):
-        module_path = f"{self.version}/experience"
         new_content = """## Work Experience 
 **Software Engineer | NovaTech Solutions | 2020 - Present** 
 - Designed and implemented microservices architecture that reduced system downtime by 30%. 
@@ -115,7 +113,7 @@ class TestResumeOperationsE2E2(unittest.TestCase):
 - Collaborated with DevOps team to implement CI/CD pipelines, reducing deployment times by 50%. 
 - Conducted code reviews and mentored junior developers, fostering team growth."""
 
-        result = update_resume_section(self.version, ResumeSectionId.EXPERIENCE, new_content)
+        result = update_resume_section(self.version, "experience", new_content)
         self.assertIn("[Success]", result)
 
 
@@ -130,13 +128,12 @@ class TestResumeAddSkills(unittest.TestCase):
         self.assertFalse(resume_fs.exists(f"{self.version}.yaml"))
 
     def test_add_skills(self):
-        module_path = f"{self.version}/skills"
         new_content = """## Skills
         - Programming: Python, JavaScript, Go
         - Cloud Platforms: AWS, GCP, Docker, Kubernetes
         - Tools & Practices: Git, Jenkins, Terraform, Agile/Scrum
         - Other: Data analysis, system design, mentoring"""
-        result = update_resume_section(self.version, ResumeSectionId.EXPERIENCE, new_content)
+        result = update_resume_section(self.version, "experience", new_content)
         self.assertIn("[Success]", result)
 
     def test_add_experience_project(self):
@@ -151,7 +148,7 @@ class TestResumeAddSkills(unittest.TestCase):
         - Collaborated with DevOps team to implement CI/CD pipelines, reducing deployment times by 50%.
         - Conducted code reviews and mentored junior developers, fostering team growth."""
 
-        result = update_resume_section(self.version, ResumeSectionId.EXPERIENCE, new_content)
+        result = update_resume_section(self.version, "experience", new_content)
         self.assertIn("[Success]", result)
         
         # Test projects section  
@@ -165,13 +162,13 @@ class TestResumeAddSkills(unittest.TestCase):
         ### IoT Data Middleware for Smart Home | 2023
         - Designed cross-platform data ingestion & cleansing workflows.
         - Built unified APIs (REST & GraphQL), improving developer adoption"""
-        result = update_resume_section(self.version, ResumeSectionId.PROJECTS, new_content)
+        result = update_resume_section(self.version, "projects", new_content)
         self.assertIn("[Success]", result)
     def test_add_education(self):
         new_content = """## Education
         **Master of Science in Computer Science**
         Stanford University | 2016 - 2018"""
-        result = update_resume_section(self.version, ResumeSectionId.EDUCATION, new_content)
+        result = update_resume_section(self.version, "education", new_content)
         self.assertIn("[Success]", result)
         self.assertIn("Master of Science in Computer Science", result)
         self.assertIn("Stanford University", result)

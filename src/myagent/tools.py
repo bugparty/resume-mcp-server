@@ -10,7 +10,7 @@ from langchain_core.messages import HumanMessage
 from .llm_config import get_thinking_llm
 from .resume_loader import (
     find_resume_versions,
-    load_resume_section,
+    get_resume_section,
     update_resume_section,
     create_new_version,
     list_modules_in_version,
@@ -21,7 +21,7 @@ from .resume_loader import (
     read_resume_summary,
     set_section_visibility,
     set_section_order,
-    get_section_style,
+    get_resume_layout,
 )
 from .resume_renderer import render_resume, compile_tex
 from .latex_jobs import submit_resume_pdf_job, get_resume_pdf_job_status
@@ -36,14 +36,33 @@ class EmptyInput(BaseModel):
     """Empty input model for tools that don't require parameters."""
     pass
 
-class TextFilenameInput(BaseModel):
-    filename: str = Field(..., description="The resume filename, e.g., 'resume.yaml'")
+class VersionNameInput(BaseModel):
+    version_name: str = Field(
+        ...,
+        description="Resume version name WITHOUT .yaml extension (e.g., 'resume')",
+    )
 
-class ResumeSectionInput(BaseModel):
-    module_path: str = Field(..., description="Resume section path using 'version/section', e.g., 'resume/summary'")
+
+class ResumeSectionRefInput(BaseModel):
+    version_name: str = Field(
+        ...,
+        description="Resume version name WITHOUT .yaml extension (e.g., 'resume')",
+    )
+    section_id: str = Field(
+        ...,
+        description="Section identifier (e.g., 'header', 'summary', 'skills', 'experience')",
+    )
+
 
 class UpdateResumeSectionInput(BaseModel):
-    module_path: str = Field(..., description="Resume section path using 'version/section', e.g., 'resume/summary'")
+    version_name: str = Field(
+        ...,
+        description="Resume version name WITHOUT .yaml extension (e.g., 'resume')",
+    )
+    section_id: str = Field(
+        ...,
+        description="Section identifier (e.g., 'summary', 'experience')",
+    )
     new_content: str = Field(..., description="Updated Markdown content for the section")
 
 class AnalyzeJDInput(BaseModel):
@@ -60,11 +79,21 @@ class CopyResumeVersionInput(BaseModel):
     target_version: str = Field(..., description="The name of the target resume version to copy to, e.g., 'resume_for_google'")
 
 class UpdateMainResumeInput(BaseModel):
-    file_name: str = Field(..., description="The resume filename (e.g., 'resume.yaml')")
+    version_name: str = Field(
+        ...,
+        description="Resume version name WITHOUT .yaml extension (e.g., 'resume')",
+    )
     file_content: str = Field(..., description="Full YAML content representing the resume")
 
 class TailorSectionForJDInput(BaseModel):
-    module_path: str = Field(..., description="Resume section path using 'version/section'")
+    version_name: str = Field(
+        ...,
+        description="Resume version name WITHOUT .yaml extension (e.g., 'resume')",
+    )
+    section_id: str = Field(
+        ...,
+        description="Section identifier (e.g., 'summary', 'experience')",
+    )
     section_content: str = Field(..., description="Current Markdown content of the section")
     jd_analysis: str = Field(..., description="The job description analysis result")
 
@@ -80,7 +109,10 @@ class ReadResumeSummaryOutput(BaseModel):
 
 
 class RenderResumeInput(BaseModel):
-    version: str = Field(..., description="Resume version name without extension, e.g., 'resume'")
+    version_name: str = Field(
+        ...,
+        description="Resume version name WITHOUT .yaml extension (e.g., 'resume')",
+    )
 
 
 class RenderResumeOutput(BaseModel):
@@ -101,7 +133,10 @@ class CompileResumeOutput(BaseModel):
 
 
 class SubmitResumePdfJobInput(BaseModel):
-    version: str = Field(..., description="Resume version name without extension, e.g., 'resume'")
+    version_name: str = Field(
+        ...,
+        description="Resume version name WITHOUT .yaml extension (e.g., 'resume')",
+    )
 
 
 class SubmitResumePdfJobOutput(BaseModel):
@@ -133,20 +168,19 @@ def list_resume_versions_tool() -> str:
         {"versions": versions, "total": len(versions)}, ensure_ascii=False
     )
 
-def load_resume_section_tool(module_path: str) -> str:
-    """
-    Load the Markdown content of a resume section using 'version/section' syntax.
-    """
-    return load_resume_section(module_path)
+def get_resume_section_tool(version_name: str, section_id: str) -> str:
+    """Load the Markdown content of a resume section."""
+    return get_resume_section(version_name, section_id)
 
-def update_resume_section_tool(module_path: str, new_content: str) -> str:
+def update_resume_section_tool(version_name: str, section_id: str, new_content: str) -> str:
     """
     Updates the Markdown content of a resume section.
     Input:
-    - module_path: Version/section identifier
+    - version_name: Resume version name (no extension)
+    - section_id: Section identifier
     - new_content: Markdown to replace the section body while preserving headings/bullets
     """
-    return update_resume_section(module_path, new_content)
+    return update_resume_section(version_name, section_id, new_content)
 
 def analyze_jd_tool(jd_text: str) -> str:
     """
@@ -287,25 +321,25 @@ def copy_resume_version_tool(source_version: str, target_version: str) -> str:
     except Exception as e:
         return f"[Error] Failed to copy resume version '{source_version}' to '{target_version}': {str(e)}"
 
-def list_modules_in_version_tool(filename: str) -> str:
-    """
-    List all section identifiers present in the given resume YAML file.
-    """
-    return list_modules_in_version(filename)
+def list_modules_in_version_tool(version_name: str) -> str:
+    """List all section identifiers present in the given resume version."""
+    return list_modules_in_version(version_name)
 
-def tailor_section_for_jd_tool(module_path: str, section_content: str, jd_analysis: str) -> str:
+def tailor_section_for_jd_tool(
+    version_name: str, section_id: str, section_content: str, jd_analysis: str
+) -> str:
     """
     Customizes a resume section based on job description analysis.
     Input:
-    - module_path: Full path to the module
+    - version_name: Resume version name (no extension)
+    - section_id: Section identifier
     - section_content: Current content of the section
     - jd_analysis: Analysis results of the job description
     Function: Optimizes the resume section content based on job description analysis
     """
-    # Use the helper function from resume_loader.py
-    return tailor_section_for_jd(module_path, section_content, jd_analysis)
+    return tailor_section_for_jd(version_name, section_id, section_content, jd_analysis)
 
-def update_main_resume_tool(file_name: str, file_content: str) -> str:
+def update_main_resume_tool(version_name: str, file_content: str) -> str:
     """
     Update the content of a main resume file.
     Input:
@@ -313,7 +347,7 @@ def update_main_resume_tool(file_name: str, file_content: str) -> str:
     - file_content: New resume content
     Note: When modifying submodules after creating a new version, update their include paths here first
     """
-    return update_main_resume(file_name, file_content)
+    return update_main_resume(version_name, file_content)
 
 def read_jd_file_tool(filename: str) -> str:
     """
@@ -337,11 +371,11 @@ def read_jd_file_tool(filename: str) -> str:
     except Exception as e:
         return f"[Error] Failed to read JD file: {str(e)}"
 
-def load_complete_resume_tool(filename: str) -> str:
+def load_complete_resume_tool(version_name: str) -> str:
     """
-    Render the full resume as Markdown for the requested YAML file.
+    Render the full resume as Markdown for the requested resume version.
     """
-    return load_complete_resume(filename)
+    return load_complete_resume(version_name)
 
 def summarize_resumes_to_index_tool() -> SummarizeResumesToIndexOutput:
     """Generate a lightweight resume_summary.yaml for quick scanning."""
@@ -355,36 +389,38 @@ def read_resume_summary_tool() -> ReadResumeSummaryOutput:
     return ReadResumeSummaryOutput(**result)
 
 
-def set_section_visibility_tool(version: str, section_id: str, enabled: bool = True) -> str:
+def set_section_visibility_tool(version_name: str, section_id: str, enabled: bool = True) -> str:
     """Enable or disable a section by updating style.section_disabled."""
     try:
-        result = set_section_visibility(version, section_id, enabled)
-        return json.dumps({"version": version, "section_id": section_id, "enabled": enabled, **result})
+        result = set_section_visibility(version_name, section_id, enabled)
+        return json.dumps(
+            {"version_name": version_name, "section_id": section_id, "enabled": enabled, **result}
+        )
     except Exception as exc:
         return json.dumps({"error": str(exc)})
 
 
-def set_section_order_tool(version: str, order: list[str]) -> str:
+def set_section_order_tool(version_name: str, order: list[str]) -> str:
     """Set preferred section ordering for rendering."""
     try:
-        result = set_section_order(version, order)
-        return json.dumps({"version": version, "order": order, **result})
+        result = set_section_order(version_name, order)
+        return json.dumps({"version_name": version_name, "order": order, **result})
     except Exception as exc:
         return json.dumps({"error": str(exc)})
 
 
-def get_section_style_tool(version: str) -> str:
+def get_resume_layout_tool(version_name: str) -> str:
     """Get current section order and disabled map for a version."""
     try:
-        result = get_section_style(version)
-        return json.dumps({"version": version, **result})
+        result = get_resume_layout(version_name)
+        return json.dumps({"version_name": version_name, **result})
     except Exception as exc:
         return json.dumps({"error": str(exc)})
 
 
-def render_resume_to_latex_tool(version: str) -> RenderResumeOutput:
+def render_resume_to_latex_tool(version_name: str) -> RenderResumeOutput:
     """Render a resume version to LaTeX string."""
-    latex = render_resume(version)
+    latex = render_resume(version_name)
     return RenderResumeOutput(latex=latex)
 
 
@@ -445,8 +481,8 @@ def compile_resume_pdf_tool(tex_content: str, version_name: str = "resume") -> C
     )
 
 
-def submit_resume_pdf_job_tool(version: str) -> SubmitResumePdfJobOutput:
-    payload = submit_resume_pdf_job(version)
+def submit_resume_pdf_job_tool(version_name: str) -> SubmitResumePdfJobOutput:
+    payload = submit_resume_pdf_job(version_name)
     return SubmitResumePdfJobOutput(**payload)
 
 
@@ -466,21 +502,21 @@ tools = [
     StructuredTool.from_function(
         func=load_complete_resume_tool,
         name="LoadCompleteResume",
-        description="Renders the full resume as Markdown. Input: - filename: Resume YAML filename (e.g., 'resume.yaml').",
-        args_schema=TextFilenameInput,
+        description="Renders the full resume as Markdown. Input: - version_name: Resume version name without .yaml (e.g., 'resume').",
+        args_schema=VersionNameInput,
         return_direct=False,
     ),
     StructuredTool.from_function(
-        func=load_resume_section_tool,
+        func=get_resume_section_tool,
         name="LoadResumeSubmodule",
-        description="Loads the Markdown content of a specific resume section. Input: - module_path: Version/section identifier (e.g., 'resume/summary').",
-        args_schema=ResumeSectionInput,
+        description="Loads the Markdown content of a specific resume section. Input: - version_name (no extension) - section_id (e.g., 'summary').",
+        args_schema=ResumeSectionRefInput,
         return_direct=False,
     ),
     StructuredTool.from_function(
         func=update_resume_section_tool,
         name="WriteResumeSubmodule",
-        description="Overwrite a resume section with new Markdown. Input: - module_path: Version/section identifier - new_content: Replacement Markdown preserving headings and bullet lists.",
+        description="Overwrite a resume section with new Markdown. Input: - version_name (no extension) - section_id - new_content.",
         args_schema=UpdateResumeSectionInput,
         return_direct=False,
     ),
@@ -522,14 +558,14 @@ tools = [
     StructuredTool.from_function(
         func=list_modules_in_version_tool,
         name="ListModulesInVersion",
-        description="Lists all section identifiers defined in a resume YAML file.",
-        args_schema=TextFilenameInput,
+        description="Lists all section identifiers defined in a resume version.",
+        args_schema=VersionNameInput,
         return_direct=False,
     ),
     StructuredTool.from_function(
         func=tailor_section_for_jd_tool,
         name="TailorSectionForJD",
-        description="Tailors the content of a specific resume section based on a Job Description analysis using the module's full path.",
+        description="Tailors the content of a specific resume section based on a Job Description analysis.",
         args_schema=TailorSectionForJDInput,
         return_direct=False,
     ),
@@ -557,25 +593,25 @@ tools = [
     StructuredTool.from_function(
         func=set_section_visibility_tool,
         name="SetSectionVisibility",
-        description="Enable or disable a section for rendering. Input: version (no extension), section_id, enabled (true/false).",
+        description="Enable or disable a section for rendering. Input: version_name (no extension), section_id, enabled (true/false).",
         return_direct=False,
     ),
     StructuredTool.from_function(
         func=set_section_order_tool,
         name="SetSectionOrder",
-        description="Set preferred section order for a resume version. Input: version (no extension), order (list of section ids).",
+        description="Set preferred section order for a resume version. Input: version_name (no extension), order (list of section ids).",
         return_direct=False,
     ),
     StructuredTool.from_function(
-        func=get_section_style_tool,
-        name="GetSectionStyle",
+        func=get_resume_layout_tool,
+        name="GetResumeLayout",
         description="Get current section order and disabled flags for a resume version.",
         return_direct=False,
     ),
     StructuredTool.from_function(
         func=render_resume_to_latex_tool,
         name="RenderResumeToLaTeX",
-        description="Render a resume version to LaTeX string. Input: - version name without extension (e.g., 'resume').",
+        description="Render a resume version to LaTeX string. Input: - version_name without extension (e.g., 'resume').",
         args_schema=RenderResumeInput,
         return_direct=False,
     ),

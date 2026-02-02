@@ -133,7 +133,7 @@ try:
     from .tools import (
         list_resume_versions_tool,
         load_complete_resume_tool,
-        load_resume_section_tool,
+        get_resume_section_tool,
         update_resume_section_tool,
         create_new_version_tool,
         delete_resume_version_tool,
@@ -148,7 +148,7 @@ try:
         get_resume_pdf_job_status_tool,
         set_section_visibility_tool,
         set_section_order_tool,
-        get_section_style_tool,
+        get_resume_layout_tool,
     )
 except ImportError:
     from myagent.settings import load_settings, get_settings
@@ -157,7 +157,7 @@ except ImportError:
     from myagent.tools import (
         list_resume_versions_tool,
         load_complete_resume_tool,
-        load_resume_section_tool,
+        get_resume_section_tool,
         update_resume_section_tool,
         create_new_version_tool,
         delete_resume_version_tool,
@@ -172,7 +172,7 @@ except ImportError:
         get_resume_pdf_job_status_tool,
         set_section_visibility_tool,
         set_section_order_tool,
-        get_section_style_tool,
+        get_resume_layout_tool,
     )
 
 def _initialize_logging() -> Path:
@@ -417,19 +417,19 @@ def list_resume_versions() -> str:
 
 @mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
-def load_complete_resume(filename: str) -> str:
+def load_complete_resume(version_name: str) -> str:
     """
     Renders the full resume as Markdown.
 
     Args:
-        filename: Resume YAML filename (e.g., 'resume.yaml')
+        version_name: Resume version name WITHOUT .yaml extension (e.g., 'resume')
     """
-    return load_complete_resume_tool(filename)
+    return load_complete_resume_tool(version_name)
 
 
 @mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
-def get_resume_section(version_name: str, section_id: ResumeSectionId) -> str:
+def get_resume_section(version_name: str, section_id: str) -> str:
     """
     Load a specific section from a resume file.
     
@@ -442,16 +442,16 @@ def get_resume_section(version_name: str, section_id: ResumeSectionId) -> str:
         Markdown content of the requested section
         
     Example:
-        get_resume_section(version_name="resume", section_id=ResumeSectionId.SUMMARY)
+        get_resume_section(version_name="resume", section_id="summary")
     """
-    return load_resume_section_tool(f"{version_name}/{section_id.value}")
+    return get_resume_section_tool(version_name, section_id)
 
 
 @mcp.tool()
 @log_mcp_tool_call
 def update_resume_section(
     version_name: str,
-    section_id: ResumeSectionId,
+    section_id: str,
     new_content: str
 ) -> str:
     """
@@ -473,12 +473,14 @@ def update_resume_section(
         
     See get_resume_yaml_format() for content format examples.
     """
-    return update_resume_section_tool(f"{version_name}/{section_id.value}", new_content)
+    return update_resume_section_tool(version_name, section_id, new_content)
 
 
 @mcp.tool()
 @log_mcp_tool_call
-def set_section_visibility(version: str, section_id: str, enabled: bool = True) -> str:
+def set_section_visibility(
+    version_name: str, section_id: str, enabled: bool = True
+) -> str:
     """
     Enable or disable rendering of a specific section in a resume version.
 
@@ -488,8 +490,12 @@ def set_section_visibility(version: str, section_id: str, enabled: bool = True) 
         enabled: True to show, False to hide
     """
     try:
-        result = set_section_visibility_tool(version, section_id, enabled)
-        payload = {"version": version, "section_id": section_id, "enabled": enabled}
+        result = set_section_visibility_tool(version_name, section_id, enabled)
+        payload = {
+            "version_name": version_name,
+            "section_id": section_id,
+            "enabled": enabled,
+        }
         try:
             payload.update(result if isinstance(result, dict) else {})
         except Exception:
@@ -501,7 +507,7 @@ def set_section_visibility(version: str, section_id: str, enabled: bool = True) 
 
 @mcp.tool()
 @log_mcp_tool_call
-def set_section_order(version: str, order: list[str]) -> str:
+def set_section_order(version_name: str, order: list[str]) -> str:
     """
     Set the rendering order of sections for a resume version.
 
@@ -510,8 +516,8 @@ def set_section_order(version: str, order: list[str]) -> str:
         order: List of section ids in desired order; unknown ids are skipped and remaining sections are appended automatically.
     """
     try:
-        result = set_section_order_tool(version, order)
-        payload = {"version": version, "order": order}
+        result = set_section_order_tool(version_name, order)
+        payload = {"version_name": version_name, "order": order}
         try:
             payload.update(result if isinstance(result, dict) else {})
         except Exception:
@@ -523,18 +529,15 @@ def set_section_order(version: str, order: list[str]) -> str:
 
 @mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
-def get_section_style(version: str) -> str:
-    """
-    Get current section order and disabled flags for a resume version.
-
-    Args:
-        version: Resume version name (without .yaml)
-    """
+def get_resume_layout(version_name: str) -> str:
+    """Get current section order and disabled flags for a resume version."""
     try:
-        result = get_section_style_tool(version)
-        payload = {"version": version}
+        result = get_resume_layout_tool(version_name)
+        payload = {"version_name": version_name}
         try:
-            payload.update(json.loads(result)) if isinstance(result, str) else payload.update(result)
+            payload.update(
+                json.loads(result) if isinstance(result, str) else (result or {})
+            )
         except Exception:
             payload["raw"] = result
         return json.dumps(payload)
@@ -590,12 +593,12 @@ def copy_resume_version(source_version: str, target_version: str) -> str:
 
 @mcp.tool(annotations=dict(readOnlyHint=True))
 @log_mcp_tool_call
-def list_resume_sections(filename: str) -> str:
+def list_resume_sections(version_name: str) -> str:
     """
     List all section identifiers available in a resume file.
 
     Args:
-        filename: Resume file name (e.g., 'resume.yaml')
+        version_name: Resume version name WITHOUT .yaml extension (e.g., 'resume')
     
     Returns:
         JSON string containing section identifiers and their types
@@ -614,7 +617,7 @@ def list_resume_sections(filename: str) -> str:
             "total": 7
         }
     """
-    return list_modules_in_version_tool(filename)
+    return list_modules_in_version_tool(version_name)
 
 # Resume Summary and Index Tools
 @mcp.tool()
@@ -811,7 +814,7 @@ The following JSON schema defines the validation rules:
 # Resume Rendering Tools
 @mcp.tool()
 @log_mcp_tool_call
-def render_resume_pdf(version: str) -> dict[str, str]:
+def render_resume_pdf(version_name: str) -> dict[str, str]:
     """
     Render a resume version directly to PDF file. **This is a WRITE tool** because it
     generates a new PDF under data/output.
@@ -822,7 +825,7 @@ def render_resume_pdf(version: str) -> dict[str, str]:
     for downstream clients.
 
     Args:
-        version: Resume version name without extension (e.g., 'resume')
+        version_name: Resume version name without extension (e.g., 'resume')
 
     Returns:
         Dictionary with keys:
@@ -832,11 +835,11 @@ def render_resume_pdf(version: str) -> dict[str, str]:
         - `latex_assets_dir`: Optional directory containing LaTeX sources for debugging.
     """
     # First render to LaTeX
-    latex_result = render_resume_to_latex_tool(version)
+    latex_result = render_resume_to_latex_tool(version_name)
     latex_content = latex_result.latex
 
     # Then compile to PDF - the tool now saves to data/output directory
-    pdf_result = compile_resume_pdf_tool(latex_content, version)
+    pdf_result = compile_resume_pdf_tool(latex_content, version_name)
     output_fs = get_output_fs()
 
     # Extract filename from returned resource path (e.g., data://resumes/output/foo.pdf)
@@ -869,14 +872,14 @@ def render_resume_pdf(version: str) -> dict[str, str]:
 
 @mcp.tool()
 @log_mcp_tool_call
-def submit_resume_pdf_job(version: str) -> dict[str, str]:
+def submit_resume_pdf_job(version_name: str) -> dict[str, str]:
     """
     Submit an async resume render+compile job.
 
     This tool renders LaTeX, uploads the LaTeX and assets bundle to S3, and
     enqueues a Celery job for PDF compilation. It returns job/task identifiers.
     """
-    return submit_resume_pdf_job_tool(version).model_dump()
+    return submit_resume_pdf_job_tool(version_name).model_dump()
 
 
 @mcp.tool(annotations=dict(readOnlyHint=True))
@@ -890,7 +893,7 @@ def get_resume_pdf_job_status(task_id: str) -> dict[str, str | None]:
 
 @mcp.tool()
 @log_mcp_tool_call
-def render_resume_to_overleaf(version: str) -> dict[str, str]:
+def render_resume_to_overleaf(version_name: str) -> dict[str, str]:
     """
     Render a resume version to a LaTeX project suitable for Overleaf import.
 
@@ -899,7 +902,7 @@ def render_resume_to_overleaf(version: str) -> dict[str, str]:
     returns an Overleaf import URL.
 
     Args:
-        version: Resume version name without extension (e.g., 'resume')
+        version_name: Resume version name without extension (e.g., 'resume')
 
     Returns:
         Dictionary with keys:
@@ -910,12 +913,12 @@ def render_resume_to_overleaf(version: str) -> dict[str, str]:
         - `latex_assets_dir`: Directory containing the LaTeX sources for debugging.
     """
 
-    latex_result = render_resume_to_latex_tool(version)
+    latex_result = render_resume_to_latex_tool(version_name)
     latex_content = latex_result.latex
 
     timestamp = time.strftime("%Y%m%d_%H%M%S")
-    zip_filename = f"{version}_{timestamp}_overleaf.zip"
-    latex_dir_name = f"{version}_{timestamp}_latex"
+    zip_filename = f"{version_name}_{timestamp}_overleaf.zip"
+    latex_dir_name = f"{version_name}_{timestamp}_latex"
 
     template_root = Path(__file__).resolve().parents[2] / "templates"
     output_fs = get_output_fs()

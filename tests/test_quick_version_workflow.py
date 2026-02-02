@@ -17,10 +17,9 @@ init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
 from myagent.resume_loader import (
     create_new_version,
     list_modules_in_version,
-    load_resume_section,
+    get_resume_section,
     update_resume_section,
 )
-from myagent.mcp_server import ResumeSectionId
 
 
 class TestQuickVersionWorkflow(unittest.TestCase):
@@ -38,15 +37,15 @@ class TestQuickVersionWorkflow(unittest.TestCase):
             self.assertIn("[Success]", result)
             self.assertTrue(resume_fs.exists(target_filename))
 
-            modules = list_modules_in_version(f"{version}.yaml")
+            modules = list_modules_in_version(version)
             self.assertIn("summary", modules)
 
-            section_output = load_resume_section(f"{version}/summary")
+            section_output = get_resume_section(version, "summary")
             _, markdown = section_output.split("\n\n", 1)
             self.assertIn("## Summary", markdown)
 
             updated_markdown = "## Summary\n- Updated bullet"
-            updated = update_resume_section(version, ResumeSectionId.SUMMARY, updated_markdown)
+            updated = update_resume_section(version, "summary", updated_markdown)
             self.assertIn("[Success]", updated)
         finally:
             # Clean up even if assertions fail
