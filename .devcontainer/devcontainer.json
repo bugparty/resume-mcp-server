@@ -11,7 +11,9 @@
         "ms-python.python",
         "ms-python.vscode-pylance",
         "ms-azuretools.vscode-docker",
-        "James-Yu.latex-workshop"
+        "James-Yu.latex-workshop",
+        "github.copilot-chat",
+        "github.copilot"
       ]
     }
   }

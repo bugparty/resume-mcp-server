@@ -43,12 +43,6 @@ from fastmcp import FastMCP
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-
-def log_mcp_tool_call(func: Callable) -> Callable:
-    """
-    Decorator to log MCP tool calls with arguments and results.
-    """
-
 class ResumeSectionId(str, Enum):
     """Enumeration of valid resume section identifiers.
     
