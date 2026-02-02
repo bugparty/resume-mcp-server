@@ -20,6 +20,7 @@ from myagent.resume_loader import (
     load_resume_section,
     update_resume_section,
 )
+from myagent.mcp_server import ResumeSectionId
 
 
 class TestQuickVersionWorkflow(unittest.TestCase):
@@ -32,23 +33,25 @@ class TestQuickVersionWorkflow(unittest.TestCase):
         if resume_fs.exists(target_filename):
             resume_fs.remove(target_filename)
 
-        result = create_new_version(version)
-        self.assertIn("[Success]", result)
-        self.assertTrue(resume_fs.exists(target_filename))
+        try:
+            result = create_new_version(version)
+            self.assertIn("[Success]", result)
+            self.assertTrue(resume_fs.exists(target_filename))
 
-        modules = list_modules_in_version(f"{version}.yaml")
-        self.assertIn("summary", modules)
+            modules = list_modules_in_version(f"{version}.yaml")
+            self.assertIn("summary", modules)
 
-        section_output = load_resume_section(f"{version}/summary")
-        _, markdown = section_output.split("\n\n", 1)
-        self.assertIn("## Summary", markdown)
+            section_output = load_resume_section(f"{version}/summary")
+            _, markdown = section_output.split("\n\n", 1)
+            self.assertIn("## Summary", markdown)
 
-        updated = update_resume_section(f"{version}/summary:## Summary\n- Updated bullet")
-        self.assertIn("[Success]", updated)
-
-        # Clean up
-        if resume_fs.exists(target_filename):
-            resume_fs.remove(target_filename)
+            updated_markdown = "## Summary\n- Updated bullet"
+            updated = update_resume_section(version, ResumeSectionId.SUMMARY, updated_markdown)
+            self.assertIn("[Success]", updated)
+        finally:
+            # Clean up even if assertions fail
+            if resume_fs.exists(target_filename):
+                resume_fs.remove(target_filename)
 
 
 if __name__ == "__main__":

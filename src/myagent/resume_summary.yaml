@@ -1,1 +1,130 @@
-resumes: []
+resumes:
+- metadata:
+    position: AI Infrastructure Engineer
+    email: fancycode@gmail.com
+    mobile: +1-310-254-0932
+    github: github.com/bugparty
+    linkedin: linkedin.com/in/bowenhan
+  highlights:
+    summary:
+    - AI Infrastructure Engineer with 9+ years of experience in AI and software systems,
+      from early Android/Android OS work at Baidu/Meituan to modern LLM fine-tuning
+      and reinforcement learning.
+    - Specialized in building intelligent agent systems using LLM-based architectures
+      (DeepSeek, LLaMA), RL algorithms (PPO, DQN), and frameworks like FastMCP, LangChain,
+      LangGraph, and FastAPI.
+    - Enable enterprises to deploy cost-efficient local agent systems by fine-tuning
+      smaller models (8B-32B) with RL, eliminating expensive ChatGPT API dependencies
+      and reducing inference costs by orders of magnitude; currently pursuing Master's
+      in Computer Engineering at UC Riverside.
+    skills:
+    - C++
+    - Java
+    - Python
+    - JavaScript
+    - Rust
+    - Go
+    - PyTorch
+    - LLaMA
+    - FastMCP
+    - LangChain
+    - LangGraph
+    - FastAPI
+    entries: []
+  version: amazon_agi_3126758
+- metadata:
+    position: Backend & Mobile Engineer
+    email: fancycode@gmail.com
+    mobile: +1-310-254-0932
+    github: github.com/bugparty
+  highlights:
+    summary:
+    - Software Engineer with 3 years of experience building distributed systems, backend
+      services, and mobile applications; relocated from China to US for Master's degree
+      and seeking long-term product engineering role at established tech company.
+    - 'Strong foundation in backend development (Python, C++, Java), cloud infrastructure
+      (AWS: EC2, S3, Lambda, RDS, ALB, CloudWatch), and Android systems programming;
+      proven ability to build scalable applications and optimize system performance.'
+    - Currently pursuing Master's in Computer Engineering at UC Riverside with focus
+      on distributed systems and software engineering; passionate about building consumer-facing
+      products that directly impact millions of users.
+    skills:
+    - Python
+    - Java
+    - C++
+    - JavaScript
+    - SQL
+    - FastAPI
+    - REST APIs
+    - RabbitMQ
+    - Redis
+    - asyncio
+    - microservices architecture
+    - distributed web scraping
+    entries: []
+  version: aws_sdei
+- metadata:
+    position: AI Infrastructure Engineer
+    email: fancycode@gmail.com
+    mobile: +1-310-254-0932
+    github: github.com/bugparty
+    linkedin: linkedin.com/in/bowenhan
+  highlights:
+    summary:
+    - AI Infrastructure Engineer with 9+ years of experience in AI and software systems,
+      from early Android/Android OS work at Baidu/Meituan to modern LLM fine-tuning
+      and reinforcement learning.
+    - Specialized in building intelligent agent systems using LLM-based architectures
+      (DeepSeek, LLaMA), RL algorithms (PPO, DQN), and frameworks like FastMCP, LangChain,
+      LangGraph, and FastAPI.
+    - Enable enterprises to deploy cost-efficient local agent systems by fine-tuning
+      smaller models (8B-32B) with RL, eliminating expensive ChatGPT API dependencies
+      and reducing inference costs by orders of magnitude; currently pursuing Master's
+      in Computer Engineering at UC Riverside.
+    skills:
+    - C++
+    - Java
+    - Python
+    - JavaScript
+    - Rust
+    - Go
+    - PyTorch
+    - LLaMA
+    - FastMCP
+    - LangChain
+    - LangGraph
+    - FastAPI
+    entries: []
+  version: gpu_arch_new_grad_2025
+- metadata:
+    position: AI Infrastructure Engineer
+    email: fancycode@gmail.com
+    mobile: +1-310-254-0932
+    github: github.com/bugparty
+  highlights:
+    summary:
+    - AI Infrastructure Engineer with 9+ years of experience in AI and software systems,
+      from early Android/Android OS work at Baidu/Meituan to modern LLM fine-tuning
+      and reinforcement learning.
+    - Specialized in building intelligent agent systems using LLM-based architectures
+      (DeepSeek, LLaMA), RL algorithms (PPO, DQN), and frameworks like FastMCP, LangChain,
+      LangGraph, and FastAPI.
+    - Enable enterprises to deploy cost-efficient local agent systems by fine-tuning
+      smaller models (8B-32B) with RL, eliminating expensive ChatGPT API dependencies
+      and reducing inference costs by orders of magnitude; currently pursuing Master's
+      in Computer Engineering at UC Riverside.
+    skills:
+    - C++
+    - Java
+    - Python
+    - JavaScript
+    - Rust
+    - Go
+    - PyTorch
+    - LLaMA
+    - FastMCP
+    - LangChain
+    - LangGraph
+    - FastAPI
+    entries: []
+  version: we_bible

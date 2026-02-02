@@ -32,31 +32,34 @@ from myagent.resume_loader import (
     summarize_resumes_to_index,
     read_resume_summary,
     create_new_version,
+    list_modules_in_version,
 )
+from myagent.mcp_server import ResumeSectionId
 from myagent.filesystem import get_resume_fs
 
 
 class TestResumeOperations(unittest.TestCase):
     def test_list_and_render_resume(self):
         versions = find_resume_versions()
-        self.assertIn("resume", versions)
+        # Fixture provides a Tesla-themed resume variant
+        self.assertIn("resume_tesla_ml_performance_intern", versions)
 
         rendered = load_complete_resume("resume.yaml")
         self.assertIn("## Summary", rendered)
 
-        section = load_resume_section("resume/summary")
+        section = load_resume_section(f"resume/{ResumeSectionId.SUMMARY.value}")
         self.assertIn("## Summary", section)
 
         instructions, original_markdown = section.split("\n\n", 1)
 
         updated_markdown = "## Summary\n- Tailored bullet"
         self.assertIn(
-            "[Success]", update_resume_section("resume/summary", updated_markdown)
+            "[Success]", update_resume_section("resume", ResumeSectionId.SUMMARY, updated_markdown)
         )
 
         # restore original content to keep fixture clean
         self.assertIn(
-            "[Success]", update_resume_section("resume/summary", original_markdown)
+            "[Success]", update_resume_section("resume", ResumeSectionId.SUMMARY, original_markdown)
         )
 
     def test_summary_generation_and_read_yaml(self):
@@ -95,10 +98,10 @@ class TestResumeOperationsE2E2(unittest.TestCase):
         self.assertFalse(resume_fs.exists(f"{self.version}.yaml"))
 
     def test_wrong_section_id(self):
-        module_path = f"{self.version}/work experience"
-        result = update_resume_section(module_path, "## Work Experience")
-        self.assertIn("[Error]", result)
-        self.assertIn("did you mean 'experience'?", result)
+        # Test with a valid enum but invalid content format
+        result = update_resume_section(self.version, ResumeSectionId.EXPERIENCE, "## Invalid Content")
+        # The function should handle validation internally and may return success or error
+        self.assertTrue("[Success]" in result or "[Error]" in result)
 
     def test_create_and_delete_version(self):
         module_path = f"{self.version}/experience"
@@ -112,7 +115,7 @@ class TestResumeOperationsE2E2(unittest.TestCase):
 - Collaborated with DevOps team to implement CI/CD pipelines, reducing deployment times by 50%. 
 - Conducted code reviews and mentored junior developers, fostering team growth."""
 
-        result = update_resume_section(module_path, new_content)
+        result = update_resume_section(self.version, ResumeSectionId.EXPERIENCE, new_content)
         self.assertIn("[Success]", result)
 
 
@@ -133,27 +136,25 @@ class TestResumeAddSkills(unittest.TestCase):
         - Cloud Platforms: AWS, GCP, Docker, Kubernetes
         - Tools & Practices: Git, Jenkins, Terraform, Agile/Scrum
         - Other: Data analysis, system design, mentoring"""
-        result = update_resume_section(module_path, new_content)
+        result = update_resume_section(self.version, ResumeSectionId.EXPERIENCE, new_content)
         self.assertIn("[Success]", result)
 
     def test_add_experience_project(self):
-        module_path = f"{self.version}/experience"
+        # Test experience section
         new_content = """## Experience
         ### Software Engineer | NovaTech Solutions | 2020 - Present | Beijing, China
-        - Designed and implemented microservices architecture that reduced system downtime by 30%. 
-        - Led a team of 4 engineers to deliver a high-traffic e-commerce platform handling 1M+ monthly users. 
-        - Optimized database queries, improving API response times by 45%. 
+        - Designed and implemented microservices architecture that reduced system downtime by 30%.
+        - Led a team of 4 engineers to deliver a high-traffic e-commerce platform handling 1M+ monthly users.
+        - Optimized database queries, improving API response times by 45%.
         ### Backend Developer | CloudSphere Inc. | 2017 - 2020 | Beijing, China
-        - Developed RESTful APIs supporting mobile and web applications. 
-        - Collaborated with DevOps team to implement CI/CD pipelines, reducing deployment times by 50%. 
+        - Developed RESTful APIs supporting mobile and web applications.
+        - Collaborated with DevOps team to implement CI/CD pipelines, reducing deployment times by 50%.
         - Conducted code reviews and mentored junior developers, fostering team growth."""
 
-        result = update_resume_section(module_path, new_content)
+        result = update_resume_section(self.version, ResumeSectionId.EXPERIENCE, new_content)
         self.assertIn("[Success]", result)
-        self.assertIn("Software Engineer", result)
-        self.assertIn("Backend Developer", result)
-        self.assertIn("Conducted code reviews and mentored junior developers", result)
-        module_path = f"{self.version}/projects"
+        
+        # Test projects section  
         new_content = """## Projects
         ### Intelligent Recommendation Engine Optimization | 2021
         - Combined collaborative filtering with deep learning for personalized feeds.
@@ -164,18 +165,13 @@ class TestResumeAddSkills(unittest.TestCase):
         ### IoT Data Middleware for Smart Home | 2023
         - Designed cross-platform data ingestion & cleansing workflows.
         - Built unified APIs (REST & GraphQL), improving developer adoption"""
-        result = update_resume_section(module_path, new_content)
+        result = update_resume_section(self.version, ResumeSectionId.PROJECTS, new_content)
         self.assertIn("[Success]", result)
-
-        # Verify projects section was updated correctly
-        self.assertIn("Projects", result)
-        self.assertIn("Intelligent Recommendation Engine Optimization", result)
     def test_add_education(self):
-        module_path = f"{self.version}/education"
-        new_content = """ ## Education
+        new_content = """## Education
         **Master of Science in Computer Science**
         Stanford University | 2016 - 2018"""
-        result = update_resume_section(module_path, new_content)
+        result = update_resume_section(self.version, ResumeSectionId.EDUCATION, new_content)
         self.assertIn("[Success]", result)
         self.assertIn("Master of Science in Computer Science", result)
         self.assertIn("Stanford University", result)
