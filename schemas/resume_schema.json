@@ -50,7 +50,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["summary", "skills", "entries", "raw"]
+            "enum": ["summary", "skills", "entries", "raw", "experience", "projects", "education"]
           },
           "id": {"type": "string"},
           "title": {"type": "string"},
@@ -135,7 +135,7 @@
           },
           {
             "if": {
-              "properties": {"type": {"const": "entries"}}
+              "properties": {"type": {"enum": ["entries", "experience", "projects", "education"]}}
             },
             "then": {
               "required": ["title", "entries"],
@@ -180,8 +180,8 @@
             "then": {
               "properties": {
                 "title": {
-                  "pattern": "^(?!.*Projects).*Experience.*$",
-                  "description": "When id is 'experience', title must contain 'Experience' and not contain 'Projects'"
+                  "pattern": "^.*Experience.*$",
+                  "description": "When id is 'experience', title must contain 'Experience'"
                 }
               }
             }
@@ -193,8 +193,8 @@
             "then": {
               "properties": {
                 "title": {
-                  "pattern": "^(?!.*Experience).*Projects?.*$",
-                  "description": "When id is 'projects', title must contain 'Project' or 'Projects' and not contain 'Experience'"
+                  "pattern": "^.*Projects?.*$",
+                  "description": "When id is 'projects', title must contain 'Project' or 'Projects'"
                 }
               }
             }
