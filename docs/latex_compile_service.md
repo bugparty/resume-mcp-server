@@ -1,37 +1,37 @@
-# LaTeX 编译服务拆分方案
+# LaTeX Compilation Service Split Plan
 
-本文档描述将简历渲染与 LaTeX 编译拆分为独立服务的实现方案，遵循以下约束：
-- Broker 使用 Redis
-- 结果 PDF 存储在 S3
-- 编译产物（中间文件）不保留
-- Jinja 渲染与编译服务解耦
-- `resume.tex` 不对外回传
+This document describes the implementation plan for splitting resume rendering and LaTeX compilation into independent services, following these constraints:
+- Broker uses Redis
+- Result PDF is stored in S3
+- Compilation artifacts (intermediate files) are not retained
+- Jinja rendering and compilation service are decoupled
+- `resume.tex` is not returned externally
 
-## 组件与职责
+## Components and Responsibilities
 
-### Render Service（Jinja/渲染服务）
-- 输入：resume 版本号或 YAML
-- 行为：生成 `resume.tex`，打包 assets（模板、字体、类文件、图片）
-- 输出：将 `resume.tex` 和 `assets.zip` 上传 S3（仅内部使用）
+### Render Service (Jinja/Rendering Service)
+- Input: Resume version number or YAML
+- Behavior: Generate `resume.tex`, package assets (templates, fonts, class files, images)
+- Output: Upload `resume.tex` and `assets.zip` to S3 (internal use only)
 
-### Compile Service（Celery Worker）
-- 输入：S3 object keys（`resume.tex`、`assets.zip`）
-- 行为：下载 → 解压 → `xelatex` 编译
-- 输出：仅上传 `resume.pdf` 至 S3
+### Compile Service (Celery Worker)
+- Input: S3 object keys (`resume.tex`, `assets.zip`)
+- Behavior: Download -> Unzip -> `xelatex` compilation
+- Output: Upload only `resume.pdf` to S3
 
 ### API/Orchestrator
-- 输入：对外提交版本号
-- 行为：触发 Render、提交 Celery 任务、查询状态
-- 输出：仅返回 `job_id` / `task_id` 与最终 PDF URL
+- Input: External submission of version number
+- Behavior: Trigger Render, submit Celery task, query status
+- Output: Return only `job_id` / `task_id` and final PDF URL
 
-## 数据流（简版）
-1. API 触发 Render Service：生成 `resume.tex` + `assets.zip` → 上传 S3
-2. API 投递 Celery 任务（只传 S3 keys）
-3. Worker 拉取文件 → 编译 → 上传 PDF
-4. API 查询任务状态 → 返回 PDF URL
+## Data Flow (Simplified)
+1. API triggers Render Service: Generate `resume.tex` + `assets.zip` -> Upload to S3
+2. API submits Celery task (sends only S3 keys)
+3. Worker pulls files -> Compiles -> Uploads PDF
+4. API queries task status -> Returns PDF URL
 
-## S3 路径约定
-默认前缀由 `RESUME_S3_KEY_PREFIX` 控制，job 路径由 `RESUME_PDF_JOB_PREFIX` 控制：
+## S3 Path Convention
+Default prefix is controlled by `RESUME_S3_KEY_PREFIX`, job path by `RESUME_PDF_JOB_PREFIX`:
 
 ```
 s3://<bucket>/<key_prefix>/<job_prefix>/<job_id>/
@@ -40,8 +40,8 @@ s3://<bucket>/<key_prefix>/<job_prefix>/<job_id>/
   - resume.pdf
 ```
 
-## assets.zip 内容
-assets 包必须包含编译所需全部资源，建议结构：
+## assets.zip Content
+The assets package must contain all resources required for compilation, suggested structure:
 
 ```
 assets/
@@ -53,7 +53,7 @@ assets/
   profile.png
 ```
 
-## 任务输入/输出
+## Task Input/Output
 
 ### Task Input
 ```
@@ -73,24 +73,24 @@ assets/
 }
 ```
 
-## 超时/重试建议
-- `CELERY_TASK_TIME_LIMIT`：120s
-- `CELERY_TASK_SOFT_TIME_LIMIT`：90s
-- `max_retries=2`，`retry_backoff=True`
+## Timeout/Retry Recommendations
+- `CELERY_TASK_TIME_LIMIT`: 120s
+- `CELERY_TASK_SOFT_TIME_LIMIT`: 90s
+- `max_retries=2`, `retry_backoff=True`
 
-## 对外工具
-新增 MCP 工具：
-- `SubmitResumePDFJob`：提交 render+compile 任务
-- `GetResumePDFJobStatus`：查询任务状态及 PDF URL
+## External Tools
+Add MCP tools:
+- `SubmitResumePDFJob`: Submit render+compile task
+- `GetResumePDFJobStatus`: Query task status and PDF URL
 
-## 独立 REST API（编译服务）
+## Independent REST API (Compilation Service)
 
-服务目录：`services/latex_compile_api/`
+Service directory: `services/latex_compile_api/`
 
-- `POST /v1/compile`：提交编译任务
-- `GET /v1/jobs/{task_id}`：查询任务状态与 PDF URL
+- `POST /v1/compile`: Submit compilation task
+- `GET /v1/jobs/{task_id}`: Query task status and PDF URL
 
-示例请求：
+Example Request:
 ```
 POST /v1/compile
 {
@@ -100,7 +100,7 @@ POST /v1/compile
 }
 ```
 
-示例响应：
+Example Response:
 ```
 {
   "job_id": "<job_id>",
@@ -110,8 +110,7 @@ POST /v1/compile
 }
 ```
 
-## 运行示例（开发）
+## Running Example (Development)
 ```
 celery -A myagent.latex_worker worker -Q default
 ```
-

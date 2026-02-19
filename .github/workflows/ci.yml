@@ -34,7 +34,7 @@ jobs:
 
       - name: Create venv and install dependencies
         run: |
-          uv venv
+          uv venv --allow-existing
           source .venv/bin/activate
           uv sync
 

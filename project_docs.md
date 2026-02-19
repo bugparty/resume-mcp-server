@@ -1,103 +1,103 @@
-# 项目名称：智能简历模块化生成系统
+# Project Name: Modular Intelligent Resume Generation System
 
-## 项目目标
-构建一个自动化系统，能够根据不同职位的需求（JD）智能选择和修改模块化的 LaTeX 简历，并组合成完整的定制化简历文档。
+## Project Goal
+Build an automated system that intelligently selects and modifies modular LaTeX resume components based on different job descriptions (JD), and combines them into a complete customized resume document.
 
-## 功能概述
+## Functional Overview
 
-- 支持模块化简历结构（每个模块一个 `.tex` 文件）
-- 支持多个版本简历（如 resume_2yoe_c++、resume_frontend）
-- 基于职位描述（JD）自动提取关键词和分析
-- 智能定制简历内容以适应目标职位
-- 支持创建新的简历版本
-- 支持简历模块的浓缩和再次提取
-- 支持完整的简历内容预览和编辑
+- Supports modular resume structure (each module is a `.tex` file)
+- Supports multiple resume versions (e.g., resume_2yoe_c++, resume_frontend)
+- Automatically extracts keywords and analyzes job descriptions (JD)
+- Intelligently customizes resume content to adapt to target positions
+- Supports creating new resume versions
+- Supports condensing and re-extracting resume modules
+- Supports full resume content preview and editing
 
-## 目录结构约定
+## Directory Structure Convention
 
 ```
 data/BowenResume/
-├── resume/                    # 通用版本模块
+├── resume/                    # General version modules
 │   ├── summary.tex
 │   ├── projects.tex
 │   ├── skills.tex
 │   └── ...
-├── resume_2yoe_c++/           # 特定方向模块
+├── resume_2yoe_c++/           # Specific direction modules
 │   ├── summary.tex
 │   ├── projects.tex
 │   ├── skills.tex
 │   └── ...
-└── cv/                        # 更学术型模块
+└── cv/                        # More academic modules
 ```
 
-## data目录说明
-data目录是我的简历，resume_xxx.tex 是我根据不同岗位做的不同版本，resume_xxx.tex 打开后，里面是\input 其他tex，用来加入不同版本的summary ,education,skills, experience等等。
+## Data Directory Explanation
+The data directory contains my resume. `resume_xxx.tex` are different versions I created for different positions. When `resume_xxx.tex` is opened, it contains `\input` commands for other tex files, used to include different versions of summary, education, skills, experience, etc.
 
-## Agent 架构
+## Agent Architecture
 
-使用 LangChain + 自定义工具函数组成 ReAct Agent 架构。
+Uses LangChain + custom tool functions to form a ReAct Agent architecture.
 
-### 已实现的工具：
-- `list_resume_versions`：列出所有可用的简历版本
-- `load_resume_modules`：加载并预览特定简历版本的内容
-- `load_resume_section`：加载单个模块内容
-- `update_resume_section`：更新特定模块内容（带自动备份）
-- `analyze_jd`：分析职位描述，提取关键信息
-- `create_new_version`：创建新的简历版本
-- `list_modules_in_version`：列出特定版本中的所有模块
-- `tailor_section_for_jd`：根据JD定制特定模块内容
-- `update_main_resume`：更新主简历文件内容
-- `read_jd_file`：读取职位描述文件
-- `load_complete_resume`：加载完整简历内容
-- `summarize_resumes_to_index`：提取简历元数据生成轻量级索引
-- `read_resume_summary`：读取轻量级的简历索引文件
+### Implemented Tools:
+- `list_resume_versions`: List all available resume versions
+- `load_resume_modules`: Load and preview content of a specific resume version
+- `load_resume_section`: Load a single module content
+- `update_resume_section`: Update specific module content (with automatic backup)
+- `analyze_jd`: Analyze job description, extract key information
+- `create_new_version`: Create a new resume version
+- `list_modules_in_version`: List all modules in a specific version
+- `tailor_section_for_jd`: Customize specific module content based on JD
+- `update_main_resume`: Update the main resume file content
+- `read_jd_file`: Read job description file
+- `load_complete_resume`: Load complete resume content
+- `summarize_resumes_to_index`: Extract resume metadata to generate a lightweight index
+- `read_resume_summary`: Read the lightweight resume index file
 
-## 示例调用
-用户输入：
+## Example Call
+User Input:
 ```
-请根据下面的JD加载匹配 resume_2yoe_c++ 中的模块，并生成定制简历。
-JD：我们希望候选人具备 C++ 项目经验，并参与过开源系统开发。
+Please load matching modules from resume_2yoe_c++ based on the JD below, and generate a customized resume.
+JD: We are looking for candidates with C++ project experience and experience in open source system development.
 ```
 
-Agent 调用流程：
-1. 使用 `analyze_jd` 分析 JD → 提取关键词和需求
-2. 使用 `list_resume_versions` 查看可用版本
-3. 使用 `load_resume_modules` 加载模块预览
-4. 使用 `tailor_section_for_jd` 定制各个模块内容
-5. 使用 `update_resume_section` 更新模块内容
-6. 使用 `update_main_resume` 更新主简历文件
+Agent Call Flow:
+1. Use `analyze_jd` to analyze JD -> extract keywords and requirements
+2. Use `list_resume_versions` to view available versions
+3. Use `load_resume_modules` to preview module content
+4. Use `tailor_section_for_jd` to customize each module content
+5. Use `update_resume_section` to update module content
+6. Use `update_main_resume` to update the main resume file
 
-## 技术实现细节
+## Technical Implementation Details
 
-- 使用 Cloudflare AI Gateway 作为 LLM 调试中间件，和加速deepseek的访问
-- 使用 Jinja2 进行模板渲染
-- 实现了自动备份机制，确保数据安全
-- 支持模块化内容的智能定制
-- 使用 YAML 格式进行简历内容的聚合和管理
+- Use Cloudflare AI Gateway as LLM debugging middleware and to accelerate DeepSeek access
+- Use Jinja2 for template rendering
+- Implemented automatic backup mechanism to ensure data safety
+- Supports intelligent customization of modular content
+- Use YAML format for resume content aggregation and management
 
-## 后续拓展
+## Future Expansions
 
-- Web 界面（如 Streamlit 或 Gradio）
-- 增加 Cover Letter 生成器
-- 模块推荐排序优化
-- 简历打分（匹配度分析）
-- 支持更多简历格式（如 Markdown、HTML）
-- 添加简历版本管理功能
-- 实现简历内容的语义搜索
+- Web Interface (e.g., Streamlit or Gradio)
+- Add Cover Letter generator
+- Module recommendation sorting optimization
+- Resume scoring (match analysis)
+- Support more resume formats (e.g., Markdown, HTML)
+- Add resume version management function
+- Implement semantic search for resume content
 
-## 依赖管理
+## Dependency Management
 
-本项目使用 uv 进行包管理，请使用 `uv pip install` 安装依赖。
+This project uses `uv` for package management. Please use `uv pip install` to install dependencies.
 
-## 新增环境变量（异步 PDF 编译）
+## New Environment Variables (Async PDF Compilation)
 
-- `CELERY_BROKER_URL`: Celery broker 地址（默认 `redis://localhost:6379/0`）
-- `CELERY_RESULT_BACKEND`: Celery 结果后端（默认 `redis://localhost:6379/1`）
-- `CELERY_TASK_TIME_LIMIT`: 编译任务硬超时（秒，默认 120）
-- `CELERY_TASK_SOFT_TIME_LIMIT`: 编译任务软超时（秒，默认 90）
-- `RESUME_PDF_JOB_PREFIX`: S3 job 目录前缀（默认 `resume-jobs/`）
+- `CELERY_BROKER_URL`: Celery broker address (default `redis://localhost:6379/0`)
+- `CELERY_RESULT_BACKEND`: Celery result backend (default `redis://localhost:6379/1`)
+- `CELERY_TASK_TIME_LIMIT`: Compilation task hard timeout (seconds, default 120)
+- `CELERY_TASK_SOFT_TIME_LIMIT`: Compilation task soft timeout (seconds, default 90)
+- `RESUME_PDF_JOB_PREFIX`: S3 job directory prefix (default `resume-jobs/`)
 
-S3 相关配置仍使用现有变量：
+S3 related configurations still use existing variables:
 - `RESUME_S3_BUCKET_NAME` / `RESUME_S3_BUCKET`
 - `RESUME_S3_ENDPOINT_URL`
 - `RESUME_S3_REGION`

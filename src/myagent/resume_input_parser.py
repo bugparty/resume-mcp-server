@@ -111,11 +111,11 @@ def log_markdown_parsing(func):
 
 
 # Regular expressions for parsing entry headings
-# eg ### 软件工程师 — OpenAI (San Francisco, CA) | 2020 - Present
+# eg ### Software Engineer — OpenAI (San Francisco, CA) | 2020 - Present
 ENTRY_HEADING_RE = re.compile(
     r"^###\s+(?P<title>[^—]+?)\s+—\s+(?P<organization>[^(|]+?)(?:\s+\((?P<location>[^)]+)\))?(?:\s+\|\s+(?P<period>.*))?$"
 )
-# eg ### 软件工程师 | OpenAI | 2020 - Present | San Francisco, CA
+# eg ### Software Engineer | OpenAI | 2020 - Present | San Francisco, CA
 ENTRY_HEADING_PIPE_RE = re.compile(
     r"^###\s+(?P<title>[^|]+?)\s*\|\s*(?P<organization>[^|]+?)\s*\|\s*(?P<period>[^|]+?)\s*\|\s*(?P<location>.+)$"
 )

@@ -12,7 +12,7 @@ class SectionType(str, Enum):
 
 @dataclass
 class Metadata:
-    """Resume元数据，包含个人信息"""
+    """Resume metadata, containing personal information"""
 
     first_name: str
     last_name: str
@@ -22,7 +22,7 @@ class Metadata:
     email: str | None = None
     github: str | None = None
     linkedin: str | None = None
-    # 支持额外字段
+    # Support extra fields
     extra_fields: dict[str, Any] = field(default_factory=dict)
 
     def __setattr__(self, name: str, value: Any) -> None:
@@ -43,7 +43,7 @@ class Metadata:
 
 @dataclass
 class SkillGroup:
-    """技能分组"""
+    """Skill group"""
 
     category: str
     items: list[str] = field(default_factory=list)
@@ -51,7 +51,7 @@ class SkillGroup:
 
 @dataclass
 class Entry:
-    """经历条目（用于工作经历、教育经历等）"""
+    """Entry item (for work experience, education, etc.)"""
 
     title: str
     organization: str
@@ -62,20 +62,20 @@ class Entry:
 
 @dataclass
 class Section:
-    """Resume section基类"""
+    """Resume section base class"""
 
     id: str
     type: SectionType | str = field(default="")
     title: str | None = None
 
     def validate(self) -> bool:
-        """验证section是否符合schema要求"""
+        """Validate if section meets schema requirements"""
         raise NotImplementedError("Subclasses should implement validate()")
 
 
 @dataclass
 class SummarySection(Section):
-    """摘要section"""
+    """Summary section"""
 
     type: Literal[SectionType.SUMMARY] = SectionType.SUMMARY
     title: str = "Summary"
@@ -87,7 +87,7 @@ class SummarySection(Section):
 
 @dataclass
 class SkillsSection(Section):
-    """技能section"""
+    """Skills section"""
 
     type: Literal[SectionType.SKILLS] = SectionType.SKILLS
     title: str = "Skills"
@@ -99,17 +99,17 @@ class SkillsSection(Section):
 
 @dataclass
 class EntriesSection(Section):
-    """条目section（经历、教育等）"""
+    """Entries section (experience, education, etc.)"""
 
     type: Literal[SectionType.ENTRIES] = SectionType.ENTRIES
     title: str = "Experience"
     entries: list[Entry] = field(default_factory=list)
 
     def validate(self) -> bool:
-        """验证section是否符合schema要求"""
+        """Validate if section meets schema requirements"""
         valid = len(self.entries) > 0
 
-        # 根据id验证title
+        # Validate title based on id
         if self.id == "experience":
             valid = (
                 valid and "Experience" in self.title and "Projects" not in self.title
@@ -126,7 +126,7 @@ class EntriesSection(Section):
 
 @dataclass
 class RawSection(Section):
-    """原始内容section"""
+    """Raw content section"""
 
     type: Literal[SectionType.RAW] = SectionType.RAW
     title: str = "Additional Information"
@@ -138,14 +138,14 @@ class RawSection(Section):
 
 @dataclass
 class Resume:
-    """完整的简历数据结构"""
+    """Complete resume data structure"""
 
     source: str
     metadata: Metadata
     sections: list[Section] = field(default_factory=list)
 
     def validate(self) -> bool:
-        """验证整个resume是否符合schema"""
+        """Validate if the entire resume meets the schema"""
         if not self.source or len(self.source) == 0:
             return False
 
@@ -159,7 +159,7 @@ class Resume:
         if len(self.sections) == 0:
             return False
 
-        # 验证每个section
+        # Validate each section
         for section in self.sections:
             if not section.validate():
                 return False
@@ -167,34 +167,34 @@ class Resume:
         return True
 
     def add_section(self, section: Section) -> None:
-        """添加一个section到resume"""
+        """Add a section to the resume"""
         self.sections.append(section)
 
     def get_section_by_id(self, section_id: str) -> Section | None:
-        """根据ID获取section"""
+        """Get section by ID"""
         for section in self.sections:
             if section.id == section_id:
                 return section
         return None
 
     def get_sections_by_type(self, section_type: SectionType | str) -> list[Section]:
-        """根据类型获取所有sections"""
+        """Get all sections by type"""
         return [s for s in self.sections if s.type == section_type]
 
 
-# 工厂函数，根据类型创建合适的Section
+# Factory function, create appropriate Section instance based on type
 def create_section(section_data: dict) -> Section:
     """
-    根据section数据创建对应类型的Section实例
+    Create corresponding Section instance based on section data
 
     Args:
-        section_data: 包含section信息的字典
+        section_data: Dictionary containing section information
 
     Returns:
-        对应类型的Section实例
+        Corresponding Section instance
 
     Raises:
-        ValueError: 当section类型未知时
+        ValueError: When section type is unknown
     """
     section_type = section_data.get("type")
     section_id = section_data.get("id", "")
@@ -230,13 +230,13 @@ def create_section(section_data: dict) -> Section:
         raise ValueError(f"Unknown section type: {section_type}")
 
 
-# JSON序列化支持
+# JSON serialization support
 import json
 from dataclasses import asdict
 
 
 def resume_to_dict(resume: Resume) -> dict:
-    """将Resume转换为字典，适用于JSON序列化"""
+    """Convert Resume to dictionary, suitable for JSON serialization"""
     data = {
         "source": resume.source,
         "metadata": {
@@ -246,17 +246,17 @@ def resume_to_dict(resume: Resume) -> dict:
         "sections": [],
     }
 
-    # 添加可选的metadata字段
+    # Add optional metadata fields
     for field_name in ["position", "address", "mobile", "email", "github", "linkedin"]:
         value = getattr(resume.metadata, field_name, None)
         if value:
             data["metadata"][field_name] = value
 
-    # 添加metadata的额外字段
+    # Add extra metadata fields
     if resume.metadata.extra_fields:
         data["metadata"].update(resume.metadata.extra_fields)
 
-    # 转换sections
+    # Convert sections
     for section in resume.sections:
         section_dict = {"type": section.type, "id": section.id}
 
@@ -278,7 +278,7 @@ def resume_to_dict(resume: Resume) -> dict:
 
 
 def dict_to_resume(data: dict) -> Resume:
-    """从字典创建Resume实例"""
+    """Create Resume instance from dictionary"""
     metadata = Metadata(
         first_name=data["metadata"]["first_name"],
         last_name=data["metadata"]["last_name"],
@@ -290,7 +290,7 @@ def dict_to_resume(data: dict) -> Resume:
         linkedin=data["metadata"].get("linkedin"),
     )
 
-    # 处理额外的metadata字段
+    # Handle extra metadata fields
     known_fields = {
         "first_name",
         "last_name",
@@ -310,9 +310,9 @@ def dict_to_resume(data: dict) -> Resume:
     return Resume(source=data["source"], metadata=metadata, sections=sections)
 
 
-# 使用示例
+# Usage example
 if __name__ == "__main__":
-    # 创建一个Resume实例
+    # Create a Resume instance
     resume = Resume(
         source="manual_input",
         metadata=Metadata(
@@ -324,7 +324,7 @@ if __name__ == "__main__":
         ),
     )
 
-    # 添加summary section
+    # Add summary section
     summary = SummarySection(
         id="summary",
         title="Professional Summary",
@@ -336,7 +336,7 @@ if __name__ == "__main__":
     )
     resume.add_section(summary)
 
-    # 添加skills section
+    # Add skills section
     skills = SkillsSection(
         id="skills",
         title="Technical Skills",
@@ -356,7 +356,7 @@ if __name__ == "__main__":
     )
     resume.add_section(skills)
 
-    # 添加experience section
+    # Add experience section
     experience = EntriesSection(
         id="experience",
         title="Professional Experience",
@@ -386,15 +386,15 @@ if __name__ == "__main__":
     )
     resume.add_section(experience)
 
-    # 验证resume
+    # Validate resume
     print(f"Resume valid: {resume.validate()}")
 
-    # 转换为JSON
+    # Convert to JSON
     resume_dict = resume_to_dict(resume)
     json_str = json.dumps(resume_dict, indent=2)
     print("\nResume JSON:")
     print(json_str)
 
-    # 从JSON恢复
+    # Restore from JSON
     resume_restored = dict_to_resume(json.loads(json_str))
     print(f"\nRestored resume valid: {resume_restored.validate()}")

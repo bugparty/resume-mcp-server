@@ -1,33 +1,33 @@
 #!/usr/bin/env python3
 """
-查看和分析 MCP Server 日志的工具脚本
+Tool script for viewing and analyzing MCP Server logs
 """
 import sys
 from pathlib import Path
 
-# 日志文件路径
+# Log file path
 LOG_FILE = Path(__file__).resolve().parents[1] / "logs" / "mcp_server.log"
 
 
 def view_all_logs():
-    """显示所有日志内容"""
+    """Display all log content"""
     if not LOG_FILE.exists():
-        print(f"日志文件不存在: {LOG_FILE}")
+        print(f"Log file does not exist: {LOG_FILE}")
         return
     
-    print(f"读取日志文件: {LOG_FILE}")
+    print(f"Reading log file: {LOG_FILE}")
     print("=" * 80)
     with open(LOG_FILE, "r", encoding="utf-8") as f:
         print(f.read())
 
 
 def view_recent_logs(lines=50):
-    """显示最近的日志条目"""
+    """Display recent log entries"""
     if not LOG_FILE.exists():
-        print(f"日志文件不存在: {LOG_FILE}")
+        print(f"Log file does not exist: {LOG_FILE}")
         return
     
-    print(f"显示最近 {lines} 行日志:")
+    print(f"Displaying recent {lines} log lines:")
     print("=" * 80)
     with open(LOG_FILE, "r", encoding="utf-8") as f:
         all_lines = f.readlines()
@@ -36,12 +36,12 @@ def view_recent_logs(lines=50):
 
 
 def filter_logs_by_tool(tool_name):
-    """按工具名过滤日志"""
+    """Filter logs by tool name"""
     if not LOG_FILE.exists():
-        print(f"日志文件不存在: {LOG_FILE}")
+        print(f"Log file does not exist: {LOG_FILE}")
         return
     
-    print(f"过滤工具: {tool_name}")
+    print(f"Filtering tool: {tool_name}")
     print("=" * 80)
     
     with open(LOG_FILE, "r", encoding="utf-8") as f:
@@ -59,9 +59,9 @@ def filter_logs_by_tool(tool_name):
 
 
 def get_statistics():
-    """获取日志统计信息"""
+    """Get log statistics"""
     if not LOG_FILE.exists():
-        print(f"日志文件不存在: {LOG_FILE}")
+        print(f"Log file does not exist: {LOG_FILE}")
         return
     
     stats = {}
@@ -81,31 +81,31 @@ def get_statistics():
                 errors[current_tool] = errors.get(current_tool, 0) + 1
                 total_errors += 1
     
-    print("MCP 工具调用统计:")
+    print("MCP Tool Call Statistics:")
     print("=" * 80)
     
-    # 按调用次数排序
+    # Sort by call count
     sorted_tools = sorted(stats.items(), key=lambda x: x[1], reverse=True)
     
     for tool_name, count in sorted_tools:
         error_count = errors.get(tool_name, 0)
         error_info = f" ({error_count} errors)" if error_count > 0 else ""
-        print(f"{tool_name:40s}: {count:3d} 次调用{error_info}")
+        print(f"{tool_name:40s}: {count:3d} calls{error_info}")
     
     print("=" * 80)
-    print(f"总计: {total_calls} 次调用")
+    print(f"Total: {total_calls} calls")
     if total_errors > 0:
-        print(f"错误: {total_errors} 次失败")
+        print(f"Errors: {total_errors} failures")
     print("=" * 80)
 
 
 def show_errors():
-    """显示所有错误日志"""
+    """Display all error logs"""
     if not LOG_FILE.exists():
-        print(f"日志文件不存在: {LOG_FILE}")
+        print(f"Log file does not exist: {LOG_FILE}")
         return
     
-    print("错误日志:")
+    print("Error Logs:")
     print("=" * 80)
     
     with open(LOG_FILE, "r", encoding="utf-8") as f:
@@ -124,12 +124,12 @@ def show_errors():
 
 
 def show_slow_calls(threshold_seconds=1.0):
-    """显示执行时间超过阈值的调用"""
+    """Display calls exceeding execution time threshold"""
     if not LOG_FILE.exists():
-        print(f"日志文件不存在: {LOG_FILE}")
+        print(f"Log file does not exist: {LOG_FILE}")
         return
     
-    print(f"执行时间超过 {threshold_seconds}s 的调用:")
+    print(f"Calls taking longer than {threshold_seconds}s:")
     print("=" * 80)
     
     with open(LOG_FILE, "r", encoding="utf-8") as f:
@@ -156,31 +156,31 @@ def show_slow_calls(threshold_seconds=1.0):
 
 
 def clear_logs():
-    """清空日志文件"""
+    """Clear log file"""
     if not LOG_FILE.exists():
-        print(f"日志文件不存在: {LOG_FILE}")
+        print(f"Log file does not exist: {LOG_FILE}")
         return
     
-    confirm = input(f"确定要清空日志文件 {LOG_FILE}? (yes/no): ")
+    confirm = input(f"Are you sure you want to clear log file {LOG_FILE}? (yes/no): ")
     if confirm.lower() == "yes":
         LOG_FILE.write_text("")
-        print("日志文件已清空")
+        print("Log file cleared")
     else:
-        print("操作已取消")
+        print("Operation cancelled")
 
 
 def main():
     if len(sys.argv) < 2:
-        print("用法:")
-        print(f"  {sys.argv[0]} all                  - 显示所有日志")
-        print(f"  {sys.argv[0]} recent [N]           - 显示最近N行日志 (默认50)")
-        print(f"  {sys.argv[0]} filter TOOL_NAME     - 按工具名过滤日志")
-        print(f"  {sys.argv[0]} stats                - 显示统计信息")
-        print(f"  {sys.argv[0]} errors               - 显示所有错误")
-        print(f"  {sys.argv[0]} slow [SECONDS]       - 显示慢调用 (默认>1s)")
-        print(f"  {sys.argv[0]} clear                - 清空日志文件")
+        print("Usage:")
+        print(f"  {sys.argv[0]} all                  - Show all logs")
+        print(f"  {sys.argv[0]} recent [N]           - Show recent N lines (default 50)")
+        print(f"  {sys.argv[0]} filter TOOL_NAME     - Filter logs by tool name")
+        print(f"  {sys.argv[0]} stats                - Show statistics")
+        print(f"  {sys.argv[0]} errors               - Show all errors")
+        print(f"  {sys.argv[0]} slow [SECONDS]       - Show slow calls (default >1s)")
+        print(f"  {sys.argv[0]} clear                - Clear log file")
         print()
-        print("示例:")
+        print("Examples:")
         print(f"  {sys.argv[0]} all")
         print(f"  {sys.argv[0]} recent 100")
         print(f"  {sys.argv[0]} filter list_resume_versions")
@@ -198,7 +198,7 @@ def main():
         view_recent_logs(lines)
     elif command == "filter":
         if len(sys.argv) < 3:
-            print("错误: 请指定工具名")
+            print("Error: Please specify tool name")
             return
         filter_logs_by_tool(sys.argv[2])
     elif command == "stats":
@@ -211,10 +211,8 @@ def main():
     elif command == "clear":
         clear_logs()
     else:
-        print(f"未知命令: {command}")
+        print(f"Unknown command: {command}")
 
 
 if __name__ == "__main__":
     main()
-
-
