@@ -116,8 +116,6 @@ try:
         read_resume_summary_tool,
         render_resume_to_latex_tool,
         compile_resume_pdf_tool,
-        submit_resume_pdf_job_tool,
-        get_resume_pdf_job_status_tool,
         set_section_visibility_tool,
         set_section_order_tool,
         get_section_style_tool,
@@ -140,8 +138,6 @@ except ImportError:
         read_resume_summary_tool,
         render_resume_to_latex_tool,
         compile_resume_pdf_tool,
-        submit_resume_pdf_job_tool,
-        get_resume_pdf_job_status_tool,
         set_section_visibility_tool,
         set_section_order_tool,
         get_section_style_tool,
@@ -884,31 +880,6 @@ def render_resume_pdf(version: str) -> dict[str, str]:
         response["latex_assets_dir"] = pdf_result.latex_assets_dir
     response["pdf_path"] = pdf_result.pdf_path
     return response
-
-
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
-        openWorldHint=False))
-@log_mcp_tool_call
-def submit_resume_pdf_job(version: str) -> dict[str, str]:
-    """
-    Submit an async resume render+compile job.
-
-    This tool renders LaTeX, uploads the LaTeX and assets bundle to S3, and
-    enqueues a Celery job for PDF compilation. It returns job/task identifiers.
-    """
-    return submit_resume_pdf_job_tool(version).model_dump()
-
-
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
-        openWorldHint=False))
-@log_mcp_tool_call
-def get_resume_pdf_job_status(task_id: str) -> dict[str, str | None]:
-    """
-    Query the status of an async resume PDF job by Celery task id.
-    """
-    return get_resume_pdf_job_status_tool(task_id).model_dump()
 
 
 @mcp.tool(annotations=dict(readOnlyHint=True,

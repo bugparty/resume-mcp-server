@@ -22,7 +22,7 @@
 - Templates: LaTeX assets under `templates/` and `templates/latex`; resume template `templates/resume_template.tex`.
 
 ## Environment & Secrets
-- Copy `sample.env` to `.env`; required: `GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`. Optional overrides: `RESUME_DATA_DIR`, `RESUME_SUMMARY_PATH` (or `RESUME_AGGREGATE_PATH`), `RESUME_JD_DIR`, `LOGS_DIR`, `DEEPSEEK_BASE_URL`, filesystem URLs `RESUME_FS_URL` and `JD_FS_URL`, `LATEX_COMPILE_API_URL`.
+- Copy `sample.env` to `.env`; required: `GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`. Optional overrides: `RESUME_DATA_DIR`, `RESUME_SUMMARY_PATH` (or `RESUME_AGGREGATE_PATH`), `RESUME_JD_DIR`, `LOGS_DIR`, `DEEPSEEK_BASE_URL`, filesystem URLs `RESUME_FS_URL` and `JD_FS_URL`, `LATEX_COMPILE_API_URL` (URL of the separately deployed latex-compile-service, default `https://latex-compile.k.0x1f0c.dev`). The latex-compile service lives in its own repo at `latex-compile-service/` (to be extracted) — do not add service code here.
 - Never commit secrets; prefer environment vars for CI. Document new keys in `project_docs.md`.
 
 ## Code Style (Python)
@@ -50,7 +50,7 @@
 ## Runtime / CLI Notes
 - `load_settings` caches settings; prefer `get_settings()` where possible. If you override paths, pass explicit args to `load_settings` and respect fallback logic.
 - Resume operations should flow through `resume_loader.py` helpers to keep format consistent. When creating versions, avoid deleting base `resume` (enforced in `delete_resume_version_tool`).
-- Rendering: use `render_resume` then `compile_tex` via `compile_resume_pdf_tool`; copy only essential template assets/fonts. Preserve timestamped output naming and `data://resumes/output/` scheme.
+- Rendering: use `render_resume` then `compile_tex_remote` via `compile_resume_pdf_tool`; copy only essential template assets/fonts. Preserve timestamped output naming and `data://resumes/output/` scheme.
 - Input parsing: `resume_input_parser.py` handles CLI args; keep new flags documented in help text.
 
 ## Cursor Rules (from .cursorrules)

@@ -68,10 +68,10 @@ The container will automatically create a public URL for ChatGPT integration. Se
    # Edit .env with your API keys
    ```
 
-3. **Install XeLaTeX** (for PDF generation)
-   - macOS: `brew install --cask mactex-no-gui`
-   - Ubuntu: `sudo apt-get install texlive-xetex texlive-latex-recommended`
-   - See full instructions in [MCP Setup Guide](./MCP_SETUP.md)
+3. **Configure external compile service** (for PDF generation)
+   - Set `LATEX_COMPILE_API_URL` in `.env`
+   - Default service: `https://latex-compile.k.0x1f0c.dev`
+   - See API details in [LaTeX Compile API](./docs/latex_compile_api.md)
 
 4. **Start the MCP server**
 
@@ -132,7 +132,7 @@ uv run python scripts/render_resume_cli.py resume --tex build/resume.tex --pdf b
 
 - Python 3.12+
 - UV package manager
-- XeLaTeX (for PDF generation)
+- External LaTeX compile service (`LATEX_COMPILE_API_URL`)
 
 ## 🚀 Ready to Start
 

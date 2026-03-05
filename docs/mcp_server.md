@@ -12,7 +12,7 @@ This MCP server exposes the Resume Agent tools (FastMCP) for MCP-aware clients (
 - LLM keys (required for analysis tools): `GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`.
 - Data/paths (optional overrides): `RESUME_DATA_DIR`, `RESUME_SUMMARY_PATH` or `RESUME_AGGREGATE_PATH`, `RESUME_JD_DIR`, `LOGS_DIR`, `RESUME_FS_URL`, `JD_FS_URL`.
 - S3/R2 output (for PDF uploads): `RESUME_S3_BUCKET_NAME` or `S3_BUCKET_NAME`; `RESUME_S3_PUBLIC_BASE_URL` (required when uploading PDFs); optional `RESUME_S3_ENDPOINT_URL`, `RESUME_S3_REGION`/`AWS_REGION`, `RESUME_S3_KEY_PREFIX`, `RESUME_S3_ADDRESSING_STYLE`, `RESUME_S3_ACCESS_KEY_ID`/`RESUME_S3_ACCESS_KEY`/`S3_ACCESS_KEY_ID`/`AWS_ACCESS_KEY_ID`, `RESUME_S3_SECRET_ACCESS_KEY`/`RESUME_S3_SECRET_KEY`/`S3_SECRET_ACCESS_KEY`/`AWS_SECRET_ACCESS_KEY`.
-- LaTeX/XeLaTeX must be installed for PDF compilation.
+- Configure external compile service via `LATEX_COMPILE_API_URL` for PDF compilation.
 
 ## Start the server
 - Default (stdio):
@@ -41,7 +41,7 @@ This MCP server exposes the Resume Agent tools (FastMCP) for MCP-aware clients (
 - `summarize_resumes_to_index`: build lightweight `resume_summary.yaml` and return its path/message.
 - `read_resume_summary`: read the summary YAML.
 - `render_resume_to_latex(version)`: produce LaTeX string.
-- `compile_resume_pdf(tex_content, version_name="resume")`: compile via xelatex; uploads PDF/latex assets to configured output filesystem or S3 (requires output FS/S3 config).
+- `compile_resume_pdf(tex_content, version_name="resume")`: compile via external LaTeX compile API; uploads PDF/latex assets to configured output filesystem or S3 (requires output FS/S3 config).
 - `get_resume_yaml_format`: return schema + example YAML for resumes.
 
 ## Client configuration examples
@@ -73,6 +73,6 @@ This MCP server exposes the Resume Agent tools (FastMCP) for MCP-aware clients (
 ## Troubleshooting
 - Missing keys → check `.env` (LLM and S3). `render_resume_to_latex` works without S3, but PDF upload needs bucket + public base URL.
 - Data path issues → ensure `data/resumes` exists or set `RESUME_DATA_DIR`.
-- LaTeX errors → verify XeLaTeX is installed and templates are present under `templates/`.
+- LaTeX errors → verify `LATEX_COMPILE_API_URL` is reachable and templates are present under `templates/`.
 - HTTP mode not reachable → confirm port, firewall, and that `--transport http` is set.
 - Logs: inspect `logs/mcp_server.log` for stack traces and tool-call traces.

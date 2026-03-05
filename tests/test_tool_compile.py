@@ -13,7 +13,6 @@ sys.modules["myagent.settings"] = MagicMock()
 sys.modules["myagent.filesystem"] = MagicMock()
 sys.modules["myagent.models"] = MagicMock()
 sys.modules["myagent.models.agent_resume"] = MagicMock()
-sys.modules["myagent.latex_jobs"] = MagicMock()
 sys.modules["langchain_core"] = MagicMock()
 sys.modules["langchain_core.messages"] = MagicMock()
 sys.modules["langchain.tools"] = MagicMock()
@@ -29,8 +28,6 @@ from myagent.tools import compile_resume_pdf_tool
 
 # Setup real filesystem mocks
 from fs.osfs import OSFS
-from fs.memoryfs import MemoryFS
-
 # We need to mock get_output_fs to writing to a local dir we can check
 OUTPUT_DIR = Path("test_tool_output")
 if OUTPUT_DIR.exists():

@@ -24,10 +24,8 @@ from .resume_loader import (
     get_section_style,
 )
 from .resume_renderer import render_resume, compile_tex_remote
-from .latex_jobs import submit_resume_pdf_job, get_resume_pdf_job_status
 from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
-from .settings import get_settings
 from .filesystem import get_jd_fs, get_output_fs
 
 
@@ -98,27 +96,6 @@ class CompileResumeOutput(BaseModel):
         default=None,
         description="Filesystem path to the directory containing LaTeX sources and assets used for compilation.",
     )
-
-
-class SubmitResumePdfJobInput(BaseModel):
-    version: str = Field(..., description="Resume version name without extension, e.g., 'resume'")
-
-
-class SubmitResumePdfJobOutput(BaseModel):
-    job_id: str = Field(..., description="Unique job identifier for this render request.")
-    task_id: str = Field(..., description="Celery task identifier for the compile job.")
-    status: str = Field(..., description="Queued status for the submitted job.")
-
-
-class ResumePdfJobStatusInput(BaseModel):
-    task_id: str = Field(..., description="Celery task identifier returned at submission time.")
-
-
-class ResumePdfJobStatusOutput(BaseModel):
-    task_id: str = Field(..., description="Celery task identifier returned at submission time.")
-    state: str = Field(..., description="Celery task state.")
-    pdf_url: str | None = Field(default=None, description="Public URL to the PDF if available.")
-    error: str | None = Field(default=None, description="Failure reason if the task failed.")
 
 # --- Tool Implementation Functions ---
 def list_resume_versions_tool() -> str:
@@ -389,7 +366,7 @@ def render_resume_to_latex_tool(version: str) -> RenderResumeOutput:
 
 
 def compile_resume_pdf_tool(tex_content: str, version_name: str = "resume") -> CompileResumeOutput:
-    """Compile LaTeX content into a PDF using xelatex."""
+    """Compile LaTeX content into a PDF using the remote compile service."""
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         tex_path = tmp_path / "resume.tex"
@@ -442,16 +419,6 @@ def compile_resume_pdf_tool(tex_content: str, version_name: str = "resume") -> C
         pdf_path="data://resumes/output/" + output_filename,
         latex_assets_dir="data://resumes/output/" + latex_dir_name,
     )
-
-
-def submit_resume_pdf_job_tool(version: str) -> SubmitResumePdfJobOutput:
-    payload = submit_resume_pdf_job(version)
-    return SubmitResumePdfJobOutput(**payload)
-
-
-def get_resume_pdf_job_status_tool(task_id: str) -> ResumePdfJobStatusOutput:
-    payload = get_resume_pdf_job_status(task_id)
-    return ResumePdfJobStatusOutput(**payload)
 
 # --- Tool Definitions ---
 tools = [
@@ -581,22 +548,8 @@ tools = [
     StructuredTool.from_function(
         func=compile_resume_pdf_tool,
         name="CompileResumePDF",
-        description="Compile LaTeX content into a PDF using xelatex. Input: - tex_content: Full LaTeX document string.",
+        description="Compile LaTeX content into a PDF using the remote compile service. Input: - tex_content: Full LaTeX document string.",
         args_schema=CompileResumeInput,
-        return_direct=False,
-    ),
-    StructuredTool.from_function(
-        func=submit_resume_pdf_job_tool,
-        name="SubmitResumePDFJob",
-        description="Submit a resume render+compile job; returns job/task ids.",
-        args_schema=SubmitResumePdfJobInput,
-        return_direct=False,
-    ),
-    StructuredTool.from_function(
-        func=get_resume_pdf_job_status_tool,
-        name="GetResumePDFJobStatus",
-        description="Check the status of a resume PDF compilation job.",
-        args_schema=ResumePdfJobStatusInput,
         return_direct=False,
     ),
 ]

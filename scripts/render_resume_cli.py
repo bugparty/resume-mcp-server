@@ -12,7 +12,7 @@ if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
 from myagent.settings import load_settings
-from myagent.resume_renderer import render_resume, compile_tex
+from myagent.resume_renderer import render_resume, compile_tex_remote
 from myagent.filesystem import init_filesystems
 
 
@@ -24,8 +24,8 @@ def main() -> int:
     parser.add_argument("--aggregate-path", dest="summary_path", help=argparse.SUPPRESS)
     parser.add_argument("--jd-dir", help="Override JD directory")
     parser.add_argument("--tex", type=Path, help="Path to write generated LaTeX")
-    parser.add_argument("--pdf", type=Path, help="Path to write compiled PDF (requires xelatex)")
-    parser.add_argument("--compile", action="store_true", help="Compile to PDF using xelatex")
+    parser.add_argument("--pdf", type=Path, help="Path to write compiled PDF")
+    parser.add_argument("--compile", action="store_true", help="Compile to PDF using remote compile service")
     args = parser.parse_args()
 
     settings = load_settings(data_dir=args.data_dir, summary_path=args.summary_path, aggregate_path=args.summary_path, jd_dir=args.jd_dir)
@@ -53,8 +53,7 @@ def main() -> int:
             if fonts_src.exists():
                 shutil.copytree(fonts_src, tmp_path / "fonts")
 
-            compile_tex(tex_path)
-            pdf_path = tex_path.with_suffix(".pdf")
+            pdf_path = compile_tex_remote(tex_path)
 
             if args.pdf:
                 args.pdf.parent.mkdir(parents=True, exist_ok=True)

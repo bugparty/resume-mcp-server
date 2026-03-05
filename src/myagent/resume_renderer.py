@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import logging
 import re
-import subprocess
 from pathlib import Path
 from typing import Any, Dict, List
 from myagent.settings import load_settings
@@ -717,20 +716,6 @@ def render_resume_from_dict(resume_dict: dict, version: str = "resume") -> str:
         return render_resume_legacy(version, metadata, sections)
 
 
-def compile_tex(tex_path: Path) -> None:
-    # Run xelatex in non-interactive mode to avoid blocking on errors
-    subprocess.run(
-        [
-            "xelatex",
-            "-interaction=nonstopmode",
-            "-halt-on-error",
-            tex_path.name,
-        ],
-        cwd=tex_path.parent,
-        check=True,
-    )
-
-
 def compile_tex_remote(
     tex_path: Path,
     output_path: Path | None = None,
@@ -763,7 +748,7 @@ def compile_tex_remote(
     # Determine API base URL
     if api_base_url is None:
         api_base_url = os.getenv(
-            "LATEX_COMPILE_API_URL", "http://latex_compile_api:8080"
+            "LATEX_COMPILE_API_URL", "https://latex-compile.k.0x1f0c.dev"
         )
     api_base_url = api_base_url.rstrip("/")
 
@@ -789,7 +774,7 @@ def compile_tex_remote(
             
     # Submit compile request via multipart upload
     compile_url = f"{api_base_url}/v1/compile"
-    data = {"main_file": tex_path.name}
+    data = {"main": tex_path.name}
     
     try:
         response = requests.post(
@@ -823,12 +808,9 @@ def main() -> None:
         help="Destination .tex file",
     )
     parser.add_argument(
-        "--compile", action="store_true", help="Compile the generated TeX using xelatex"
-    )
-    parser.add_argument(
-        "--remote-compile",
+        "--compile",
         action="store_true",
-        help="Compile the generated TeX using remote service",
+        help="Compile the generated TeX using the remote compile service",
     )
     args = parser.parse_args()
 
@@ -839,8 +821,6 @@ def main() -> None:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(tex, encoding="utf-8")
     if args.compile:
-        compile_tex(args.output)
-    if args.remote_compile:
         pdf_path = compile_tex_remote(args.output)
         print(f"PDF compiled remotely: {pdf_path}")
 

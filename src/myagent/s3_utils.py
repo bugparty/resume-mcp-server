@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import os
 import time
-from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
@@ -141,29 +140,4 @@ def upload_bytes_to_s3(
 
     public_url = f"{public_base_url}{object_key}"
     return public_url, object_key
-
-
-def download_s3_object_bytes(object_key: str, description: str) -> bytes:
-    s3_client, s3_bucket, _, _ = _get_s3_client_and_settings()
-    try:
-        response = s3_client.get_object(Bucket=s3_bucket, Key=object_key)
-        return response["Body"].read()
-    except (BotoCoreError, ClientError) as exc:
-        logger.error(
-            "Failed to download %s '%s' from bucket '%s': %s",
-            description,
-            object_key,
-            s3_bucket,
-            exc,
-            exc_info=True,
-        )
-        raise RuntimeError(f"Failed to download {description} from S3") from exc
-
-
-def download_s3_object_to_file(
-    object_key: str, destination: Path, description: str
-) -> None:
-    data = download_s3_object_bytes(object_key, description)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_bytes(data)
 
