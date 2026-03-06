@@ -119,6 +119,9 @@ try:
         set_section_visibility_tool,
         set_section_order_tool,
         get_section_style_tool,
+        build_vector_index_tool,
+        search_resume_entries_tool,
+        get_vector_index_status_tool,
     )
 except ImportError:
     from myagent.settings import load_settings, get_settings
@@ -141,6 +144,9 @@ except ImportError:
         set_section_visibility_tool,
         set_section_order_tool,
         get_section_style_tool,
+        build_vector_index_tool,
+        search_resume_entries_tool,
+        get_vector_index_status_tool,
     )
 
 def _initialize_logging() -> Path:
@@ -198,6 +204,7 @@ Your primary responsibilities include:
 2. **Content Optimization**: Tailor resume content to match specific job descriptions
 3. **Resume Rendering**: Generate professional PDF resumes from YAML data
 4. **Job Description Analysis**: Analyze job postings to identify key requirements and keywords
+5. **Semantic Search**: Search experience and project entries with vector similarity
 
 Available Capabilities:
 - List and load resume versions from the data directory
@@ -206,6 +213,7 @@ Available Capabilities:
 - Update resume sections to match job requirements
 - Render resumes to LaTeX and compile to PDF
 - Manage resume summaries and indexes
+- Build and query semantic vector index for experience/project entries
 - Read and compare multiple resume versions
 
 Best Practices:
@@ -649,6 +657,53 @@ def read_resume_summary() -> str:
     """
     result = read_resume_summary_tool()
     return result.content
+
+
+@mcp.tool(annotations=dict(readOnlyHint=False,
+        idempotentHint=False,
+        openWorldHint=False))
+@log_mcp_tool_call
+def build_vector_index(force_rebuild: bool = False) -> str:
+    """
+    Build or refresh vector index for resume experience/project entries.
+
+    Args:
+        force_rebuild: When true, recompute embeddings for all indexed chunks.
+    """
+    return build_vector_index_tool(force_rebuild)
+
+
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
+@log_mcp_tool_call
+def search_resume_entries(
+    query: str,
+    entry_type: str = "all",
+    chunk_level: str = "entry",
+    top_k: int = 5,
+) -> str:
+    """
+    Semantic vector search over experience/projects entries.
+
+    Args:
+        query: Search query string
+        entry_type: Filter by 'experience', 'projects', or 'all'
+        chunk_level: Search granularity, 'entry' or 'bullet'
+        top_k: Number of matches to return
+    """
+    return search_resume_entries_tool(query, entry_type, chunk_level, top_k)
+
+
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
+@log_mcp_tool_call
+def get_vector_index_status() -> str:
+    """
+    Get vector index freshness and collection statistics.
+    """
+    return get_vector_index_status_tool()
 
 
 # Resume Format Documentation Tools

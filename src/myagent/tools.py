@@ -27,6 +27,12 @@ from .resume_renderer import render_resume, compile_tex_remote
 from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
 from .filesystem import get_jd_fs, get_output_fs
+from .vector_search import (
+    mark_index_stale,
+    build_index,
+    search_entries,
+    get_index_status,
+)
 
 
 # --- Pydantic Models for Tool Input ---
@@ -97,7 +103,36 @@ class CompileResumeOutput(BaseModel):
         description="Filesystem path to the directory containing LaTeX sources and assets used for compilation.",
     )
 
+
+class BuildVectorIndexInput(BaseModel):
+    force_rebuild: bool = Field(
+        default=False,
+        description="Whether to force re-embedding all chunks instead of using cache.",
+    )
+
+
+class SearchResumeEntriesInput(BaseModel):
+    query: str = Field(..., description="Semantic search query text.")
+    entry_type: str = Field(
+        default="all",
+        description="Filter by section type: 'experience', 'projects', or 'all'.",
+    )
+    chunk_level: str = Field(
+        default="entry",
+        description="Search granularity: 'entry' or 'bullet'.",
+    )
+    top_k: int = Field(default=5, description="Maximum number of matches to return.")
+
 # --- Tool Implementation Functions ---
+def _is_success_message(result: str) -> bool:
+    return isinstance(result, str) and result.strip().startswith("[Success]")
+
+
+def _mark_stale_after_success(result: str, reason: str) -> None:
+    if _is_success_message(result):
+        mark_index_stale(reason)
+
+
 def list_resume_versions_tool() -> str:
     """Return the available resume versions as a JSON payload."""
     versions = find_resume_versions()
@@ -123,7 +158,9 @@ def update_resume_section_tool(module_path: str, new_content: str) -> str:
     - module_path: Version/section identifier
     - new_content: Markdown to replace the section body while preserving headings/bullets
     """
-    return update_resume_section(module_path, new_content)
+    result = update_resume_section(module_path, new_content)
+    _mark_stale_after_success(result, "update_resume_section")
+    return result
 
 def analyze_jd_tool(jd_text: str) -> str:
     """
@@ -188,7 +225,9 @@ def analyze_jd_tool(jd_text: str) -> str:
 
 def create_new_version_tool(new_version_name: str) -> str:
     """Create a new resume YAML version by copying the base template."""
-    return create_new_version(new_version_name)
+    result = create_new_version(new_version_name)
+    _mark_stale_after_success(result, "create_new_version")
+    return result
 
 def delete_resume_version_tool(version_name: str) -> str:
     """
@@ -219,7 +258,9 @@ def delete_resume_version_tool(version_name: str) -> str:
     try:
         # Delete the file
         resume_fs.remove(filename)
-        return f"[Success] Resume version '{version_name}' has been deleted successfully."
+        result = f"[Success] Resume version '{version_name}' has been deleted successfully."
+        _mark_stale_after_success(result, "delete_resume_version")
+        return result
     except Exception as e:
         return f"[Error] Failed to delete resume version '{version_name}': {str(e)}"
 
@@ -260,7 +301,9 @@ def copy_resume_version_tool(source_version: str, target_version: str) -> str:
         # Copy the file
         content = resume_fs.readtext(source_filename)
         resume_fs.writetext(target_filename, content)
-        return f"[Success] Resume version '{source_version}' has been copied to '{target_version}' successfully."
+        result = f"[Success] Resume version '{source_version}' has been copied to '{target_version}' successfully."
+        _mark_stale_after_success(result, "copy_resume_version")
+        return result
     except Exception as e:
         return f"[Error] Failed to copy resume version '{source_version}' to '{target_version}': {str(e)}"
 
@@ -290,7 +333,9 @@ def update_main_resume_tool(file_name: str, file_content: str) -> str:
     - file_content: New resume content
     Note: When modifying submodules after creating a new version, update their include paths here first
     """
-    return update_main_resume(file_name, file_content)
+    result = update_main_resume(file_name, file_content)
+    _mark_stale_after_success(result, "update_main_resume")
+    return result
 
 def read_jd_file_tool(filename: str) -> str:
     """
@@ -336,6 +381,7 @@ def set_section_visibility_tool(version: str, section_id: str, enabled: bool = T
     """Enable or disable a section by updating style.section_disabled."""
     try:
         result = set_section_visibility(version, section_id, enabled)
+        mark_index_stale("set_section_visibility")
         return json.dumps({"version": version, "section_id": section_id, "enabled": enabled, **result})
     except Exception as exc:
         return json.dumps({"error": str(exc)})
@@ -345,6 +391,7 @@ def set_section_order_tool(version: str, order: list[str]) -> str:
     """Set preferred section ordering for rendering."""
     try:
         result = set_section_order(version, order)
+        mark_index_stale("set_section_order")
         return json.dumps({"version": version, "order": order, **result})
     except Exception as exc:
         return json.dumps({"error": str(exc)})
@@ -419,6 +466,34 @@ def compile_resume_pdf_tool(tex_content: str, version_name: str = "resume") -> C
         pdf_path="data://resumes/output/" + output_filename,
         latex_assets_dir="data://resumes/output/" + latex_dir_name,
     )
+
+
+def build_vector_index_tool(force_rebuild: bool = False) -> str:
+    """Build or refresh vector index for resume experience/projects entries."""
+    result = build_index(force_rebuild=force_rebuild)
+    return json.dumps(result, ensure_ascii=False)
+
+
+def search_resume_entries_tool(
+    query: str,
+    entry_type: str = "all",
+    chunk_level: str = "entry",
+    top_k: int = 5,
+) -> str:
+    """Semantic search across indexed resume experience/project entries."""
+    result = search_entries(
+        query=query,
+        entry_type=entry_type,
+        chunk_level=chunk_level,
+        top_k=top_k,
+    )
+    return json.dumps(result, ensure_ascii=False)
+
+
+def get_vector_index_status_tool() -> str:
+    """Return persisted vector index status and current collection count."""
+    result = get_index_status()
+    return json.dumps(result, ensure_ascii=False)
 
 # --- Tool Definitions ---
 tools = [
@@ -550,6 +625,27 @@ tools = [
         name="CompileResumePDF",
         description="Compile LaTeX content into a PDF using the remote compile service. Input: - tex_content: Full LaTeX document string.",
         args_schema=CompileResumeInput,
+        return_direct=False,
+    ),
+    StructuredTool.from_function(
+        func=build_vector_index_tool,
+        name="BuildVectorIndex",
+        description="Build or refresh semantic vector index for experience/projects entries.",
+        args_schema=BuildVectorIndexInput,
+        return_direct=False,
+    ),
+    StructuredTool.from_function(
+        func=search_resume_entries_tool,
+        name="SearchResumeEntries",
+        description="Semantic search for resume entries with filters: entry_type (experience/projects/all), chunk_level (entry/bullet), top_k.",
+        args_schema=SearchResumeEntriesInput,
+        return_direct=False,
+    ),
+    StructuredTool.from_function(
+        func=get_vector_index_status_tool,
+        name="GetVectorIndexStatus",
+        description="Get vector index health/status, freshness, and counts.",
+        args_schema=EmptyInput,
         return_direct=False,
     ),
 ]

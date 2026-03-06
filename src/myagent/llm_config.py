@@ -1,8 +1,8 @@
 import os
-from typing import Optional
+from typing import Optional, Any
 from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 # Load environment variables from .env file
 load_dotenv()
@@ -14,6 +14,8 @@ _openai_llm: Optional[ChatOpenAI] = None
 _openai_llm_think: Optional[ChatOpenAI] = None
 _deepseek_llm: Optional[ChatOpenAI] = None
 _deepseek_llm_think: Optional[ChatOpenAI] = None
+_google_embeddings: Optional[Any] = None
+_openai_embeddings: Optional[Any] = None
 
 
 def _require_env(var_name: str) -> str:
@@ -97,3 +99,32 @@ def get_thinking_llm(provider: str = "deepseek"):
         )
     return _google_llm_think
 
+
+def get_embedding_model(provider: str = "google") -> Any:
+    """Return an embedding client lazily for the given provider.
+
+    Supported providers: 'google' (default), 'openai'.
+    """
+
+    provider_lc = provider.lower()
+    if provider_lc == "openai":
+        global _openai_embeddings
+        if _openai_embeddings is None:
+            _openai_embeddings = OpenAIEmbeddings(
+                model=os.getenv(
+                    "OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"
+                ),
+                api_key=_require_env("OPENAI_API_KEY"),
+                base_url=os.getenv("OPENAI_BASE_URL"),
+                check_embedding_ctx_length=False,
+                tiktoken_enabled=False,
+            )
+        return _openai_embeddings
+
+    global _google_embeddings
+    if _google_embeddings is None:
+        _google_embeddings = GoogleGenerativeAIEmbeddings(
+            model="models/gemini-embedding-001",
+            google_api_key=_require_env("GOOGLE_API_KEY"),
+        )
+    return _google_embeddings

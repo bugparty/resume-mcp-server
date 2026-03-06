@@ -13,6 +13,9 @@ class AppSettings:
     summary_path: Path
     jd_dir: Path
     logs_dir: Path
+    vector_db_dir: Path
+    index_status_path: Path
+    embedding_provider: str
     # Filesystem URLs for PyFilesystem2
     resume_fs_url: str
     jd_fs_url: str
@@ -50,6 +53,9 @@ def load_settings(
     summary_path: str | Path | None = None,
     aggregate_path: str | Path | None = None,
     jd_dir: str | Path | None = None,
+    vector_db_dir: str | Path | None = None,
+    index_status_path: str | Path | None = None,
+    embedding_provider: str | None = None,
     resume_fs_url: str | None = None,
     jd_fs_url: str | None = None,
 ) -> AppSettings:
@@ -62,6 +68,8 @@ def load_settings(
     default_summary = root_dir / "src" / "myagent" / "resume_summary.yaml"
     default_jd_dir = root_dir / "data" / "jd"
     default_logs_dir = root_dir / "logs"
+    default_vector_db_dir = root_dir / "data" / "vector_db"
+    default_index_status_path = default_vector_db_dir / "index_status.json"
 
     defaults_use_fallback = False
     if not _is_directory_writable(default_data_dir):
@@ -90,6 +98,19 @@ def load_settings(
     )
     resolved_jd_dir = Path(jd_dir or os.getenv("RESUME_JD_DIR", default_jd_dir))
     resolved_logs_dir = Path(os.getenv("LOGS_DIR", default_logs_dir))
+    resolved_vector_db_dir = Path(
+        vector_db_dir or os.getenv("VECTOR_DB_DIR", default_vector_db_dir)
+    )
+    resolved_index_status_path = Path(
+        index_status_path
+        or os.getenv("VECTOR_INDEX_STATUS_PATH")
+        or default_index_status_path
+    )
+    resolved_embedding_provider = (
+        embedding_provider
+        or os.getenv("EMBEDDING_PROVIDER")
+        or "google"
+    ).lower()
     
     # Filesystem URLs - default to local filesystem using resolved paths
     resolved_resume_fs = resume_fs_url or os.getenv("RESUME_FS_URL", str(resolved_data_dir))
@@ -97,11 +118,16 @@ def load_settings(
 
     global _SETTINGS
     resolved_logs_dir.mkdir(parents=True, exist_ok=True)
+    resolved_vector_db_dir.mkdir(parents=True, exist_ok=True)
+    resolved_index_status_path.parent.mkdir(parents=True, exist_ok=True)
     _SETTINGS = AppSettings(
         data_dir=resolved_data_dir,
         summary_path=resolved_summary,
         jd_dir=resolved_jd_dir,
         logs_dir=resolved_logs_dir,
+        vector_db_dir=resolved_vector_db_dir,
+        index_status_path=resolved_index_status_path,
+        embedding_provider=resolved_embedding_provider,
         resume_fs_url=resolved_resume_fs,
         jd_fs_url=resolved_jd_fs,
     )
