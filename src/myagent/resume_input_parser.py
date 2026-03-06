@@ -119,6 +119,10 @@ ENTRY_HEADING_RE = re.compile(
 ENTRY_HEADING_PIPE_RE = re.compile(
     r"^###\s+(?P<title>[^|]+?)\s*\|\s*(?P<organization>[^|]+?)\s*\|\s*(?P<period>[^|]+?)\s*\|\s*(?P<location>.+)$"
 )
+# eg ### 软件工程师 | OpenAI (San Francisco, CA) | 2020 - Present
+ENTRY_HEADING_PIPE_INLINE_LOCATION_RE = re.compile(
+    r"^###\s+(?P<title>[^|]+?)\s*\|\s*(?P<organization>[^|()]+?)(?:\s+\((?P<location>[^)]+)\))\s*\|\s*(?P<period>.+)$"
+)
 # New regex for quoted format: '**Job Title | Company Name | Time Period**'
 ENTRY_QUOTED_RE = re.compile(
     r"^['\"]?\*\*(?P<title>[^|]+?)\s*\|\s*(?P<organization>[^|]+?)(?:\s*\|\s*(?P<period>[^*]+?))?\*\*['\"]?$"
@@ -155,6 +159,14 @@ def parse_header_markdown(markdown: str) -> Dict[str, Any]:
 
 
 # Education format regexes
+# eg ### M.S. Computer Science | Stanford University | 2016 - 2018 | Palo Alto, CA
+EDUCATION_PIPE_RE = re.compile(
+    r"^###\s+(?P<degree>[^|]+?)\s*\|\s*(?P<university>[^|]+?)\s*\|\s*(?P<period>[^|]+?)\s*\|\s*(?P<location>.+)$"
+)
+# eg ### M.S. Computer Science | Stanford University | 2016 - 2018
+EDUCATION_PIPE_NO_LOCATION_RE = re.compile(
+    r"^###\s+(?P<degree>[^|]+?)\s*\|\s*(?P<university>[^|]+?)\s*\|\s*(?P<period>.+)$"
+)
 # eg **M.S. Computer Science**, Stanford University | 2016 - 2018
 EDUCATION_BOLD_RE = re.compile(
     r"^\*\*(?P<degree>[^*]+)\*\*,?\s*(?P<university>[^|]+?)(?:\s+\|\s+(?P<period>.*))?$"
@@ -220,7 +232,31 @@ def parse_education_markdown(
                 current = None
             pending_degree = None
 
-            # Try standard heading format: ### Degree — University (Location) | Period
+            # Try canonical pipe format first: ### Degree | University | Period | Location
+            match = EDUCATION_PIPE_RE.match(stripped)
+            if match:
+                current = {
+                    "title": match.group("degree").strip(),
+                    "organization": match.group("university").strip(),
+                    "location": match.group("location").strip(),
+                    "period": match.group("period").strip(),
+                    "bullets": [],
+                }
+                continue
+
+            # Also support the pipe format without location
+            match = EDUCATION_PIPE_NO_LOCATION_RE.match(stripped)
+            if match:
+                current = {
+                    "title": match.group("degree").strip(),
+                    "organization": match.group("university").strip(),
+                    "location": "",
+                    "period": match.group("period").strip(),
+                    "bullets": [],
+                }
+                continue
+
+            # Try legacy heading format: ### Degree — University (Location) | Period
             match = EDUCATION_HEADING_RE.match(stripped)
             if match:
                 current = {
@@ -451,6 +487,8 @@ def parse_experience_markdown(
             continue
         if stripped.startswith("###"):
             match = ENTRY_HEADING_RE.match(stripped)
+            if not match:
+                match = ENTRY_HEADING_PIPE_INLINE_LOCATION_RE.match(stripped)
             if not match:
                 match = ENTRY_HEADING_PIPE_RE.match(stripped)
             if not match:

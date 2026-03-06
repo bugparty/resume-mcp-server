@@ -485,11 +485,9 @@ def update_resume_section(module_path: str, new_content: str) -> str:
     
     Education Section:
         ## Education
-        **Master of Science in Computer Science**
-        Stanford University | 2016 - 2018
+        ### Master of Science in Computer Science | Stanford University | 2016 - 2018 | Palo Alto, CA
         
-        **Bachelor of Science in Computer Engineering**
-        Stanford University (Palo Alto, CA) | 2012 - 2016
+        ### Bachelor of Science in Computer Engineering | Stanford University | 2012 - 2016 | Palo Alto, CA
     """
     return update_resume_section_tool(module_path, new_content)
 

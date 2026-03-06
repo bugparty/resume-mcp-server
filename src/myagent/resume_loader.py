@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import copy
+import re
 import warnings
 import os
 import yaml
@@ -346,6 +348,27 @@ def _render_projects(section: Dict[str, Any]) -> str:
     return "\n".join(lines).strip()
 
 
+def _render_education(section: Dict[str, Any]) -> str:
+    lines = [f"## {_sanitize_title(section)}"]
+    for entry in section.get("entries", []):
+        title = entry.get("title", "Degree")
+        organization = entry.get("organization", "School")
+        period = entry.get("period", "")
+        location = entry.get("location", "")
+
+        heading_parts = [title, organization]
+        if period:
+            heading_parts.append(period)
+        if location:
+            heading_parts.append(location)
+
+        lines.append("### " + " | ".join(heading_parts))
+        for bullet in entry.get("bullets", []):
+            lines.append(f"- {bullet}")
+        lines.append("")
+    return "\n".join(lines).strip()
+
+
 def _render_entries_common(section: Dict[str, Any]) -> str:
     lines = [f"## {_sanitize_title(section)}"]
     for entry in section.get("entries", []):
@@ -376,7 +399,7 @@ SECTION_RENDERERS = {
     "skills": _render_skills,
     "experience": _render_experience,
     "projects": _render_projects,
-    "education": _render_entries_common,
+    "education": _render_education,
     "raw": _render_raw,
 }
 
@@ -438,12 +461,175 @@ SECTION_HINTS_BY_TYPE: Dict[str, str] = {
         - One-line impact summary mentioning tech stack and result""",
     "education": """Education Section:
         ## Education
-        **M.S. Computer Science**, Stanford University | 2016 - 2018
+        ### M.S. Computer Science | Stanford University | 2016 - 2018 | Palo Alto, CA
         - Coursework or honors relevant to the role""",
     "raw": """Custom Section:
         ## Section Title
         Add concise paragraphs or bullets tailored to the role.""",
 }
+
+FORMAT_INSTRUCTION_COMMENT = (
+    "<!-- Edit the markdown below. Preserve headings and bullet structure so we "
+    "can parse updates reliably. -->"
+)
+MIN_FORMATTED_CONTENT_BYTES = 10
+
+
+def _non_empty_line_count(markdown: str) -> int:
+    return sum(1 for line in markdown.splitlines() if line.strip())
+
+
+def _extract_heading_title(markdown: str) -> str | None:
+    for raw_line in markdown.splitlines():
+        line = raw_line.strip()
+        if line.startswith("##") and not line.startswith("###"):
+            return line.lstrip("#").strip().lower()
+    return None
+
+
+def _looks_like_multi_section_resume(markdown: str) -> bool:
+    section_headings = [
+        line.strip()
+        for line in markdown.splitlines()
+        if line.strip().startswith("##") and not line.strip().startswith("###")
+    ]
+    return len(section_headings) > 1
+
+
+def _has_entry_markers(markdown: str) -> bool:
+    return any(
+        marker in markdown for marker in ("###", "**")
+    ) or bool(re.search(r"^\s*[-*]\s+", markdown, re.MULTILINE))
+
+
+def _hint_for_section(section_id: str, section_type: str) -> str:
+    if section_id == HEADER_SECTION_ID:
+        return HEADER_SECTION_TEMPLATE
+    return (
+        SECTION_HINTS_BY_TYPE.get(section_id)
+        or SECTION_HINTS_BY_TYPE.get(section_type)
+        or SECTION_HINTS_BY_TYPE["raw"]
+    )
+
+
+def _build_format_error(
+    module_path: str,
+    section_id: str,
+    section_type: str,
+    reason: str,
+    *,
+    details: str | None = None,
+) -> str:
+    lines = [
+        f"[Error] Failed to parse updated content for '{module_path}'.",
+        f"{reason} The update was not saved.",
+    ]
+    if details:
+        lines.append(details)
+    lines.append("Tip: call `load_resume_section` first and preserve the same heading and bullet structure.")
+    lines.append(_hint_for_section(section_id, section_type))
+    return "\n".join(lines)
+
+
+def _validate_common_markdown(
+    module_path: str, section_id: str, section_type: str, markdown: str
+) -> str | None:
+    if FORMAT_INSTRUCTION_COMMENT in markdown:
+        return _build_format_error(
+            module_path,
+            section_id,
+            section_type,
+            "The input still contains the loader instruction comment.",
+            details="Submit only the section markdown itself, not the HTML comment wrapper.",
+        )
+
+    if _looks_like_multi_section_resume(markdown):
+        return _build_format_error(
+            module_path,
+            section_id,
+            section_type,
+            "This tool can update only one section at a time.",
+            details="The input appears to contain multiple '##' section headings.",
+        )
+
+    heading_title = _extract_heading_title(markdown)
+    if heading_title and section_id.replace("_", " ").lower() not in heading_title:
+        return _build_format_error(
+            module_path,
+            section_id,
+            section_type,
+            "The section title/type may not match the target section.",
+            details=f"Expected a heading for '{section_id}', but received '## {heading_title.title()}'.",
+        )
+
+    return None
+
+
+def _validate_parsed_section(
+    module_path: str,
+    markdown: str,
+    section_before: Dict[str, Any],
+    section_after: Dict[str, Any],
+    section_id: str,
+    section_type: str,
+) -> str | None:
+    common_error = _validate_common_markdown(
+        module_path, section_id, section_type, markdown
+    )
+    if common_error:
+        return common_error
+
+    content_is_substantial = len(markdown.encode("utf-8")) > MIN_FORMATTED_CONTENT_BYTES
+    line_count = _non_empty_line_count(markdown)
+
+    if section_type in {"experience", "projects", "education"}:
+        entries = section_after.get("entries") or []
+        if content_is_substantial and not entries:
+            details = "Possible issue: the entry heading format does not match the expected markdown structure."
+            if _has_entry_markers(markdown) or line_count >= 2:
+                details += " Expected supported entry headings such as '### Role — Company | Period' or the section-specific alternative below."
+            return _build_format_error(
+                module_path,
+                section_id,
+                section_type,
+                "The parsed section became empty.",
+                details=details,
+            )
+
+    elif section_type == "skills":
+        groups = section_after.get("groups") or []
+        has_valid_category = any((group.get("category") or "").strip() for group in groups)
+        has_items = any(group.get("items") for group in groups)
+        if content_is_substantial and (not groups or not has_valid_category or (line_count >= 2 and not has_items)):
+            return _build_format_error(
+                module_path,
+                section_id,
+                section_type,
+                "The skills content could not be parsed into valid categories/items.",
+                details="Possible issue: each line should follow a category format such as '- Programming: Python, Go'.",
+            )
+
+    elif section_type == "summary":
+        bullets = section_after.get("bullets") or []
+        if content_is_substantial and not bullets:
+            return _build_format_error(
+                module_path,
+                section_id,
+                section_type,
+                "The summary content became empty after parsing.",
+                details="Possible issue: the section is missing bullet lines or concise summary text.",
+            )
+
+    elif section_type == "raw":
+        if content_is_substantial and not (section_after.get("content") or "").strip():
+            return _build_format_error(
+                module_path,
+                section_id,
+                section_type,
+                "The custom section content became empty after parsing.",
+            )
+
+    return None
 
 
 def list_modules_in_version(main_resume_filename: str) -> str:
@@ -494,8 +680,7 @@ def load_resume_section(module_path: str) -> str:
             markdown = _render_section(section)
     except (FileNotFoundError, KeyError) as exc:
         return f"[Error] {exc}"
-    instructions = "<!-- Edit the markdown below. Preserve headings and bullet structure so we can parse updates reliably. -->"
-    return f"{instructions}\n\n{markdown}"
+    return f"{FORMAT_INSTRUCTION_COMMENT}\n\n{markdown}"
 
 
 def _update_section_from_markdown(
@@ -538,21 +723,47 @@ def update_resume_section(module_path: str, new_content: str | None = None) -> s
     version, section_id = module_path.split("/", 1)
     try:
         if section_id == HEADER_SECTION_ID:
+            header_error = _validate_common_markdown(
+                module_path, section_id, HEADER_SECTION_ID, new_content
+            )
+            if header_error:
+                return header_error
             data = _load_resume(version)
             metadata_updates = parse_header_markdown(new_content)
             if not metadata_updates:
-                return "[Error] Header content must contain at least one 'key: value' pair."
+                return _build_format_error(
+                    module_path,
+                    section_id,
+                    HEADER_SECTION_ID,
+                    "Header content must contain at least one 'key: value' pair.",
+                    details="Example: 'email: john.doe@example.com'",
+                )
             data.setdefault("metadata", {}).update(metadata_updates)
             _save_resume(version, data)
             return (f"[Success] Updated {module_path}. updated metadata: {metadata_updates}")
         else:
             data, section = _get_section(version, section_id)
+            section_before = copy.deepcopy(section)
+            section_type = section.get("type", "raw")
             _update_section_from_markdown(
                 version, section_id, section, new_content
             )
+            validation_error = _validate_parsed_section(
+                module_path,
+                new_content,
+                section_before,
+                section,
+                section_id,
+                section_type,
+            )
+            if validation_error:
+                return validation_error
             # Section is modified in-place by the parser
             _save_resume(version, data)
-            return (f"[Success] Updated {module_path}. updated section: {section}")
+            result = f"[Success] Updated {module_path}. updated section: {section}"
+            if section_before == section:
+                result += " No effective content change detected."
+            return result
     except (FileNotFoundError, KeyError) as exc:
         return f"[Error] {exc}"
 
