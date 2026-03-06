@@ -564,7 +564,7 @@ def get_section_style(version: str) -> str:
 @log_mcp_tool_call
 def create_new_version(new_version_name: str) -> str:
     """
-    Creates a new resume version by copying the default YAML template.
+    Creates a new resume version.
 
     Args:
         new_version_name: The name for the new resume version (e.g., 'resume_for_google')
@@ -723,7 +723,7 @@ sections:
     - Kubernetes
     - CI/CD
 
-- type: entries
+- type: experience
   id: experience
   title: Professional Experience
   entries:
@@ -743,7 +743,7 @@ sections:
     - "Built full-stack web applications using **React** and **Python/Django**"
     - "Optimized database queries resulting in **40% performance improvement**"
 
-- type: entries
+- type: education
   id: education
   title: Education
   entries:
@@ -786,9 +786,9 @@ The following JSON schema defines the validation rules:
 - **Purpose**: Technical skills organized by category
 - **groups**: Array of objects with `category` and `items` fields
 
-### 3. Entries Section (type: "entries")
+### 3. Experience/Projects/Education Section (type: "experience" | "projects" | "education")
 - **Required fields**: `id`, `title`, `entries`
-- **Purpose**: Experience, education, projects with structured data
+- **Purpose**: Structured timeline content (work, projects, education)
 - **entries**: Array of objects with `title`, `organization`, `location`, `period`, `bullets`
 
 ### 4. Raw Section (type: "raw")
@@ -813,7 +813,7 @@ The following JSON schema defines the validation rules:
 ## Common Mistakes to Avoid
 
 - Don't use Markdown file format - only YAML
-- Don't mix section types (e.g., don't put `bullets` in `entries` section)
+- Don't mix section types (e.g., don't put `bullets` in an `experience` section)
 - Ensure all required fields are present for each section type
 - Follow the exact structure shown in the schema
 """

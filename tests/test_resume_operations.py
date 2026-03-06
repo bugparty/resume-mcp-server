@@ -136,6 +136,22 @@ class TestResumeAddSkills(unittest.TestCase):
         result = update_resume_section(module_path, new_content)
         self.assertIn("[Success]", result)
 
+    def test_add_skills_with_bold_non_bullet_categories(self):
+        module_path = f"{self.version}/skills"
+        new_content = """## Skills
+**Programming**: Python, C++, Rust
+
+**Systems & Software**: Linux, Docker, networking diagnostics
+
+**Tools**: Multimeter, Oscilloscope"""
+        result = update_resume_section(module_path, new_content)
+        self.assertIn("[Success]", result)
+
+        rendered = load_resume_section(module_path)
+        self.assertIn("- Programming: Python, C++, Rust", rendered)
+        self.assertIn("- Systems & Software: Linux, Docker, networking diagnostics", rendered)
+        self.assertIn("- Tools: Multimeter, Oscilloscope", rendered)
+
     def test_add_experience_project(self):
         module_path = f"{self.version}/experience"
         new_content = """## Experience

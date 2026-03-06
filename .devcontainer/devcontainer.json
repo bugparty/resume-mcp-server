@@ -1,5 +1,5 @@
 {
-  "name": "Python + TeX Live (full)",
+  "name": "Python Workspace",
   "dockerComposeFile": "../docker-compose.yml",
   "service": "devcontainer",
    "workspaceFolder": "/workspace",
@@ -10,8 +10,7 @@
       "extensions": [
         "ms-python.python",
         "ms-python.vscode-pylance",
-        "ms-azuretools.vscode-docker",
-        "James-Yu.latex-workshop"
+        "ms-azuretools.vscode-docker"
       ]
     }
   }

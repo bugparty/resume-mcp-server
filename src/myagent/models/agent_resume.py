@@ -6,7 +6,9 @@ from typing import Any, Literal
 class SectionType(str, Enum):
     SUMMARY = "summary"
     SKILLS = "skills"
-    ENTRIES = "entries"
+    EXPERIENCE = "experience"
+    PROJECTS = "projects"
+    EDUCATION = "education"
     RAW = "raw"
 
 
@@ -101,7 +103,9 @@ class SkillsSection(Section):
 class EntriesSection(Section):
     """条目section（经历、教育等）"""
 
-    type: Literal[SectionType.ENTRIES] = SectionType.ENTRIES
+    type: Literal[
+        SectionType.EXPERIENCE, SectionType.PROJECTS, SectionType.EDUCATION
+    ] = SectionType.EXPERIENCE
     title: str = "Experience"
     entries: list[Entry] = field(default_factory=list)
 
@@ -109,17 +113,19 @@ class EntriesSection(Section):
         """验证section是否符合schema要求"""
         valid = len(self.entries) > 0
 
-        # 根据id验证title
-        if self.id == "experience":
+        # 根据type验证title
+        if self.type == SectionType.EXPERIENCE:
             valid = (
                 valid and "Experience" in self.title and "Projects" not in self.title
             )
-        elif self.id == "projects":
+        elif self.type == SectionType.PROJECTS:
             valid = (
                 valid
                 and ("Project" in self.title or "Projects" in self.title)
                 and "Experience" not in self.title
             )
+        elif self.type == SectionType.EDUCATION:
+            valid = valid and "Education" in self.title
 
         return valid
 
@@ -210,7 +216,14 @@ def create_section(section_data: dict) -> Section:
             for g in section_data.get("groups", [])
         ]
         return SkillsSection(id=section_id, title=title, groups=groups)
-    elif section_type == SectionType.ENTRIES:
+    elif section_type in {
+        SectionType.EXPERIENCE,
+        SectionType.PROJECTS,
+        SectionType.EDUCATION,
+        SectionType.EXPERIENCE.value,
+        SectionType.PROJECTS.value,
+        SectionType.EDUCATION.value,
+    }:
         entries = [
             Entry(
                 title=e.get("title", ""),
@@ -221,7 +234,14 @@ def create_section(section_data: dict) -> Section:
             )
             for e in section_data.get("entries", [])
         ]
-        return EntriesSection(id=section_id, title=title, entries=entries)
+        normalized_type = (
+            section_type
+            if isinstance(section_type, SectionType)
+            else SectionType(section_type)
+        )
+        return EntriesSection(
+            id=section_id, type=normalized_type, title=title, entries=entries
+        )
     elif section_type == SectionType.RAW:
         return RawSection(
             id=section_id, title=title, content=section_data.get("content", "")

@@ -16,7 +16,7 @@ sections:
   - '**8+ years of experience** tailoring Markdown-driven resumes for AI-assisted
     workflows.'
   - Experienced with **DeepSeek**, **LangChain**, and configurable data pipelines.
-- type: entries
+- type: education
   title: Education
   id: education
   entries:
@@ -39,7 +39,7 @@ sections:
     items:
     - DeepSeek
     - LangChain
-- type: entries
+- type: experience
   title: Work Experience
   id: experience
   entries:

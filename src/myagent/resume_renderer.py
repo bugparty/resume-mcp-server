@@ -336,7 +336,7 @@ def render_section_with_template(section: Dict[str, any]) -> str:
     Raises:
         TemplateNotFound: If template doesn't exist (falls back to entries.tex.j2)
     """
-    section_type = section.get("type", "entries")
+    section_type = section.get("type", "raw")
     section_type = section_type_normalize_str(section_type)
     template_name = f"sections/{section_type}.tex.j2"
 
@@ -487,7 +487,6 @@ def render_education(section: Dict[str, any]) -> str:
 SECTION_RENDERERS = {
     "summary": render_section_with_template,
     "skills": render_section_with_template,
-    "entries": render_section_with_template,
     "experience": render_section_with_template,
     "projects": render_section_with_template,
     "education": render_section_with_template,
@@ -497,7 +496,6 @@ SECTION_RENDERERS = {
 LEGACY_RENDERERS = {
     "summary": render_summary,
     "skills": render_skills,
-    "entries": render_entries,
     "experience": render_experience,
     "projects": render_projects,
     "education": render_education,

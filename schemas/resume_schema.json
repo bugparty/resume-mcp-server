@@ -50,7 +50,14 @@
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["summary", "skills", "entries", "raw"]
+            "enum": [
+              "summary",
+              "skills",
+              "experience",
+              "projects",
+              "education",
+              "raw"
+            ]
           },
           "id": {"type": "string"},
           "title": {"type": "string"},
@@ -135,11 +142,66 @@
           },
           {
             "if": {
-              "properties": {"type": {"const": "entries"}}
+              "properties": {"type": {"const": "experience"}}
             },
             "then": {
               "required": ["title", "entries"],
               "properties": {
+                "id": {"const": "experience"},
+                "title": {
+                  "pattern": "^(?!.*Projects).*Experience.*$",
+                  "description": "Experience section title must contain 'Experience' and not contain 'Projects'"
+                },
+                "entries": {
+                  "minItems": 1
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {"required": ["bullets"]},
+                  {"required": ["groups"]},
+                  {"required": ["content"]}
+                ]
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {"type": {"const": "projects"}}
+            },
+            "then": {
+              "required": ["title", "entries"],
+              "properties": {
+                "id": {"const": "projects"},
+                "title": {
+                  "pattern": "^(?!.*Experience).*Projects?.*$",
+                  "description": "Projects section title must contain 'Project' or 'Projects' and not contain 'Experience'"
+                },
+                "entries": {
+                  "minItems": 1
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {"required": ["bullets"]},
+                  {"required": ["groups"]},
+                  {"required": ["content"]}
+                ]
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {"type": {"const": "education"}}
+            },
+            "then": {
+              "required": ["title", "entries"],
+              "properties": {
+                "id": {"const": "education"},
+                "title": {
+                  "pattern": ".*Education.*",
+                  "description": "Education section title must contain 'Education'"
+                },
                 "entries": {
                   "minItems": 1
                 }
@@ -170,32 +232,6 @@
                   {"required": ["groups"]},
                   {"required": ["entries"]}
                 ]
-              }
-            }
-          },
-          {
-            "if": {
-              "properties": {"id": {"const": "experience"}}
-            },
-            "then": {
-              "properties": {
-                "title": {
-                  "pattern": "^(?!.*Projects).*Experience.*$",
-                  "description": "When id is 'experience', title must contain 'Experience' and not contain 'Projects'"
-                }
-              }
-            }
-          },
-          {
-            "if": {
-              "properties": {"id": {"const": "projects"}}
-            },
-            "then": {
-              "properties": {
-                "title": {
-                  "pattern": "^(?!.*Experience).*Projects?.*$",
-                  "description": "When id is 'projects', title must contain 'Project' or 'Projects' and not contain 'Experience'"
-                }
               }
             }
           }

@@ -15,7 +15,7 @@ sections:
   bullets:
   - Focused on optimizing ML workloads for Tesla Dojo using DeepSeek-based pipelines.
   - Experienced with distributed training, profiling, and CUDA performance tuning.
-- type: entries
+- type: education
   title: Education
   id: education
   entries:
@@ -39,7 +39,7 @@ sections:
     - PyTorch
     - Profilers
     - Distributed Systems
-- type: entries
+- type: experience
   title: Work Experience
   id: experience
   entries:

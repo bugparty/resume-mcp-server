@@ -165,10 +165,7 @@ def _summarize_resume(data: Dict[str, Any]) -> Dict[str, Any]:
         elif section_type == "skills":
             for group in section.get("groups", []):
                 skills.extend(group.get("items", []))
-        elif section_type == "entries" and section.get("id") in {
-            "experience",
-            "projects",
-        }:
+        elif section_type in {"experience", "projects"}:
             for entry in section.get("entries", []):
                 title = (entry.get("title") or "").strip()
                 organization = (entry.get("organization") or "").strip()
@@ -349,11 +346,6 @@ def _render_projects(section: Dict[str, Any]) -> str:
     return "\n".join(lines).strip()
 
 
-def _render_entries(section: Dict[str, Any]) -> str:
-    """Render generic entries section (deprecated, use experience/projects instead)."""
-    return _render_entries_common(section)
-
-
 def _render_entries_common(section: Dict[str, Any]) -> str:
     lines = [f"## {_sanitize_title(section)}"]
     for entry in section.get("entries", []):
@@ -382,9 +374,9 @@ def _render_raw(section: Dict[str, Any]) -> str:
 SECTION_RENDERERS = {
     "summary": _render_summary,
     "skills": _render_skills,
-    "entries": _render_entries,  # Deprecated, use experience/projects instead
     "experience": _render_experience,
     "projects": _render_projects,
+    "education": _render_entries_common,
     "raw": _render_raw,
 }
 
@@ -510,7 +502,6 @@ def _update_section_from_markdown(
     version: str, section_id: str, section: Dict[str, Any], markdown: str
 ) -> None:
     # First try to match by section_id for specific sections like education
-    # This allows education to use entries type but have custom parsing
     parser = SECTION_PARSERS.get(section_id)
     
     # If no specific parser for section_id, fall back to type-based lookup

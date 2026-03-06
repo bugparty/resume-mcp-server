@@ -359,9 +359,16 @@ def parse_skills_markdown(
         stripped = line.strip()
         if not stripped:
             continue
-        if not stripped.startswith("-"):
-            continue
-        content = stripped[1:].strip()
+
+        # Only treat real markdown list markers as bullets ("- " or "* ").
+        # This avoids misclassifying lines like "**Programming**: ..." as bullets.
+        if re.match(r"^[-*]\s+", stripped):
+            content = re.sub(r"^[-*]\s+", "", stripped, count=1)
+        else:
+            # Also support non-bullet categorized lines, e.g.:
+            # **Programming**: Python, C++, Rust
+            content = stripped
+
         if ":" in content:
             category, items = content.split(":", 1)
             # Handle bold formatting in category (remove ** if present)
@@ -592,7 +599,6 @@ def parse_raw_markdown(
 SECTION_PARSERS = {
     "summary": parse_summary_markdown,
     "skills": parse_skills_markdown,
-    "entries": parse_experience_markdown,  # Deprecated, use experience/projects instead
     "experience": parse_experience_markdown,
     "projects": parse_projects_markdown,
     "education": parse_education_markdown,
