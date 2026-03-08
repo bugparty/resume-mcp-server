@@ -169,6 +169,25 @@ class TestResumeAddSkills(unittest.TestCase):
         self.assertIn("Software Engineer", result)
         self.assertIn("Backend Developer", result)
         self.assertIn("Conducted code reviews and mentored junior developers", result)
+
+    def test_add_experience_with_inline_location_pipe_format(self):
+        module_path = f"{self.version}/experience"
+        new_content = """## Experience
+        ### Software Engineer | NovaTech Solutions (Beijing, China) | 2020 - Present
+        - Designed and implemented microservices architecture that reduced system downtime by 30%.
+        ### Backend Developer | CloudSphere Inc. (Shanghai, China) | 2017 - 2020
+        - Developed RESTful APIs supporting mobile and web applications."""
+
+        result = update_resume_section(module_path, new_content)
+        self.assertIn("[Success]", result)
+
+        rendered = load_resume_section(module_path)
+        self.assertIn("Software Engineer", rendered)
+        self.assertIn("NovaTech Solutions", rendered)
+        self.assertIn("Beijing, China", rendered)
+        self.assertIn("2020 - Present", rendered)
+
+    def test_add_projects(self):
         module_path = f"{self.version}/projects"
         new_content = """## Projects
         ### Intelligent Recommendation Engine Optimization | 2021
@@ -186,9 +205,39 @@ class TestResumeAddSkills(unittest.TestCase):
         # Verify projects section was updated correctly
         self.assertIn("Projects", result)
         self.assertIn("Intelligent Recommendation Engine Optimization", result)
-    def test_add_education(self):
+    def test_add_education_pipe_format(self):
         module_path = f"{self.version}/education"
-        new_content = """ ## Education
+        new_content = """## Education
+        ### Master of Science in Computer Science | Stanford University | 2016 - 2018 | Palo Alto, CA"""
+        result = update_resume_section(module_path, new_content)
+        self.assertIn("[Success]", result)
+        self.assertIn("Master of Science in Computer Science", result)
+        self.assertIn("Stanford University", result)
+        self.assertIn("2016 - 2018", result)
+        self.assertIn("Palo Alto, CA", result)
+
+        rendered = load_resume_section(module_path)
+        self.assertIn(
+            "### Master of Science in Computer Science | Stanford University | 2016 - 2018 | Palo Alto, CA",
+            rendered,
+        )
+
+    def test_add_education_pipe_without_location(self):
+        module_path = f"{self.version}/education"
+        new_content = """## Education
+        ### Bachelor of Science in Computer Engineering | Stanford University | 2012 - 2016"""
+        result = update_resume_section(module_path, new_content)
+        self.assertIn("[Success]", result)
+
+        rendered = load_resume_section(module_path)
+        self.assertIn(
+            "### Bachelor of Science in Computer Engineering | Stanford University | 2012 - 2016",
+            rendered,
+        )
+
+    def test_add_education_legacy_bold_format_still_supported(self):
+        module_path = f"{self.version}/education"
+        new_content = """## Education
         **Master of Science in Computer Science**
         Stanford University | 2016 - 2018"""
         result = update_resume_section(module_path, new_content)
@@ -196,7 +245,142 @@ class TestResumeAddSkills(unittest.TestCase):
         self.assertIn("Master of Science in Computer Science", result)
         self.assertIn("Stanford University", result)
         self.assertIn("2016 - 2018", result)
-    
+
+    def test_add_education_legacy_heading_format_still_supported(self):
+        module_path = f"{self.version}/education"
+        new_content = """## Education
+        ### Master of Science in Computer Science — Stanford University (Palo Alto, CA) | 2016 - 2018"""
+        result = update_resume_section(module_path, new_content)
+        self.assertIn("[Success]", result)
+
+        rendered = load_resume_section(module_path)
+        self.assertIn(
+            "### Master of Science in Computer Science | Stanford University | 2016 - 2018 | Palo Alto, CA",
+            rendered,
+        )
+
+
+class TestResumeSectionValidation(unittest.TestCase):
+    def setUp(self):
+        self.version = "TestResumeSectionValidation"
+        create_new_version(self.version)
+
+    def tearDown(self):
+        resume_fs = get_resume_fs()
+        if resume_fs.exists(f"{self.version}.yaml"):
+            resume_fs.remove(f"{self.version}.yaml")
+        self.assertFalse(resume_fs.exists(f"{self.version}.yaml"))
+
+    def test_experience_invalid_format_does_not_overwrite_section(self):
+        module_path = f"{self.version}/experience"
+        before = load_resume_section(module_path)
+        result = update_resume_section(
+            module_path,
+            "## Experience\nThis is a long paragraph without supported entry headings.",
+        )
+        after = load_resume_section(module_path)
+
+        self.assertIn("[Error]", result)
+        self.assertIn("Failed to parse updated content", result)
+        self.assertIn("The parsed section became empty", result)
+        self.assertEqual(before, after)
+
+    def test_projects_invalid_format_returns_hint(self):
+        module_path = f"{self.version}/projects"
+        result = update_resume_section(
+            module_path,
+            "## Projects\n### Wrong heading without dates\nThis line never becomes a bullet",
+        )
+
+        self.assertIn("[Error]", result)
+        self.assertIn("The parsed section became empty", result)
+        self.assertIn("Projects Section:", result)
+
+    def test_education_invalid_format_returns_error(self):
+        module_path = f"{self.version}/education"
+        before = load_resume_section(module_path)
+        result = update_resume_section(
+            module_path,
+            "## Education\nUniversity of Somewhere only plain text without degree structure",
+        )
+        after = load_resume_section(module_path)
+
+        self.assertIn("[Error]", result)
+        self.assertIn("The parsed section became empty", result)
+        self.assertIn(
+            "### M.S. Computer Science | Stanford University | 2016 - 2018 | Palo Alto, CA",
+            result,
+        )
+        self.assertEqual(before, after)
+
+    def test_skills_invalid_format_returns_error(self):
+        module_path = f"{self.version}/skills"
+        before = load_resume_section(module_path)
+        result = update_resume_section(
+            module_path,
+            "## Skills\nThis paragraph ignores categories entirely and should be rejected.",
+        )
+        after = load_resume_section(module_path)
+
+        self.assertIn("[Error]", result)
+        self.assertIn("could not be parsed into valid categories/items", result)
+        self.assertEqual(before, after)
+
+    def test_header_invalid_format_returns_example(self):
+        result = update_resume_section(
+            f"{self.version}/header",
+            "## Header\njust some words without colon pairs",
+        )
+
+        self.assertIn("[Error]", result)
+        self.assertIn("key: value", result)
+        self.assertIn("email: john.doe@example.com", result)
+
+    def test_loader_comment_is_rejected(self):
+        module_path = f"{self.version}/summary"
+        result = update_resume_section(
+            module_path,
+            "<!-- Edit the markdown below. Preserve headings and bullet structure so we can parse updates reliably. -->\n\n## Summary\n- Focused bullet",
+        )
+
+        self.assertIn("[Error]", result)
+        self.assertIn("loader instruction comment", result)
+
+    def test_multi_section_input_is_rejected(self):
+        module_path = f"{self.version}/summary"
+        before = load_resume_section(module_path)
+        result = update_resume_section(
+            module_path,
+            "## Summary\n- Focused bullet\n\n## Skills\n- Python: FastAPI",
+        )
+        after = load_resume_section(module_path)
+
+        self.assertIn("[Error]", result)
+        self.assertIn("only one section at a time", result)
+        self.assertEqual(before, after)
+
+    def test_title_mismatch_is_rejected(self):
+        module_path = f"{self.version}/experience"
+        before = load_resume_section(module_path)
+        result = update_resume_section(
+            module_path,
+            "## Skills\n- Programming: Python, Go",
+        )
+        after = load_resume_section(module_path)
+
+        self.assertIn("[Error]", result)
+        self.assertIn("title/type may not match", result)
+        self.assertEqual(before, after)
+
+    def test_success_without_effective_change_mentions_it(self):
+        module_path = f"{self.version}/summary"
+        section_output = load_resume_section(module_path)
+        _, markdown = section_output.split("\n\n", 1)
+        result = update_resume_section(module_path, markdown)
+
+        self.assertIn("[Success]", result)
+        self.assertIn("No effective content change detected.", result)
+
 
 if __name__ == "__main__":
     unittest.main()
