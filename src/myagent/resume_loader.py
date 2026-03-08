@@ -669,7 +669,8 @@ def list_modules_in_version(main_resume_filename: str) -> str:
 def load_resume_section(module_path: str) -> str:
     module_path = module_path.strip()
     if "/" not in module_path:
-        return "[Error] Module path must follow 'version/section' format."
+        # Backward compatibility: treat bare section id as `resume/<section>`.
+        module_path = f"resume/{module_path}"
     version, section_id = module_path.split("/", 1)
     try:
         if section_id == HEADER_SECTION_ID:
