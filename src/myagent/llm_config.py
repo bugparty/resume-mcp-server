@@ -16,6 +16,7 @@ _deepseek_llm: Optional[ChatOpenAI] = None
 _deepseek_llm_think: Optional[ChatOpenAI] = None
 _google_embeddings: Optional[Any] = None
 _openai_embeddings: Optional[Any] = None
+_openrouter_embeddings: Optional[Any] = None
 
 
 def _require_env(var_name: str) -> str:
@@ -23,6 +24,60 @@ def _require_env(var_name: str) -> str:
     if not value:
         raise RuntimeError(f"Missing required environment variable: {var_name}")
     return value
+
+
+def _is_openrouter_base_url(base_url: str | None) -> bool:
+    return isinstance(base_url, str) and "openrouter.ai" in base_url.lower()
+
+
+class OpenRouterEmbeddings:
+    """Embedding adapter backed by the OpenRouter SDK."""
+
+    def __init__(self, *, model: str, api_key: str) -> None:
+        self.model = model
+        self.api_key = api_key
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        vectors = self._generate(texts)
+        if len(vectors) != len(texts):
+            raise RuntimeError(
+                f"OpenRouter embeddings count mismatch: expected {len(texts)}, got {len(vectors)}"
+            )
+        return vectors
+
+    def embed_query(self, text: str) -> list[float]:
+        vectors = self._generate([text])
+        if not vectors:
+            raise RuntimeError("OpenRouter embeddings returned an empty response.")
+        return vectors[0]
+
+    def _generate(self, inputs: list[str]) -> list[list[float]]:
+        try:
+            from openrouter import OpenRouter
+        except Exception as exc:
+            raise RuntimeError(
+                "OpenRouter SDK is required for OPENAI_BASE_URL=openrouter.ai. "
+                "Install dependency: pip install openrouter"
+            ) from exc
+
+        with OpenRouter(api_key=self.api_key) as open_router:
+            response = open_router.embeddings.generate(input=inputs, model=self.model)
+        data = self._extract_data(response)
+        vectors: list[list[float]] = []
+        for item in data:
+            embedding = item.get("embedding") if isinstance(item, dict) else None
+            if embedding is None and hasattr(item, "embedding"):
+                embedding = getattr(item, "embedding")
+            if isinstance(embedding, list):
+                vectors.append(embedding)
+        return vectors
+
+    @staticmethod
+    def _extract_data(response: Any) -> list[Any]:
+        if isinstance(response, dict):
+            return response.get("data") or []
+        data = getattr(response, "data", None)
+        return data or []
 
 
 def get_llm(provider: str = "deepseek"):
@@ -108,14 +163,32 @@ def get_embedding_model(provider: str = "google") -> Any:
 
     provider_lc = provider.lower()
     if provider_lc == "openai":
+        base_url = os.getenv("OPENAI_BASE_URL")
+        model_name = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+
+        if _is_openrouter_base_url(base_url):
+            global _openrouter_embeddings
+            if _openrouter_embeddings is None:
+                openrouter_key = os.getenv("OPENROUTER_API_KEY") or os.getenv(
+                    "OPENAI_API_KEY"
+                )
+                if not openrouter_key:
+                    raise RuntimeError(
+                        "Missing required environment variable: OPENROUTER_API_KEY "
+                        "(or OPENAI_API_KEY fallback)"
+                    )
+                _openrouter_embeddings = OpenRouterEmbeddings(
+                    model=model_name,
+                    api_key=openrouter_key,
+                )
+            return _openrouter_embeddings
+
         global _openai_embeddings
         if _openai_embeddings is None:
             _openai_embeddings = OpenAIEmbeddings(
-                model=os.getenv(
-                    "OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"
-                ),
+                model=model_name,
                 api_key=_require_env("OPENAI_API_KEY"),
-                base_url=os.getenv("OPENAI_BASE_URL"),
+                base_url=base_url,
                 check_embedding_ctx_length=False,
                 tiktoken_enabled=False,
             )

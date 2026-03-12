@@ -322,6 +322,64 @@ def _build_search_result_item(
     }
 
 
+def _embedding_context(provider: str, embedding_model: Any) -> str:
+    model_name = _normalize_text(getattr(embedding_model, "model", "")) or "unknown"
+    return f"provider={provider}, model={model_name}"
+
+
+def _embed_documents_with_validation(
+    embedding_model: Any, documents: List[str], provider: str
+) -> List[List[float]]:
+    try:
+        vectors = embedding_model.embed_documents(documents)
+    except Exception as exc:
+        raise RuntimeError(
+            "Failed to generate document embeddings. "
+            f"Check embedding endpoint/model compatibility ({_embedding_context(provider, embedding_model)}): {exc}"
+        ) from exc
+
+    if vectors is None:
+        raise RuntimeError(
+            "Embedding API returned no document vectors (None). "
+            f"Check embedding endpoint/model compatibility ({_embedding_context(provider, embedding_model)})."
+        )
+    if not isinstance(vectors, list):
+        raise RuntimeError(
+            "Embedding API returned an invalid document vectors payload. "
+            f"Expected list, got {type(vectors).__name__} ({_embedding_context(provider, embedding_model)})."
+        )
+    if len(vectors) != len(documents):
+        raise RuntimeError(
+            "Embedding API returned a mismatched document vector count. "
+            f"Expected {len(documents)}, got {len(vectors)} ({_embedding_context(provider, embedding_model)})."
+        )
+    return vectors
+
+
+def _embed_query_with_validation(
+    embedding_model: Any, query_text: str, provider: str
+) -> List[float]:
+    try:
+        vector = embedding_model.embed_query(query_text)
+    except Exception as exc:
+        raise RuntimeError(
+            "Failed to generate query embedding. "
+            f"Check embedding endpoint/model compatibility ({_embedding_context(provider, embedding_model)}): {exc}"
+        ) from exc
+
+    if vector is None:
+        raise RuntimeError(
+            "Embedding API returned no query embedding (None). "
+            f"Check embedding endpoint/model compatibility ({_embedding_context(provider, embedding_model)})."
+        )
+    if not isinstance(vector, list):
+        raise RuntimeError(
+            "Embedding API returned an invalid query embedding payload. "
+            f"Expected list, got {type(vector).__name__} ({_embedding_context(provider, embedding_model)})."
+        )
+    return vector
+
+
 def build_index(force_rebuild: bool = False) -> Dict[str, Any]:
     _ensure_filesystems_initialized()
     _, collection = _get_client_and_collection()
@@ -390,10 +448,13 @@ def build_index(force_rebuild: bool = False) -> Dict[str, Any]:
 
     new_embedding_count = 0
     if to_embed_ids:
-        embedding_model = get_embedding_model(get_settings().embedding_provider)
+        provider = get_settings().embedding_provider
+        embedding_model = get_embedding_model(provider)
         embedded_vectors: List[List[float]] = []
         for doc_batch in _batch(to_embed_docs, batch_size=64):
-            batch_vectors = embedding_model.embed_documents(doc_batch)
+            batch_vectors = _embed_documents_with_validation(
+                embedding_model, doc_batch, provider
+            )
             embedded_vectors.extend(batch_vectors)
 
         collection.upsert(
@@ -475,8 +536,9 @@ def search_entries(
     ensure_state = ensure_index_ready()
 
     _, collection = _get_client_and_collection()
-    embedding_model = get_embedding_model(get_settings().embedding_provider)
-    query_vector = embedding_model.embed_query(query_text)
+    provider = get_settings().embedding_provider
+    embedding_model = get_embedding_model(provider)
+    query_vector = _embed_query_with_validation(embedding_model, query_text, provider)
 
     where_filter: Dict[str, Any] = {"chunk_level": normalized_level}
     if normalized_type:

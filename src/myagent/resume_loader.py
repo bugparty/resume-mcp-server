@@ -4,6 +4,7 @@ import copy
 import re
 import warnings
 import os
+from typing import Literal
 import yaml
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
@@ -409,6 +410,69 @@ def _render_section(section: Dict[str, Any]) -> str:
     return renderer(section)
 
 
+def _apply_section_style(
+    sections: List[Dict[str, Any]], style: Dict[str, Any]
+) -> List[Dict[str, Any]]:
+    """Reorder/filter sections using style.section_order and style.section_disabled."""
+
+    if not sections:
+        return []
+    if not isinstance(style, dict):
+        return sections
+
+    order = (
+        style.get("section_order")
+        if isinstance(style.get("section_order"), list)
+        else []
+    )
+    disabled_map = (
+        style.get("section_disabled")
+        if isinstance(style.get("section_disabled"), dict)
+        else {}
+    )
+
+    def is_enabled(section: Dict[str, Any]) -> bool:
+        section_id = section.get("id")
+        return disabled_map.get(section_id) is not True
+
+    section_by_id = {
+        section.get("id"): section
+        for section in sections
+        if isinstance(section, dict) and isinstance(section.get("id"), str)
+    }
+
+    ordered: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for section_id in order:
+        if not isinstance(section_id, str):
+            continue
+        section = section_by_id.get(section_id)
+        if section is None:
+            continue
+        if not is_enabled(section):
+            seen.add(section_id)
+            continue
+        ordered.append(section)
+        seen.add(section_id)
+
+    for section in sections:
+        if not isinstance(section, dict):
+            continue
+        section_id = section.get("id")
+        if section_id in seen:
+            continue
+        if not is_enabled(section):
+            if isinstance(section_id, str):
+                seen.add(section_id)
+            continue
+        ordered.append(section)
+        if isinstance(section_id, str):
+            seen.add(section_id)
+
+    return ordered
+
+
 def _render_resume(version: str) -> str:
     data = _load_resume(version)
     parts = []
@@ -424,7 +488,10 @@ def _render_resume(version: str) -> str:
             meta.get("linkedin", ""),
         ]
         parts.append("\n".join(line for line in contact_lines if line))
-    for section in data.get("sections", []):
+    styled_sections = _apply_section_style(
+        data.get("sections", []), data.get("style", {})
+    )
+    for section in styled_sections:
         parts.append(_render_section(section))
     return "\n\n".join(filter(None, parts))
 
@@ -473,10 +540,182 @@ FORMAT_INSTRUCTION_COMMENT = (
     "can parse updates reliably. -->"
 )
 MIN_FORMATTED_CONTENT_BYTES = 10
+INSERT_POSITIONS = {"start", "end", "before", "after"}
 
 
 def _non_empty_line_count(markdown: str) -> int:
     return sum(1 for line in markdown.splitlines() if line.strip())
+
+
+def _editable_text(markdown: str) -> str:
+    return f"{FORMAT_INSTRUCTION_COMMENT}\n\n{markdown}"
+
+
+def _strip_instruction_comment(markdown: str) -> str:
+    stripped = markdown.strip()
+    if stripped.startswith(FORMAT_INSTRUCTION_COMMENT):
+        _, _, remainder = stripped.partition("\n\n")
+        return remainder.strip()
+    return stripped
+
+
+def _target_to_version_and_section(target_path: str) -> Tuple[str, str | None]:
+    normalized = target_path.strip()
+    if not normalized:
+        raise ValueError("Target path cannot be empty.")
+    if "/" not in normalized:
+        return normalized, None
+    version, section_id = normalized.split("/", 1)
+    if not version or not section_id:
+        raise ValueError("Target path must be 'version' or 'version/section'.")
+    return version, section_id
+
+
+def _render_resume_text_body(version: str) -> str:
+    data = _load_resume(version)
+    blocks = [_render_header(data.get("metadata", {}))]
+    for section in data.get("sections", []):
+        if isinstance(section, dict):
+            blocks.append(_render_section(section))
+    return "\n\n".join(block for block in blocks if block.strip())
+
+
+def _count_matches(text: str, needle: str) -> int:
+    if not needle:
+        return 0
+    return text.count(needle)
+
+
+def _replace_once(text: str, old_text: str, new_text: str) -> str:
+    return text.replace(old_text, new_text, 1)
+
+
+def _split_top_level_blocks(markdown: str) -> List[str]:
+    blocks: List[str] = []
+    current: List[str] = []
+    for line in markdown.strip().splitlines():
+        stripped = line.strip()
+        if stripped.startswith("##") and not stripped.startswith("###") and current:
+            blocks.append("\n".join(current).strip())
+            current = [line]
+        else:
+            current.append(line)
+    if current:
+        blocks.append("\n".join(current).strip())
+    return [block for block in blocks if block]
+
+
+def _build_match_error(
+    action: str,
+    target_path: str,
+    needle_name: str,
+    needle: str,
+    match_count: int,
+) -> str:
+    if match_count == 0:
+        return (
+            f"[Error] Could not {action} in '{target_path}': {needle_name} was not found. "
+            "Call `read_resume_text` first and use a more exact snippet."
+        )
+    preview = needle[:80].replace("\n", "\\n")
+    return (
+        f"[Error] Could not {action} in '{target_path}': {needle_name} matched "
+        f"{match_count} times. Use a more specific snippet or anchor. "
+        f"Preview: '{preview}'"
+    )
+
+
+def _apply_section_markdown(
+    data: Dict[str, Any],
+    version: str,
+    section_id: str,
+    markdown: str,
+    module_path: str,
+) -> str | None:
+    if section_id == HEADER_SECTION_ID:
+        header_error = _validate_common_markdown(
+            module_path, section_id, HEADER_SECTION_ID, markdown
+        )
+        if header_error:
+            return header_error
+        metadata_updates = parse_header_markdown(markdown)
+        if not metadata_updates:
+            if _non_empty_line_count(markdown) <= 1:
+                return None
+            return _build_format_error(
+                module_path,
+                section_id,
+                HEADER_SECTION_ID,
+                "Header content must contain at least one 'key: value' pair.",
+                details="Example: 'email: john.doe@example.com'",
+            )
+        data.setdefault("metadata", {}).update(metadata_updates)
+        return None
+
+    sections = data.get("sections", [])
+    section = next(
+        (
+            item
+            for item in sections
+            if isinstance(item, dict) and item.get("id") == section_id
+        ),
+        None,
+    )
+    if section is None:
+        raise KeyError(f"Section '{section_id}' not found in version '{version}'")
+
+    section_before = copy.deepcopy(section)
+    section_type = section.get("type", "raw")
+    _update_section_from_markdown(version, section_id, section, markdown)
+    return _validate_parsed_section(
+        module_path,
+        markdown,
+        section_before,
+        section,
+        section_id,
+        section_type,
+    )
+
+
+def _write_resume_text_body(version: str, section_id: str | None, markdown: str) -> str:
+    normalized = _strip_instruction_comment(markdown)
+    if section_id is not None:
+        return update_resume_section(f"{version}/{section_id}", normalized)
+
+    data = _load_resume(version)
+    edited_blocks = _split_top_level_blocks(normalized)
+    expected_section_ids = [HEADER_SECTION_ID]
+    expected_section_ids.extend(
+        section.get("id")
+        for section in data.get("sections", [])
+        if isinstance(section, dict) and isinstance(section.get("id"), str)
+    )
+
+    if len(edited_blocks) != len(expected_section_ids):
+        return (
+            f"[Error] Failed to update '{version}': whole-resume editing cannot add, "
+            "remove, or reorder top-level '##' blocks."
+        )
+
+    working_copy = copy.deepcopy(data)
+    for current_section_id, block in zip(expected_section_ids, edited_blocks):
+        module_path = (
+            f"{version}/{current_section_id}"
+            if current_section_id != HEADER_SECTION_ID
+            else f"{version}/header"
+        )
+        error = _apply_section_markdown(
+            working_copy,
+            version,
+            current_section_id,
+            block,
+            module_path,
+        )
+        if error:
+            return error
+
+    _save_resume(version, working_copy)
+    return f"[Success] Updated {version} via editable text view."
 
 
 def _extract_heading_title(markdown: str) -> str | None:
@@ -684,6 +923,25 @@ def load_resume_section(module_path: str) -> str:
     return f"{FORMAT_INSTRUCTION_COMMENT}\n\n{markdown}"
 
 
+def read_resume_text(target_path: str) -> str:
+    try:
+        version, section_id = _target_to_version_and_section(target_path)
+        if section_id is None:
+            markdown = _render_resume_text_body(version)
+            return _editable_text(markdown)
+        return load_resume_section(f"{version}/{section_id}")
+    except (FileNotFoundError, KeyError, ValueError) as exc:
+        return f"[Error] {exc}"
+
+
+def _read_section_text_body(version: str, section_id: str) -> str:
+    if section_id == HEADER_SECTION_ID:
+        data = _load_resume(version)
+        return _render_header(data.get("metadata", {}))
+    _, section = _get_section(version, section_id)
+    return _render_section(section)
+
+
 def _update_section_from_markdown(
     version: str, section_id: str, section: Dict[str, Any], markdown: str
 ) -> None:
@@ -767,6 +1025,91 @@ def update_resume_section(module_path: str, new_content: str | None = None) -> s
             return result
     except (FileNotFoundError, KeyError) as exc:
         return f"[Error] {exc}"
+
+
+def replace_resume_text(target_path: str, old_text: str, new_text: str) -> str:
+    try:
+        version, section_id = _target_to_version_and_section(target_path)
+        current_text = (
+            _render_resume_text_body(version)
+            if section_id is None
+            else _read_section_text_body(version, section_id)
+        )
+    except (FileNotFoundError, KeyError, ValueError) as exc:
+        return f"[Error] {exc}"
+
+    match_count = _count_matches(current_text, old_text)
+    if match_count != 1:
+        return _build_match_error(
+            "replace text", target_path, "old_text", old_text, match_count
+        )
+
+    updated_text = _replace_once(current_text, old_text, new_text)
+    return _write_resume_text_body(version, section_id, updated_text)
+
+
+def insert_resume_text(
+    target_path: str,
+    new_text: str,
+    position: Literal["start", "end", "before", "after"] | str,
+    anchor_text: str | None = None,
+) -> str:
+    try:
+        version, section_id = _target_to_version_and_section(target_path)
+        current_text = (
+            _render_resume_text_body(version)
+            if section_id is None
+            else _read_section_text_body(version, section_id)
+        )
+    except (FileNotFoundError, KeyError, ValueError) as exc:
+        return f"[Error] {exc}"
+
+    if position not in INSERT_POSITIONS:
+        allowed = ", ".join(sorted(INSERT_POSITIONS))
+        return f"[Error] Invalid insert position '{position}'. Expected one of: {allowed}."
+
+    if position in {"before", "after"}:
+        if not anchor_text:
+            return (
+                f"[Error] Insert position '{position}' requires `anchor_text` in "
+                f"'{target_path}'."
+            )
+        match_count = _count_matches(current_text, anchor_text)
+        if match_count != 1:
+            return _build_match_error(
+                "insert text", target_path, "anchor_text", anchor_text, match_count
+            )
+        if position == "before":
+            updated_text = _replace_once(current_text, anchor_text, new_text + anchor_text)
+        else:
+            updated_text = _replace_once(current_text, anchor_text, anchor_text + new_text)
+    elif position == "start":
+        updated_text = new_text + current_text
+    else:
+        updated_text = current_text + new_text
+
+    return _write_resume_text_body(version, section_id, updated_text)
+
+
+def delete_resume_text(target_path: str, old_text: str) -> str:
+    try:
+        version, section_id = _target_to_version_and_section(target_path)
+        current_text = (
+            _render_resume_text_body(version)
+            if section_id is None
+            else _read_section_text_body(version, section_id)
+        )
+    except (FileNotFoundError, KeyError, ValueError) as exc:
+        return f"[Error] {exc}"
+
+    match_count = _count_matches(current_text, old_text)
+    if match_count != 1:
+        return _build_match_error(
+            "delete text", target_path, "old_text", old_text, match_count
+        )
+
+    updated_text = _replace_once(current_text, old_text, "")
+    return _write_resume_text_body(version, section_id, updated_text)
 
 
 def update_main_resume(file_name: str, file_content: str) -> str:

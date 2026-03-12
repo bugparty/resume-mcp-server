@@ -11,7 +11,11 @@ from .llm_config import get_thinking_llm
 from .resume_loader import (
     find_resume_versions,
     load_resume_section,
+    read_resume_text,
     update_resume_section,
+    replace_resume_text,
+    insert_resume_text,
+    delete_resume_text,
     create_new_version,
     list_modules_in_version,
     update_main_resume,
@@ -46,9 +50,45 @@ class TextFilenameInput(BaseModel):
 class ResumeSectionInput(BaseModel):
     module_path: str = Field(..., description="Resume section path using 'version/section', e.g., 'resume/summary'")
 
+class ResumeTextTargetInput(BaseModel):
+    target_path: str = Field(
+        ...,
+        description="Editable resume text target, either 'version' for the whole resume view or 'version/section' for one section.",
+    )
+
 class UpdateResumeSectionInput(BaseModel):
     module_path: str = Field(..., description="Resume section path using 'version/section', e.g., 'resume/summary'")
     new_content: str = Field(..., description="Updated Markdown content for the section")
+
+class ReplaceResumeTextInput(BaseModel):
+    target_path: str = Field(
+        ...,
+        description="Editable resume text target, either 'version' or 'version/section'.",
+    )
+    old_text: str = Field(..., description="Exact text snippet to replace. Must match exactly once.")
+    new_text: str = Field(..., description="Replacement text.")
+
+class InsertResumeTextInput(BaseModel):
+    target_path: str = Field(
+        ...,
+        description="Editable resume text target, either 'version' or 'version/section'.",
+    )
+    new_text: str = Field(..., description="Text to insert.")
+    position: str = Field(
+        ...,
+        description="Insertion position: 'start', 'end', 'before', or 'after'.",
+    )
+    anchor_text: str | None = Field(
+        default=None,
+        description="Required when position is 'before' or 'after'. Must match exactly once.",
+    )
+
+class DeleteResumeTextInput(BaseModel):
+    target_path: str = Field(
+        ...,
+        description="Editable resume text target, either 'version' or 'version/section'.",
+    )
+    old_text: str = Field(..., description="Exact text snippet to delete. Must match exactly once.")
 
 class AnalyzeJDInput(BaseModel):
     jd_text: str = Field(..., description="The full text of the Job Description to analyze")
@@ -151,6 +191,12 @@ def load_resume_section_tool(module_path: str) -> str:
     """
     return load_resume_section(module_path)
 
+def read_resume_text_tool(target_path: str) -> str:
+    """
+    Read editable markdown text for a whole resume view or one section.
+    """
+    return read_resume_text(target_path)
+
 def update_resume_section_tool(module_path: str, new_content: str) -> str:
     """
     Updates the Markdown content of a resume section.
@@ -160,6 +206,35 @@ def update_resume_section_tool(module_path: str, new_content: str) -> str:
     """
     result = update_resume_section(module_path, new_content)
     _mark_stale_after_success(result, "update_resume_section")
+    return result
+
+def replace_resume_text_tool(target_path: str, old_text: str, new_text: str) -> str:
+    """
+    Replace one exact text snippet in a resume text view.
+    """
+    result = replace_resume_text(target_path, old_text, new_text)
+    _mark_stale_after_success(result, "replace_resume_text")
+    return result
+
+def insert_resume_text_tool(
+    target_path: str,
+    new_text: str,
+    position: str,
+    anchor_text: str | None = None,
+) -> str:
+    """
+    Insert text into a resume text view using a semantic position or anchor.
+    """
+    result = insert_resume_text(target_path, new_text, position, anchor_text)
+    _mark_stale_after_success(result, "insert_resume_text")
+    return result
+
+def delete_resume_text_tool(target_path: str, old_text: str) -> str:
+    """
+    Delete one exact text snippet from a resume text view.
+    """
+    result = delete_resume_text(target_path, old_text)
+    _mark_stale_after_success(result, "delete_resume_text")
     return result
 
 def analyze_jd_tool(jd_text: str) -> str:
@@ -519,10 +594,38 @@ tools = [
         return_direct=False,
     ),
     StructuredTool.from_function(
+        func=read_resume_text_tool,
+        name="ReadResumeText",
+        description="Read editable resume markdown. Input: - target_path: either 'version' for the whole resume text view or 'version/section' for a single section.",
+        args_schema=ResumeTextTargetInput,
+        return_direct=False,
+    ),
+    StructuredTool.from_function(
         func=update_resume_section_tool,
         name="WriteResumeSubmodule",
         description="Overwrite a resume section with new Markdown. Input: - module_path: Version/section identifier - new_content: Replacement Markdown preserving headings and bullet lists.",
         args_schema=UpdateResumeSectionInput,
+        return_direct=False,
+    ),
+    StructuredTool.from_function(
+        func=replace_resume_text_tool,
+        name="ReplaceResumeText",
+        description="Replace one exact text snippet in a resume text view. Input: target_path, old_text, new_text. The old_text must match exactly once.",
+        args_schema=ReplaceResumeTextInput,
+        return_direct=False,
+    ),
+    StructuredTool.from_function(
+        func=insert_resume_text_tool,
+        name="InsertResumeText",
+        description="Insert text into a resume text view. Input: target_path, new_text, position ('start'|'end'|'before'|'after'), and anchor_text for before/after.",
+        args_schema=InsertResumeTextInput,
+        return_direct=False,
+    ),
+    StructuredTool.from_function(
+        func=delete_resume_text_tool,
+        name="DeleteResumeText",
+        description="Delete one exact text snippet from a resume text view. Input: target_path and old_text. The old_text must match exactly once.",
+        args_schema=DeleteResumeTextInput,
         return_direct=False,
     ),
     StructuredTool.from_function(

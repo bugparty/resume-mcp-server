@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 from myagent import llm_config, vector_search
@@ -335,3 +336,141 @@ def test_get_embedding_model_caches_by_provider(monkeypatch) -> None:
     assert openai_first.base_url == "http://127.0.0.1:1234/v1"
     assert openai_first.check_embedding_ctx_length is False
     assert openai_first.tiktoken_enabled is False
+
+
+def test_search_entries_returns_clear_error_when_embedding_call_fails(
+    monkeypatch,
+) -> None:
+    class BrokenEmbeddings:
+        model = "text-embedding-3-small"
+
+        def embed_query(self, text: str) -> list[float]:
+            raise TypeError("'NoneType' object is not iterable")
+
+    monkeypatch.setattr(
+        vector_search, "ensure_index_ready", lambda: {"auto_rebuilt": False}
+    )
+    monkeypatch.setattr(
+        vector_search, "_get_client_and_collection", lambda: (object(), FakeCollection())
+    )
+    monkeypatch.setattr(
+        vector_search, "get_embedding_model", lambda provider=None: BrokenEmbeddings()
+    )
+    monkeypatch.setattr(
+        vector_search,
+        "get_settings",
+        lambda: type("Settings", (), {"embedding_provider": "openai"})(),
+    )
+
+    try:
+        vector_search.search_entries(query="backend payments", chunk_level="bullet")
+        assert False, "Expected RuntimeError when embedding provider fails"
+    except RuntimeError as exc:
+        message = str(exc)
+        assert "Failed to generate query embedding" in message
+        assert "provider=openai" in message
+
+
+def test_build_index_returns_clear_error_when_document_embeddings_fail(
+    monkeypatch, tmp_path: Path
+) -> None:
+    class BrokenEmbeddings:
+        model = "text-embedding-3-small"
+
+        def embed_documents(self, texts: list[str]) -> list[list[float]]:
+            raise TypeError("'NoneType' object is not iterable")
+
+    settings = vector_search.get_settings()
+    monkeypatch.setattr(
+        vector_search,
+        "get_settings",
+        lambda: type(
+            "Settings",
+            (),
+            {
+                "vector_db_dir": tmp_path / "vector_db",
+                "index_status_path": tmp_path / "vector_db" / "index_status.json",
+                "embedding_provider": "openai",
+                "resume_fs_url": "mem://",
+                "jd_fs_url": "mem://",
+            },
+        )(),
+    )
+    monkeypatch.setattr(vector_search, "find_resume_versions", lambda: ["resume_a"])
+    monkeypatch.setattr(
+        vector_search, "load_complete_resume_as_dict", lambda version: _sample_resume()
+    )
+    monkeypatch.setattr(
+        vector_search, "_get_client_and_collection", lambda: (object(), FakeCollection())
+    )
+    monkeypatch.setattr(
+        vector_search, "get_embedding_model", lambda provider=None: BrokenEmbeddings()
+    )
+
+    try:
+        vector_search.build_index(force_rebuild=True)
+        assert False, "Expected RuntimeError when document embedding generation fails"
+    except RuntimeError as exc:
+        message = str(exc)
+        assert "Failed to generate document embeddings" in message
+        assert "provider=openai" in message
+
+
+def test_get_embedding_model_uses_openrouter_sdk_when_base_url_is_openrouter(
+    monkeypatch,
+) -> None:
+    class FakeEmbeddingsAPI:
+        def __init__(self) -> None:
+            self.calls: list[dict] = []
+
+        def generate(self, *, input, model: str):
+            self.calls.append({"input": input, "model": model})
+            return {
+                "data": [
+                    {"embedding": [0.11, 0.22]},
+                    {"embedding": [0.33, 0.44]},
+                ]
+            }
+
+    class FakeOpenRouterClient:
+        def __init__(self, api_key: str) -> None:
+            self.api_key = api_key
+            self.embeddings = FakeEmbeddingsAPI()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+    class FakeOpenRouterFactory:
+        def __init__(self) -> None:
+            self.instances: list[FakeOpenRouterClient] = []
+
+        def __call__(self, *, api_key: str):
+            client = FakeOpenRouterClient(api_key=api_key)
+            self.instances.append(client)
+            return client
+
+    fake_factory = FakeOpenRouterFactory()
+    fake_module = type("FakeOpenRouterModule", (), {"OpenRouter": fake_factory})()
+    monkeypatch.setitem(sys.modules, "openrouter", fake_module)
+
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1")
+    monkeypatch.setenv("OPENAI_EMBEDDING_MODEL", "Taurus")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "openrouter-test-key")
+    monkeypatch.setattr(llm_config, "_openrouter_embeddings", None)
+    monkeypatch.setattr(llm_config, "_openai_embeddings", None)
+
+    model = llm_config.get_embedding_model("openai")
+    vectors = model.embed_documents(["alpha", "beta"])
+    query_vector = model.embed_query("gamma")
+
+    assert vectors == [[0.11, 0.22], [0.33, 0.44]]
+    assert query_vector == [0.11, 0.22]
+    assert len(fake_factory.instances) == 2
+    assert fake_factory.instances[0].api_key == "openrouter-test-key"
+    assert fake_factory.instances[0].embeddings.calls[0] == {
+        "input": ["alpha", "beta"],
+        "model": "Taurus",
+    }

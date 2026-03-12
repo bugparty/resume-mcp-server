@@ -110,13 +110,16 @@ try:
         list_resume_versions_tool,
         load_complete_resume_tool,
         load_resume_section_tool,
+        read_resume_text_tool,
         update_resume_section_tool,
+        replace_resume_text_tool,
+        insert_resume_text_tool,
+        delete_resume_text_tool,
         create_new_version_tool,
         delete_resume_version_tool,
         copy_resume_version_tool,
         update_main_resume_tool,
         list_modules_in_version_tool,
-        summarize_resumes_to_index_tool,
         read_resume_summary_tool,
         render_resume_to_latex_tool,
         compile_resume_pdf_tool,
@@ -135,7 +138,11 @@ except ImportError:
         list_resume_versions_tool,
         load_complete_resume_tool,
         load_resume_section_tool,
+        read_resume_text_tool,
         update_resume_section_tool,
+        replace_resume_text_tool,
+        insert_resume_text_tool,
+        delete_resume_text_tool,
         create_new_version_tool,
         delete_resume_version_tool,
         copy_resume_version_tool,
@@ -239,7 +246,7 @@ def resume_agent_prompt() -> str:
 Your primary responsibilities include:
 1. **Resume Version Management**: Help users create, manage, and organize multiple versions of their resumes
 2. **Content Optimization**: Tailor resume content to match specific job descriptions
-3. **Resume Rendering**: Generate professional PDF resumes from YAML data
+3. **Resume Rendering**: Generate professional PDF resumes
 4. **Job Description Analysis**: Analyze job postings to identify key requirements and keywords
 5. **Semantic Search**: Search experience and project entries with vector similarity
 
@@ -256,35 +263,49 @@ Available Capabilities:
 Best Practices:
 - Always list available resume versions before loading
 - When tailoring resumes, analyze the JD first to understand requirements
-- **IMPORTANT**: You CANNOT update the entire resume at once. You MUST update one section at a time using `update_resume_section`
-- Only update specific sections (e.g., 'resume/summary', 'resume/experience', 'resume/skills', 'resume/projects')
+- Prefer `read_resume_text` plus `replace_resume_text` / `insert_resume_text` / `delete_resume_text` for localized edits
+- You may edit either one section (`version/section`) or the whole resume editable text view (`version`)
+- Whole-resume text edits must preserve the existing top-level `##` block structure
 - Never attempt to replace the complete resume YAML in a single operation
 - Minimize repetitive confirmations—if the user has requested help across multiple sections, acknowledge once and proceed section-by-section without asking for permission each time (unless the user explicitly requests step-by-step approval)
 - Keep resume content concise, professional, and achievement-focused
 - Use action verbs and quantifiable results when possible
 - Maintain consistent formatting across sections
 - Save different versions for different job applications
-- After section updates are complete, update `metadata.position` so it matches the final resume focus and JD target role
+- After section updates are complete, update `position` in header section so it matches the final resume focus and JD target role
 
 Workflow Example:
 1. User provides a job description → analyze_jd to extract requirements
 2. List available resume versions → list_resume_versions
-3. Load relevant sections → load_resume_section or load_complete_resume
+3. Load relevant sections/text → load_resume_section, read_resume_text, or load_complete_resume
 4. Manually review and optimize content based on JD analysis
-5. **Update ONE section at a time** → update_resume_section for each section (summary, experience, skills, etc.)
+5. Apply localized text edits with replace/insert/delete tools, or use update_resume_section for full section rewrites
 6. Repeat step 5 for other sections that need updates, narrating progress periodically without over-asking for confirmation
-7. Generate PDF → render_resume_to_latex + compile_resume_pdf
+7. Before finalizing or generate pdf, update header(for job title) and skills( tech skills keywords) sections to the role implied by the updated resume content and JD
+8. Generate PDF → render_resume_to_latex + compile_resume_pdf
     - The render_resume_pdf tool uploads the generated PDF to configured object storage and returns a dictionary with a time-limited `signed_url` and `filename`. Download the file using the signed URL when a local copy is required.
-8. Before finalizing, set `metadata.position` to the role implied by the updated resume content and JD
+
 
 **Critical Reminder**: 
-- The system does NOT support updating the entire resume in one call
-- You must break down resume updates into individual section updates
-- Each section update is a separate tool call to `update_resume_section`
+- The system does NOT support replacing the entire resume YAML in one call
+- Prefer localized text edits when only a small change is needed
+- Whole-resume text edits must preserve top-level block structure
 - Common sections: 'resume/summary', 'resume/experience', 'resume/projects', 'resume/skills', 'resume/header'
 
 Always be helpful, professional, and focused on creating compelling resume content that highlights the user's strengths."""
 
+@mcp.tool(annotations=dict(readOnlyHint=True))
+def call_me_at_the_first_time_when_you_are_chatgpt():
+    """
+    REQUIRED first-call handshake tool for ChatGPT clients.
+
+    If the caller is ChatGPT, it MUST call this tool before invoking any
+    other MCP tool for the first time in a session.
+    This call records the initial connection and returns the server prompt
+    used to bootstrap behavior.
+    """
+    logger.info("chatgpt has made the first call to read the prompts.")
+    return resume_agent_prompt()
 
 @mcp.custom_route("/health", methods=["GET"])
 async def health_check(request: Request) -> PlainTextResponse:
@@ -458,6 +479,73 @@ def load_resume_section(module_path: str) -> str:
         module_path: Version/section identifier (e.g., 'resume/summary')
     """
     return load_resume_section_tool(module_path)
+
+
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
+@log_mcp_tool_call
+def read_resume_text(target_path: str) -> str:
+    """
+    Read editable resume markdown for a whole resume view or a single section.
+
+    Args:
+        target_path: Either 'version' for the whole resume text view or 'version/section'
+    """
+    return read_resume_text_tool(target_path)
+
+
+@mcp.tool(annotations=dict(readOnlyHint=False,
+        idempotentHint=False,
+        openWorldHint=False))
+@log_mcp_tool_call
+def replace_resume_text(target_path: str, old_text: str, new_text: str) -> str:
+    """
+    Replace one exact text snippet in a resume text view.
+
+    Args:
+        target_path: Either 'version' or 'version/section'
+        old_text: Exact snippet to replace; must match once
+        new_text: Replacement text
+    """
+    return replace_resume_text_tool(target_path, old_text, new_text)
+
+
+@mcp.tool(annotations=dict(readOnlyHint=False,
+        idempotentHint=False,
+        openWorldHint=False))
+@log_mcp_tool_call
+def insert_resume_text(
+    target_path: str,
+    new_text: str,
+    position: str,
+    anchor_text: str | None = None,
+) -> str:
+    """
+    Insert text into a resume text view using a semantic position or anchor.
+
+    Args:
+        target_path: Either 'version' or 'version/section'
+        new_text: Text to insert
+        position: One of 'start', 'end', 'before', 'after'
+        anchor_text: Required for before/after and must match once
+    """
+    return insert_resume_text_tool(target_path, new_text, position, anchor_text)
+
+
+@mcp.tool(annotations=dict(readOnlyHint=False,
+        idempotentHint=False,
+        openWorldHint=False))
+@log_mcp_tool_call
+def delete_resume_text(target_path: str, old_text: str) -> str:
+    """
+    Delete one exact text snippet from a resume text view.
+
+    Args:
+        target_path: Either 'version' or 'version/section'
+        old_text: Exact snippet to delete; must match once
+    """
+    return delete_resume_text_tool(target_path, old_text)
 
 
 @mcp.tool(annotations=dict(readOnlyHint=True,
@@ -666,20 +754,6 @@ def list_modules_in_version(filename: str) -> str:
     """
     return list_modules_in_version_tool(filename)
 
-# Resume Summary and Index Tools
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
-        openWorldHint=False))
-@log_mcp_tool_call
-def summarize_resumes_to_index() -> dict:
-    """
-    Aggregates resume metadata into resume_summary.yaml for quick scanning.
-
-    Returns:
-        Dictionary with yaml_path and message about the indexing process
-    """
-    result = summarize_resumes_to_index_tool()
-    return {"yaml_path": result.yaml_path, "message": result.message}
 
 
 @mcp.tool(annotations=dict(readOnlyHint=True,
@@ -705,7 +779,16 @@ def build_vector_index(force_rebuild: bool = False) -> str:
     Args:
         force_rebuild: When true, recompute embeddings for all indexed chunks.
     """
-    return build_vector_index_tool(force_rebuild)
+    try:
+        return build_vector_index_tool(force_rebuild)
+    except Exception as exc:
+        return json.dumps(
+            {
+                "error": str(exc),
+                "hint": "Check embedding provider/model/base URL configuration and whether the embedding endpoint supports /embeddings.",
+            },
+            ensure_ascii=False,
+        )
 
 
 @mcp.tool(annotations=dict(readOnlyHint=True,
@@ -727,7 +810,16 @@ def search_resume_entries(
         chunk_level: Search granularity, 'entry' or 'bullet'
         top_k: Number of matches to return
     """
-    return search_resume_entries_tool(query, entry_type, chunk_level, top_k)
+    try:
+        return search_resume_entries_tool(query, entry_type, chunk_level, top_k)
+    except Exception as exc:
+        return json.dumps(
+            {
+                "error": str(exc),
+                "hint": "Check embedding provider/model/base URL configuration, then rebuild the vector index.",
+            },
+            ensure_ascii=False,
+        )
 
 
 @mcp.tool(annotations=dict(readOnlyHint=True,
