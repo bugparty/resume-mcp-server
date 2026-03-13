@@ -9,9 +9,8 @@ SRC_PATH = ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
-from myagent.settings import load_settings
-from myagent.filesystem import init_filesystems
-from myagent import mcp_server
+from resume_platform.infrastructure.settings import load_settings
+from resume_platform.infrastructure.filesystem import init_filesystems
 
 FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "test_data"
 
@@ -25,11 +24,8 @@ settings = load_settings(
 # Initialize filesystems for tests
 init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
 
-from myagent.resume_loader import (
-    find_resume_versions,
-    load_complete_resume,
-    load_resume_section,
-    read_resume_text,
+from resume_platform.resume.views import load_complete_resume, load_resume_section, read_resume_text
+from resume_platform.resume.editing import (
     update_resume_section,
     replace_resume_text,
     insert_resume_text,
@@ -37,9 +33,9 @@ from myagent.resume_loader import (
     summarize_resumes_to_index,
     read_resume_summary,
     create_new_version,
-    set_section_order,
 )
-from myagent.filesystem import get_resume_fs
+from resume_platform.resume.repository import find_resume_versions, set_section_order
+from resume_platform.infrastructure.filesystem import get_resume_fs
 
 
 class TestResumeOperations(unittest.TestCase):
@@ -538,6 +534,9 @@ class TestResumeTextEditing(unittest.TestCase):
         self.assertEqual(before, after)
 
     def test_mcp_server_exposes_new_text_read_tool(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        mcp_server.init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
         rendered = mcp_server.read_resume_text(self.version)
         self.assertIn("## Header", rendered)
 

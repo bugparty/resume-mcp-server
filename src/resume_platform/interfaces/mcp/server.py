@@ -18,7 +18,7 @@ import zipfile
 from pathlib import Path
 import mimetypes
 from urllib.parse import quote
-from typing import Union, Any, Callable
+from typing import Union, Callable
 from functools import wraps
 try:
     import boto3  # Backward-compatible test patch target.
@@ -31,8 +31,8 @@ from fs.copy import copy_fs
 from fs.osfs import OSFS
 
 
-# Ensure src-based imports resolve when running via `fastmcp inspect`
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# Ensure repo-root-based paths resolve when running via `fastmcp inspect`
+PROJECT_ROOT = Path(__file__).resolve().parents[4]
 SRC_PATH = PROJECT_ROOT / "src"
 if str(SRC_PATH) not in sys.path and SRC_PATH.exists():
     sys.path.insert(0, str(SRC_PATH))
@@ -103,10 +103,14 @@ def log_mcp_tool_call(func: Callable) -> Callable:
 
 # Try relative import first, fall back to absolute import
 try:
-    from .settings import load_settings, get_settings
-    from .filesystem import init_filesystems, get_output_fs
-    from .s3_utils import upload_bytes_to_s3
-    from .tools import (
+    from resume_platform.infrastructure.settings import load_settings, get_settings
+    from resume_platform.infrastructure.filesystem import (
+        init_filesystems,
+        get_output_fs,
+        is_initialized,
+    )
+    from resume_platform.infrastructure.s3_utils import upload_bytes_to_s3
+    from resume_platform.tools import (
         list_resume_versions_tool,
         load_complete_resume_tool,
         load_resume_section_tool,
@@ -131,10 +135,14 @@ try:
         get_vector_index_status_tool,
     )
 except ImportError:
-    from myagent.settings import load_settings, get_settings
-    from myagent.filesystem import init_filesystems, get_output_fs
-    from myagent.s3_utils import upload_bytes_to_s3
-    from myagent.tools import (
+    from resume_platform.infrastructure.settings import load_settings, get_settings
+    from resume_platform.infrastructure.filesystem import (
+        init_filesystems,
+        get_output_fs,
+        is_initialized,
+    )
+    from resume_platform.infrastructure.s3_utils import upload_bytes_to_s3
+    from resume_platform.tools import (
         list_resume_versions_tool,
         load_complete_resume_tool,
         load_resume_section_tool,
@@ -209,24 +217,32 @@ def _initialize_logging() -> Path:
 
 
 mcp_log_file = _initialize_logging()
-settings = None
-try:
-    settings = load_settings()
-except Exception:
+
+def _ensure_server_filesystems_initialized() -> None:
+    if is_initialized():
+        return
+
     settings = None
+    try:
+        settings = load_settings()
+    except Exception:
+        settings = None
 
-resume_fs_url = getattr(settings, "resume_fs_url", None)
-jd_fs_url = getattr(settings, "jd_fs_url", None)
+    resume_fs_url = getattr(settings, "resume_fs_url", None)
+    jd_fs_url = getattr(settings, "jd_fs_url", None)
 
-if not (isinstance(resume_fs_url, str) and resume_fs_url.strip()):
-    resume_fs_url = str(PROJECT_ROOT / "data" / "resumes")
-if not (isinstance(jd_fs_url, str) and jd_fs_url.strip()):
-    jd_fs_url = str(PROJECT_ROOT / "data" / "jd")
+    if not (isinstance(resume_fs_url, str) and resume_fs_url.strip()):
+        resume_fs_url = str(PROJECT_ROOT / "data" / "resumes")
+    if not (isinstance(jd_fs_url, str) and jd_fs_url.strip()):
+        jd_fs_url = str(PROJECT_ROOT / "data" / "jd")
 
-try:
-    init_filesystems(resume_fs_url, jd_fs_url)
-except Exception:
-    init_filesystems("mem://", "mem://")
+    try:
+        init_filesystems(resume_fs_url, jd_fs_url)
+    except Exception:
+        init_filesystems("mem://", "mem://")
+
+
+_ensure_server_filesystems_initialized()
 
 # Create FastMCP instance
 mcp = FastMCP("Resume Agent Tools")
@@ -849,7 +865,6 @@ def get_resume_yaml_format() -> str:
 
     Use this before calling update_main_resume to understand the required YAML structure.
     """
-    import json
     from pathlib import Path
 
     # Get the schema content
@@ -1095,7 +1110,7 @@ def render_resume_to_overleaf(version: str) -> dict[str, str]:
     zip_filename = f"{version}_{timestamp}_overleaf.zip"
     latex_dir_name = f"{version}_{timestamp}_latex"
 
-    template_root = Path(__file__).resolve().parents[2] / "templates"
+    template_root = PROJECT_ROOT / "templates"
     output_fs = get_output_fs()
 
     with tempfile.TemporaryDirectory() as tmpdir:

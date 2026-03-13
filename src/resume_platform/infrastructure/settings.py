@@ -33,6 +33,18 @@ class AppSettings:
 _SETTINGS: Optional[AppSettings] = None
 
 
+def _resolve_path(value: str | Path | None, *, base_dir: Path) -> Path:
+    """Resolve relative config paths against the repository root."""
+
+    if value is None:
+        raise ValueError("Path value cannot be None.")
+
+    path = Path(value).expanduser()
+    if not path.is_absolute():
+        path = base_dir / path
+    return path
+
+
 def _is_directory_writable(path: Path) -> bool:
     """Check if a directory can be created and written to."""
 
@@ -61,11 +73,11 @@ def load_settings(
 ) -> AppSettings:
     """Load application settings with optional overrides."""
 
-    root_dir = Path(__file__).resolve().parents[2]
+    root_dir = Path(__file__).resolve().parents[3]
     fallback_base = Path(os.getenv("TMPDIR", "/tmp")) / "resume_mcp"
 
     default_data_dir = root_dir / "data" / "resumes"
-    default_summary = root_dir / "src" / "myagent" / "resume_summary.yaml"
+    default_summary = root_dir / "src" / "resume_platform" / "resume_summary.yaml"
     default_jd_dir = root_dir / "data" / "jd"
     default_logs_dir = root_dir / "logs"
     default_vector_db_dir = root_dir / "data" / "vector_db"
@@ -88,23 +100,35 @@ def load_settings(
         default_summary = fallback_summary
         default_logs_dir = fallback_logs_dir
 
-    resolved_data_dir = Path(data_dir or os.getenv("RESUME_DATA_DIR", default_data_dir))
-    resolved_summary = Path(
+    resolved_data_dir = _resolve_path(
+        data_dir or os.getenv("RESUME_DATA_DIR") or default_data_dir,
+        base_dir=root_dir,
+    )
+    resolved_summary = _resolve_path(
         summary_path
         or os.getenv("RESUME_SUMMARY_PATH")
         or aggregate_path
         or os.getenv("RESUME_AGGREGATE_PATH")
-        or default_summary
+        or default_summary,
+        base_dir=root_dir,
     )
-    resolved_jd_dir = Path(jd_dir or os.getenv("RESUME_JD_DIR", default_jd_dir))
-    resolved_logs_dir = Path(os.getenv("LOGS_DIR", default_logs_dir))
-    resolved_vector_db_dir = Path(
-        vector_db_dir or os.getenv("VECTOR_DB_DIR", default_vector_db_dir)
+    resolved_jd_dir = _resolve_path(
+        jd_dir or os.getenv("RESUME_JD_DIR") or default_jd_dir,
+        base_dir=root_dir,
     )
-    resolved_index_status_path = Path(
+    resolved_logs_dir = _resolve_path(
+        os.getenv("LOGS_DIR") or default_logs_dir,
+        base_dir=root_dir,
+    )
+    resolved_vector_db_dir = _resolve_path(
+        vector_db_dir or os.getenv("VECTOR_DB_DIR") or default_vector_db_dir,
+        base_dir=root_dir,
+    )
+    resolved_index_status_path = _resolve_path(
         index_status_path
         or os.getenv("VECTOR_INDEX_STATUS_PATH")
-        or default_index_status_path
+        or default_index_status_path,
+        base_dir=root_dir,
     )
     resolved_embedding_provider = (
         embedding_provider
@@ -113,8 +137,16 @@ def load_settings(
     ).lower()
     
     # Filesystem URLs - default to local filesystem using resolved paths
-    resolved_resume_fs = resume_fs_url or os.getenv("RESUME_FS_URL", str(resolved_data_dir))
-    resolved_jd_fs = jd_fs_url or os.getenv("JD_FS_URL", str(resolved_jd_dir))
+    resolved_resume_fs = (
+        resume_fs_url
+        or (str(resolved_data_dir) if data_dir is not None else None)
+        or os.getenv("RESUME_FS_URL", str(resolved_data_dir))
+    )
+    resolved_jd_fs = (
+        jd_fs_url
+        or (str(resolved_jd_dir) if jd_dir is not None else None)
+        or os.getenv("JD_FS_URL", str(resolved_jd_dir))
+    )
 
     global _SETTINGS
     resolved_logs_dir.mkdir(parents=True, exist_ok=True)

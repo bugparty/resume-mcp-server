@@ -1,22 +1,63 @@
 import os
 from typing import Optional, Any
 from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+
+try:
+    from langchain_openai import OpenAIEmbeddings
+except Exception:  # pragma: no cover - optional dependency at import time
+    OpenAIEmbeddings = None
+
+try:
+    from langchain_google_genai import GoogleGenerativeAIEmbeddings
+except Exception:  # pragma: no cover - optional dependency at import time
+    GoogleGenerativeAIEmbeddings = None
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Lazy, cached clients (created on first use only)
-_google_llm: Optional[ChatGoogleGenerativeAI] = None
-_google_llm_think: Optional[ChatGoogleGenerativeAI] = None
-_openai_llm: Optional[ChatOpenAI] = None
-_openai_llm_think: Optional[ChatOpenAI] = None
-_deepseek_llm: Optional[ChatOpenAI] = None
-_deepseek_llm_think: Optional[ChatOpenAI] = None
+_google_llm: Optional[Any] = None
+_google_llm_think: Optional[Any] = None
+_openai_llm: Optional[Any] = None
+_openai_llm_think: Optional[Any] = None
+_deepseek_llm: Optional[Any] = None
+_deepseek_llm_think: Optional[Any] = None
 _google_embeddings: Optional[Any] = None
 _openai_embeddings: Optional[Any] = None
 _openrouter_embeddings: Optional[Any] = None
+
+
+def _chat_openai_class() -> Any:
+    # Import on demand to avoid heavy module import during MCP server startup.
+    from langchain_openai import ChatOpenAI
+
+    return ChatOpenAI
+
+
+def _openai_embeddings_class() -> Any:
+    if OpenAIEmbeddings is not None:
+        return OpenAIEmbeddings
+
+    from langchain_openai import OpenAIEmbeddings as openai_embeddings_class
+
+    return openai_embeddings_class
+
+
+def _chat_google_class() -> Any:
+    from langchain_google_genai import ChatGoogleGenerativeAI
+
+    return ChatGoogleGenerativeAI
+
+
+def _google_embeddings_class() -> Any:
+    if GoogleGenerativeAIEmbeddings is not None:
+        return GoogleGenerativeAIEmbeddings
+
+    from langchain_google_genai import (
+        GoogleGenerativeAIEmbeddings as google_embeddings_class,
+    )
+
+    return google_embeddings_class
 
 
 def _require_env(var_name: str) -> str:
@@ -89,7 +130,8 @@ def get_llm(provider: str = "deepseek"):
     if provider_lc == "openai":
         global _openai_llm
         if _openai_llm is None:
-            _openai_llm = ChatOpenAI(
+            chat_openai = _chat_openai_class()
+            _openai_llm = chat_openai(
                 model="gpt-4o",
                 api_key=_require_env("OPENAI_API_KEY"),
                 temperature=0.7,
@@ -99,7 +141,8 @@ def get_llm(provider: str = "deepseek"):
     if provider_lc == "deepseek":
         global _deepseek_llm
         if _deepseek_llm is None:
-            _deepseek_llm = ChatOpenAI(
+            chat_openai = _chat_openai_class()
+            _deepseek_llm = chat_openai(
                 model="deepseek/deepseek-chat",
                 api_key=_require_env("DEEPSEEK_API_KEY"),
                 base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"),
@@ -110,7 +153,8 @@ def get_llm(provider: str = "deepseek"):
     # google (default fallback when explicitly requested)
     global _google_llm
     if _google_llm is None:
-        _google_llm = ChatGoogleGenerativeAI(
+        chat_google = _chat_google_class()
+        _google_llm = chat_google(
             model="gemini-2.0-flash",
             google_api_key=_require_env("GOOGLE_API_KEY"),
             temperature=0.7,
@@ -125,7 +169,8 @@ def get_thinking_llm(provider: str = "deepseek"):
     if provider_lc == "openai":
         global _openai_llm_think
         if _openai_llm_think is None:
-            _openai_llm_think = ChatOpenAI(
+            chat_openai = _chat_openai_class()
+            _openai_llm_think = chat_openai(
                 model="gpt-4o",
                 api_key=_require_env("OPENAI_API_KEY"),
                 temperature=0.5,
@@ -135,7 +180,8 @@ def get_thinking_llm(provider: str = "deepseek"):
     if provider_lc == "deepseek":
         global _deepseek_llm_think
         if _deepseek_llm_think is None:
-            _deepseek_llm_think = ChatOpenAI(
+            chat_openai = _chat_openai_class()
+            _deepseek_llm_think = chat_openai(
                 model="deepseek/deepseek-reasoner",
                 api_key=_require_env("DEEPSEEK_API_KEY"),
                 base_url=os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"),
@@ -146,7 +192,8 @@ def get_thinking_llm(provider: str = "deepseek"):
     # google
     global _google_llm_think
     if _google_llm_think is None:
-        _google_llm_think = ChatGoogleGenerativeAI(
+        chat_google = _chat_google_class()
+        _google_llm_think = chat_google(
             model="gemini-2.5-flash",
             google_api_key=_require_env("GOOGLE_API_KEY"),
             temperature=0.5,
@@ -185,7 +232,8 @@ def get_embedding_model(provider: str = "google") -> Any:
 
         global _openai_embeddings
         if _openai_embeddings is None:
-            _openai_embeddings = OpenAIEmbeddings(
+            openai_embeddings = _openai_embeddings_class()
+            _openai_embeddings = openai_embeddings(
                 model=model_name,
                 api_key=_require_env("OPENAI_API_KEY"),
                 base_url=base_url,
@@ -196,7 +244,8 @@ def get_embedding_model(provider: str = "google") -> Any:
 
     global _google_embeddings
     if _google_embeddings is None:
-        _google_embeddings = GoogleGenerativeAIEmbeddings(
+        google_embeddings = _google_embeddings_class()
+        _google_embeddings = google_embeddings(
             model="models/gemini-embedding-001",
             google_api_key=_require_env("GOOGLE_API_KEY"),
         )

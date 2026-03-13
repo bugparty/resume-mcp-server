@@ -1,7 +1,7 @@
 # Docker Quick Start Guide
 
 This project provides a ready-to-use Docker image with entry scripts. After container startup, it will:
-- Install and prepare Python dependencies, TeX Live (including `xelatex`) and `cloudflared`
+- Install and prepare Python dependencies and `cloudflared`
 - Start MCP HTTP service (default `0.0.0.0:8000`)
 - Automatically create Cloudflare temporary tunnel and print public URL `https://*.trycloudflare.com/mcp` for easy use in ChatGPT MCP settings
 

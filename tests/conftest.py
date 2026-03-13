@@ -2,6 +2,13 @@ import sys
 from unittest.mock import MagicMock
 import pytest
 
+# These files are manual integration/debug scripts, not pytest suites.
+# Ignoring them keeps test discovery responsive in VS Code and CLI pytest.
+collect_ignore = [
+    "test_remote_renderer.py",
+    "test_tool_compile.py",
+]
+
 # Mock dependencies globally before any test collection happens
 sys.modules["langchain_core"] = MagicMock()
 sys.modules["langchain_core.messages"] = MagicMock()

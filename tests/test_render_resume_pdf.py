@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 from fs.memoryfs import MemoryFS
 
-from myagent import mcp_server
+from resume_platform.interfaces.mcp import server
 
 
 def test_render_resume_pdf_uploads_and_returns_public_url(monkeypatch):
@@ -42,12 +42,12 @@ def test_render_resume_pdf_uploads_and_returns_public_url(monkeypatch):
     def fake_boto3_client(*args, **kwargs):
         return fake_s3_client
 
-    monkeypatch.setattr(mcp_server, "render_resume_to_latex_tool", fake_render_resume_to_latex_tool)
-    monkeypatch.setattr(mcp_server, "compile_resume_pdf_tool", fake_compile_resume_pdf_tool)
-    monkeypatch.setattr(mcp_server, "get_output_fs", lambda: memory_fs)
-    monkeypatch.setattr(mcp_server.boto3, "client", fake_boto3_client)
+    monkeypatch.setattr(server, "render_resume_to_latex_tool", fake_render_resume_to_latex_tool)
+    monkeypatch.setattr(server, "compile_resume_pdf_tool", fake_compile_resume_pdf_tool)
+    monkeypatch.setattr(server, "get_output_fs", lambda: memory_fs)
+    monkeypatch.setattr(server.boto3, "client", fake_boto3_client)
 
-    result = mcp_server.render_resume_pdf.fn("resume")
+    result = server.render_resume_pdf.fn("resume")
 
     expected_key = "resumes/test.pdf"
     expected_url = "https://cdn.example.com/base/resumes/test.pdf"

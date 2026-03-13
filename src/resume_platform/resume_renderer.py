@@ -5,16 +5,14 @@ import logging
 import re
 from pathlib import Path
 from typing import Any, Dict, List
-from myagent.settings import load_settings
-from myagent.filesystem import init_filesystems
+from resume_platform.infrastructure.settings import load_settings
+from resume_platform.infrastructure.filesystem import init_filesystems
 from urllib.parse import urlparse
 
-from fs.copy import copy_fs
-from fs.osfs import OSFS
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
-from myagent.models.agent_resume import SectionType
-from myagent.resume_loader import load_complete_resume_as_dict
+from resume_platform.models.agent_resume import SectionType
+from resume_platform.resume.repository import load_complete_resume_as_dict
 
 PACKAGE_ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = PACKAGE_ROOT.parent.parent

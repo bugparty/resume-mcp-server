@@ -1,5 +1,6 @@
 resumes:
-- metadata:
+- version: resume
+  metadata:
     position: DeepSeek Test Engineer
     email: test@example.com
     mobile: (+1) 555-123-4567
@@ -18,8 +19,8 @@ resumes:
     - LangChain
     entries:
     - AI Resume Agent - Open Source Project
-  version: resume
-- metadata:
+- version: resume_tesla_ml_performance_intern
+  metadata:
     position: Tesla ML Performance Intern
     email: test@example.com
     mobile: (+1) 555-123-4567
@@ -38,4 +39,3 @@ resumes:
     - Distributed Systems
     entries:
     - Performance Intern - Tesla
-  version: resume_tesla_ml_performance_intern

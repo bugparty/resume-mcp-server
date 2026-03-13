@@ -8,23 +8,21 @@ import subprocess
 import signal
 
 # Mocks
-sys.modules["myagent.resume_loader"] = MagicMock()
-sys.modules["myagent.settings"] = MagicMock()
-sys.modules["myagent.filesystem"] = MagicMock()
-sys.modules["myagent.models"] = MagicMock()
-sys.modules["myagent.models.agent_resume"] = MagicMock()
+sys.modules["resume_platform.resume.repository"] = MagicMock()
+sys.modules["resume_platform.infrastructure.filesystem"] = MagicMock()
+sys.modules["resume_platform.models"] = MagicMock()
+sys.modules["resume_platform.models.agent_resume"] = MagicMock()
 sys.modules["langchain_core"] = MagicMock()
 sys.modules["langchain_core.messages"] = MagicMock()
 sys.modules["langchain.tools"] = MagicMock()
 sys.modules["langchain.tools.StructuredTool"] = MagicMock()
-sys.modules["myagent.llm_config"] = MagicMock()
 
 # Setup paths and environment
 sys.path.append(str(Path("/workspace/src")))
 os.environ["LATEX_COMPILE_API_URL"] = "http://localhost:8085"
 
 # Import tool
-from myagent.tools import compile_resume_pdf_tool
+from resume_platform.tools import compile_resume_pdf_tool
 
 # Setup real filesystem mocks
 from fs.osfs import OSFS
@@ -35,7 +33,7 @@ if OUTPUT_DIR.exists():
 OUTPUT_DIR.mkdir()
 
 mock_fs = OSFS(str(OUTPUT_DIR))
-sys.modules["myagent.filesystem"].get_output_fs.return_value = mock_fs
+sys.modules["resume_platform.infrastructure.filesystem"].get_output_fs.return_value = mock_fs
 
 # Workdir for server
 WORKDIR = Path("/workspace/services/latex_compile_api")

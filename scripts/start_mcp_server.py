@@ -7,7 +7,6 @@ making all resume management tools available via the MCP protocol.
 """
 
 import sys
-import os
 import subprocess
 from pathlib import Path
 
@@ -57,7 +56,7 @@ def main():
     try:
         if args.reload:
             repo_root = Path(__file__).resolve().parent.parent
-            server_spec = f"{repo_root / 'src/myagent/mcp_server.py'}:mcp"
+            server_spec = f"{repo_root / 'src/resume_platform/server.py'}:mcp"
             cmd = [
                 "uv",
                 "run",
@@ -73,7 +72,7 @@ def main():
             subprocess.run(cmd, check=True, cwd=str(repo_root))
             return
 
-        from myagent.mcp_server import main as server_main
+        from resume_platform.interfaces.mcp.server import main as server_main
         server_main(transport=args.transport, port=args.port)
     except KeyboardInterrupt:
         print("\n👋 Resume Agent MCP Server stopped.")

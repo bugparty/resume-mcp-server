@@ -4,12 +4,17 @@
   "service": "devcontainer",
   "workspaceFolder": "/workspace",
   "shutdownAction": "stopCompose",
+  "containerEnv": {
+    "VIRTUAL_ENV": ""
+  },
   "remoteUser": "vscode",
   "mounts": [
     "source=${localEnv:USERPROFILE}/.codex,target=/home/vscode/.codex,type=bind"
   ],
   "remoteEnv": {
-    "CODEX_HOME": "/home/vscode/.codex"
+    "CODEX_HOME": "/home/vscode/.codex",
+    "UV_PROJECT_ENVIRONMENT": "/workspace/.venv-linux",
+    "VIRTUAL_ENV": ""
   },
   "customizations": {
     "vscode": {
@@ -18,7 +23,17 @@
         "ms-python.vscode-pylance",
         "ms-azuretools.vscode-docker",
         "openai.chatgpt"
-      ]
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/workspace/.venv-linux/bin/python",
+        "python.testing.pytestArgs": [
+          "tests",
+          "--ignore=tests/test_remote_renderer.py",
+          "--ignore=tests/test_tool_compile.py"
+        ],
+        "python.testing.pytestEnabled": true,
+        "python.testing.unittestEnabled": false
+      }
     }
   }
 }

@@ -1,4 +1,4 @@
-"""Command-line interface to render resumes to LaTeX/PDF using myagent."""
+"""Command-line interface to render resumes to LaTeX/PDF using resume_platform."""
 
 from __future__ import annotations
 
@@ -11,9 +11,9 @@ SRC_PATH = ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
-from myagent.settings import load_settings
-from myagent.resume_renderer import render_resume, compile_tex_remote
-from myagent.filesystem import init_filesystems
+from resume_platform.infrastructure.settings import load_settings
+from resume_platform.resume_renderer import render_resume, compile_tex_remote
+from resume_platform.infrastructure.filesystem import init_filesystems
 
 
 def main() -> int:

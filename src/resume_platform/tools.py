@@ -7,30 +7,29 @@ from fs.copy import copy_fs
 from fs.osfs import OSFS
 
 from langchain_core.messages import HumanMessage
-from .llm_config import get_thinking_llm
-from .resume_loader import (
-    find_resume_versions,
+from resume_platform.infrastructure.llm_config import get_thinking_llm
+from resume_platform.resume.views import (
     load_resume_section,
     read_resume_text,
+    list_modules_in_version,
+    load_complete_resume,
+)
+from resume_platform.resume.editing import (
+    tailor_section_for_jd,
+    summarize_resumes_to_index,
+    read_resume_summary,
     update_resume_section,
     replace_resume_text,
     insert_resume_text,
     delete_resume_text,
-    create_new_version,
-    list_modules_in_version,
     update_main_resume,
-    tailor_section_for_jd,
-    load_complete_resume,
-    summarize_resumes_to_index,
-    read_resume_summary,
-    set_section_visibility,
-    set_section_order,
-    get_section_style,
+    create_new_version,
 )
+from .resume.repository import find_resume_versions, set_section_visibility, set_section_order, get_section_style
 from .resume_renderer import render_resume, compile_tex_remote
 from langchain.tools import StructuredTool
 from pydantic import BaseModel, Field
-from .filesystem import get_jd_fs, get_output_fs
+from resume_platform.infrastructure.filesystem import get_jd_fs, get_output_fs
 from .vector_search import (
     mark_index_stale,
     build_index,
@@ -311,7 +310,7 @@ def delete_resume_version_tool(version_name: str) -> str:
     - version_name: The name of the resume version to delete (without .yaml extension)
     Note: This operation cannot be undone. Ensure you have backups if needed.
     """
-    from .filesystem import get_resume_fs
+    from resume_platform.infrastructure.filesystem import get_resume_fs
     
     # Validate input
     version_name = version_name.strip()
@@ -346,7 +345,7 @@ def copy_resume_version_tool(source_version: str, target_version: str) -> str:
     - source_version: The name of the source resume version to copy from (without .yaml extension)
     - target_version: The name of the target resume version to copy to (without .yaml extension)
     """
-    from .filesystem import get_resume_fs
+    from resume_platform.infrastructure.filesystem import get_resume_fs
     
     # Validate input
     source_version = source_version.strip()

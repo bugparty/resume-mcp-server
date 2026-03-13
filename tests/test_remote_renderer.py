@@ -10,15 +10,14 @@ import sys
 from unittest.mock import MagicMock
 
 # Define Mocks before importing resume_renderer
-sys.modules["myagent.resume_loader"] = MagicMock()
-sys.modules["myagent.settings"] = MagicMock()
-sys.modules["myagent.filesystem"] = MagicMock()
-sys.modules["myagent.models"] = MagicMock()
-sys.modules["myagent.models.agent_resume"] = MagicMock()
+sys.modules["resume_platform.resume.repository"] = MagicMock()
+sys.modules["resume_platform.infrastructure.filesystem"] = MagicMock()
+sys.modules["resume_platform.models"] = MagicMock()
+sys.modules["resume_platform.models.agent_resume"] = MagicMock()
 
 # Add src to pythonpath
 sys.path.append(str(Path("/workspace/src")))
-from myagent.resume_renderer import compile_tex_remote
+from resume_platform.resume_renderer import compile_tex_remote
 
 # Server Config
 PORT = 8084

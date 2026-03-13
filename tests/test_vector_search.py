@@ -3,7 +3,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from myagent import llm_config, vector_search
+from resume_platform import vector_search
+from resume_platform.infrastructure import llm_config
 
 
 def _sample_resume() -> dict:

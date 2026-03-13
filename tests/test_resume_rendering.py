@@ -1,5 +1,4 @@
 import os
-import shutil
 import sys
 from pathlib import Path
 
@@ -10,16 +9,15 @@ SRC_PATH = ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
-from myagent.settings import load_settings
-from myagent.filesystem import init_filesystems, reset_filesystems
-from myagent.resume_renderer import (
-    render_resume,
+from resume_platform.infrastructure.settings import load_settings
+from resume_platform.infrastructure.filesystem import init_filesystems, reset_filesystems
+from resume_platform.resume_renderer import (
     markdown_inline_to_latex,
     escape_tex,
     _normalize_metadata,
     render_resume_from_dict,
 )
-from myagent.tools import compile_resume_pdf_tool
+from resume_platform.tools import compile_resume_pdf_tool
 
 FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "test_data"
 
@@ -59,7 +57,7 @@ def test_compile_exports_latex_assets(monkeypatch, tmp_path):
         pdf_path.write_bytes(b"%PDF-1.4\n% fake\n")
         return pdf_path
 
-    monkeypatch.setattr("myagent.tools.compile_tex_remote", fake_compile)
+    monkeypatch.setattr("resume_platform.tools.compile_tex_remote", fake_compile)
 
     tex_content = r"\documentclass{article}\begin{document}Hello\end{document}"
     result = compile_resume_pdf_tool(tex_content, "debug")
