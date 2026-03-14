@@ -12,39 +12,67 @@ import logging
 import json
 import copy
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from functools import wraps
 
-from .settings import get_settings
 
-# Configure logging for markdown parsing operations
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+# Module-level logger (initialized lazily)
+_logger: Optional[logging.Logger] = None
 
-# Create logs directory if it doesn't exist
-SETTINGS = get_settings()
-LOGS_DIR = SETTINGS.logs_dir
-LOGS_DIR.mkdir(parents=True, exist_ok=True)
 
-# File handler for markdown parse logs
-markdown_log_file = LOGS_DIR / "markdown_parsing.log"
-file_handler = logging.FileHandler(markdown_log_file, encoding="utf-8")
-file_handler.setLevel(logging.INFO)
+def _get_logger() -> logging.Logger:
+    """Get or create the module logger lazily to avoid import-time side effects."""
+    global _logger
+    if _logger is None:
+        _logger = logging.getLogger(__name__)
+    return _logger
 
-# Console handler for debugging
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.WARNING)
 
-# Formatter
-formatter = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-file_handler.setFormatter(formatter)
-console_handler.setFormatter(formatter)
+# Lazy initialization of logs directory
+_logs_dir: Optional[Path] = None
 
-logger.addHandler(file_handler)
-logger.addHandler(console_handler)
+
+def _get_logs_dir() -> Path:
+    """Get logs directory lazily to avoid import-time side effects."""
+    global _logs_dir
+    if _logs_dir is None:
+        from .settings import get_settings
+        settings = get_settings()
+        _logs_dir = settings.logs_dir
+        _logs_dir.mkdir(parents=True, exist_ok=True)
+    return _logs_dir
+
+
+# Lazy markdown log file
+_markdown_log_file: Optional[Path] = None
+
+
+def _get_markdown_log_file() -> Path:
+    """Get markdown log file path lazily."""
+    global _markdown_log_file
+    if _markdown_log_file is None:
+        _markdown_log_file = _get_logs_dir() / "markdown_parsing.log"
+    return _markdown_log_file
+
+
+def _ensure_logging_configured() -> None:
+    """Ensure logging is configured (called lazily when actually needed)."""
+    logger = _get_logger()
+
+    # Only configure if no handlers exist
+    if not logger.handlers and not logger.parent.handlers:
+        logger.setLevel(logging.INFO)
+
+        # File handler
+        log_file = _get_markdown_log_file()
+        file_handler = logging.FileHandler(log_file, encoding="utf-8")
+        file_handler.setLevel(logging.INFO)
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
 
 
 def log_markdown_parsing(func):
@@ -57,6 +85,9 @@ def log_markdown_parsing(func):
     def wrapper(
         markdown: str, section: Dict[str, Any], version: str, section_id: str
     ) -> None:
+        # Ensure logging is configured before using
+        _ensure_logging_configured()
+        logger = _get_logger()
         func_name = func.__name__
 
         # Create a deep copy of the section before parsing

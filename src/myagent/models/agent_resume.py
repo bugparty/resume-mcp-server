@@ -53,8 +53,8 @@ class Entry:
 @dataclass
 class Section:
     """Resume section基类"""
-    type: SectionType | str
     id: str
+    type: SectionType | str
     title: str | None = None
     
     def validate(self) -> bool:

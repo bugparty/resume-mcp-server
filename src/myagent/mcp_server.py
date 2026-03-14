@@ -18,7 +18,7 @@ import zipfile
 from pathlib import Path
 import mimetypes
 from urllib.parse import urlparse, quote
-from typing import Union, Any, Callable
+from typing import Union, Any, Callable, Optional
 from functools import wraps
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
@@ -40,9 +40,20 @@ load_dotenv(dotenv_path=PROJECT_ROOT / ".env", override=False)
 
 from fastmcp import FastMCP
 
-# Configure logging for MCP server
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+# Module-level logger (initialized lazily)
+_mcp_logger: Optional[logging.Logger] = None
+
+
+def _get_mcp_logger() -> logging.Logger:
+    """Get or create the MCP server logger lazily."""
+    global _mcp_logger
+    if _mcp_logger is None:
+        _mcp_logger = logging.getLogger(__name__)
+    return _mcp_logger
+
+
+# Global variable to store the data directory path
+DATA_DIR = None
 
 
 def log_mcp_tool_call(func: Callable) -> Callable:
@@ -52,6 +63,7 @@ def log_mcp_tool_call(func: Callable) -> Callable:
 
     @wraps(func)
     def wrapper(*args, **kwargs):
+        logger = _get_mcp_logger()
         tool_name = func.__name__
         start_time = time.time()
 
@@ -102,6 +114,7 @@ def log_mcp_tool_call(func: Callable) -> Callable:
 # ---------------------------------------------------------------------------
 def _get_s3_client_and_settings() -> tuple[Any, str, str, str]:
     """Create an S3 client using resume-related environment variables."""
+    logger = _get_mcp_logger()
 
     s3_bucket = (
         os.getenv("RESUME_S3_BUCKET_NAME")
@@ -176,6 +189,7 @@ def _build_object_key(filename: str, key_prefix: str) -> str:
 def _ensure_s3_object_available(
     s3_client: Any, bucket: str, object_key: str, description: str
 ) -> None:
+    logger = _get_mcp_logger()
     max_attempts = 5
     for attempt in range(1, max_attempts + 1):
         try:
@@ -203,6 +217,7 @@ def _ensure_s3_object_available(
 def _upload_bytes_to_s3(
     data: bytes, filename: str, content_type: str, description: str
 ) -> tuple[str, str]:
+    logger = _get_mcp_logger()
     s3_client, s3_bucket, key_prefix, public_base_url = _get_s3_client_and_settings()
     object_key = _build_object_key(filename, key_prefix)
 
@@ -266,7 +281,15 @@ except ImportError:
         compile_resume_pdf_tool,
     )
 
+# Lazy-initialized log file path
+_mcp_log_file: Optional[Path] = None
+_settings: Optional[Any] = None
+_mcp: Optional[Any] = None
+
+
 def _initialize_logging() -> Path:
+    """Initialize logging lazily to avoid module-level side effects."""
+    logger = _get_mcp_logger()
     settings = get_settings()
     logs_dir = settings.logs_dir
     logs_dir.mkdir(parents=True, exist_ok=True)
@@ -294,11 +317,34 @@ def _initialize_logging() -> Path:
     return log_path
 
 
-mcp_log_file = _initialize_logging()
-settings = load_settings()
-init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
+def _ensure_initialized() -> None:
+    """Ensure MCP server is initialized (lazy initialization)."""
+    global _mcp_log_file, _settings, _mcp
+    if _mcp is not None:
+        return
 
-# Create FastMCP instance
+    # Initialize logging first
+    _mcp_log_file = _initialize_logging()
+    _settings = load_settings()
+    init_filesystems(_settings.resume_fs_url, _settings.jd_fs_url)
+    _mcp = True
+
+
+def _get_mcp_log_file() -> Path:
+    """Get the MCP log file path, initializing if needed."""
+    _ensure_initialized()
+    global _mcp_log_file
+    return _mcp_log_file
+
+
+def _get_settings():
+    """Get settings, initializing if needed."""
+    _ensure_initialized()
+    global _settings
+    return _settings
+
+
+# Create FastMCP instance (module level for decorator registration)
 mcp = FastMCP("Resume Agent Tools")
 
 
@@ -870,7 +916,8 @@ def render_resume_pdf(version: str) -> dict[str, str]:
         with output_fs.open(filename, "rb") as pdf_file:
             pdf_bytes = pdf_file.read()
     except Exception as exc:
-        logger.error("Failed to read generated PDF '%s': %s", filename, exc, exc_info=True)
+        mcp_logger = _get_mcp_logger()
+        mcp_logger.error("Failed to read generated PDF '%s': %s", filename, exc, exc_info=True)
         raise RuntimeError(f"Failed to read generated PDF '{filename}'") from exc
 
     public_url, _ = _upload_bytes_to_s3(
@@ -980,6 +1027,7 @@ def render_resume_to_overleaf(version: str) -> dict[str, str]:
 
 
 def _resolve_transport(default_transport: str, default_port: int) -> tuple[str, int]:
+    logger = _get_mcp_logger()
     env_transport = (
         os.getenv("FASTMCP_TRANSPORT")
         or os.getenv("MCP_TRANSPORT")
@@ -1016,6 +1064,11 @@ def _resolve_transport(default_transport: str, default_port: int) -> tuple[str, 
 
 def main(transport="stdio", port=8000):
     """Main entry point for the MCP server."""
+    # Ensure initialization before starting
+    _ensure_initialized()
+    logger = _get_mcp_logger()
+    log_file = _get_mcp_log_file()
+
     transport, port = _resolve_transport(transport, port)
 
     # Initialize filesystem before starting server
@@ -1024,10 +1077,10 @@ def main(transport="stdio", port=8000):
     logger.info(f"Transport: {transport}")
     if transport == "http":
         logger.info(f"Port: {port}")
-    logger.info(f"Log file: {mcp_log_file}")
+    logger.info(f"Log file: {log_file}")
     logger.info("=" * 80)
 
-    
+
     logger.info("Filesystems initialized")
     logger.info("MCP Server ready to accept connections")
     logger.info("=" * 80 + "\n")
