@@ -2,6 +2,7 @@ import os
 import sys
 import unittest
 from pathlib import Path
+from starlette.testclient import TestClient
 
 # Add src directory to Python path for module imports
 ROOT = Path(__file__).resolve().parents[1]
@@ -539,6 +540,32 @@ class TestResumeTextEditing(unittest.TestCase):
         mcp_server.init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
         rendered = mcp_server.read_resume_text(self.version)
         self.assertIn("## Header", rendered)
+
+    def test_mcp_server_http_app_exposes_streamable_and_sse_routes(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        app = mcp_server._build_dual_http_app()
+        route_paths = {getattr(route, "path", None) for route in app.routes}
+
+        self.assertIn("/mcp", route_paths)
+        self.assertIn("/sse", route_paths)
+        self.assertIn("/messages", route_paths)
+
+    def test_mcp_server_http_app_adds_cors_headers(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        app = mcp_server._build_dual_http_app()
+        client = TestClient(app)
+        response = client.options(
+            "/sse",
+            headers={
+                "Origin": "chrome-extension://kngiafgkdnlkgmefdafaibkibegkcaef",
+                "Access-Control-Request-Method": "GET",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get("access-control-allow-origin"), "*")
 
 
 if __name__ == "__main__":

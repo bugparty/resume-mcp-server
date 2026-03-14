@@ -20,15 +20,21 @@ import mimetypes
 from urllib.parse import quote
 from typing import Union, Callable
 from functools import wraps
+from contextlib import asynccontextmanager
 try:
     import boto3  # Backward-compatible test patch target.
 except Exception:
     boto3 = None
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
+from starlette.applications import Starlette
+from starlette.middleware.cors import CORSMiddleware
+from starlette.routing import BaseRoute
 from dotenv import load_dotenv
 from fs.copy import copy_fs
 from fs.osfs import OSFS
+import uvicorn
+import fastmcp
 
 
 # Ensure repo-root-based paths resolve when running via `fastmcp inspect`
@@ -41,6 +47,8 @@ if str(SRC_PATH) not in sys.path and SRC_PATH.exists():
 load_dotenv(dotenv_path=PROJECT_ROOT / ".env", override=False)
 
 from fastmcp import FastMCP
+from fastmcp.server.http import set_http_request
+from fastmcp.server.context import reset_transport, set_transport
 
 # Configure logging for MCP server
 logger = logging.getLogger(__name__)
@@ -246,6 +254,90 @@ _ensure_server_filesystems_initialized()
 
 # Create FastMCP instance
 mcp = FastMCP("Resume Agent Tools")
+
+
+def _route_signature(route: BaseRoute) -> tuple[str, tuple[str, ...], str]:
+    path = getattr(route, "path", repr(route))
+    methods = tuple(sorted(getattr(route, "methods", []) or ()))
+    return path, methods, type(route).__name__
+
+
+def _dedupe_routes(routes: list[BaseRoute]) -> list[BaseRoute]:
+    seen: set[tuple[str, tuple[str, ...], str]] = set()
+    result: list[BaseRoute] = []
+    for route in routes:
+        signature = _route_signature(route)
+        if signature in seen:
+            continue
+        seen.add(signature)
+        result.append(route)
+    return result
+
+
+def _cors_origins() -> list[str]:
+    raw = os.getenv("MCP_CORS_ALLOW_ORIGINS", "*")
+    origins = [origin.strip() for origin in raw.split(",") if origin.strip()]
+    return origins or ["*"]
+
+
+class _DualTransportMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        path = scope.get("path", "")
+        transport_type = (
+            "sse"
+            if path == "/sse" or path.startswith("/messages/")
+            else "streamable-http"
+        )
+        transport_token = set_transport(transport_type)
+        try:
+            with set_http_request(Request(scope)):
+                await self.app(scope, receive, send)
+        finally:
+            reset_transport(transport_token)
+
+
+def _build_dual_http_app() -> Starlette:
+    sse_app = mcp.http_app(transport="sse")
+    streamable_app = mcp.http_app(transport="http")
+    routes = _dedupe_routes([*sse_app.routes, *streamable_app.routes])
+
+    @asynccontextmanager
+    async def lifespan(app: Starlette):
+        async with streamable_app.lifespan(streamable_app):
+            yield
+
+    app = Starlette(routes=routes, lifespan=lifespan)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors_origins(),
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
+    )
+    app.add_middleware(_DualTransportMiddleware)
+    return app
+
+
+def _run_http_server(port: int) -> None:
+    app = _build_dual_http_app()
+    config = uvicorn.Config(
+        app,
+        host=fastmcp.settings.host,
+        port=port,
+        log_level=fastmcp.settings.log_level.lower(),
+        timeout_graceful_shutdown=0,
+        lifespan="on",
+        ws="websockets-sansio",
+    )
+    server = uvicorn.Server(config)
+    server.run()
 
 
 # Define server-level prompt to guide AI assistants
@@ -1220,6 +1312,7 @@ def main(transport="stdio", port=8000):
     logger.info(f"Transport: {transport}")
     if transport == "http":
         logger.info(f"Port: {port}")
+        logger.info("HTTP MCP endpoints: /mcp (streamable HTTP), /sse, /messages/")
     logger.info(f"Log file: {mcp_log_file}")
     logger.info("=" * 80)
 
@@ -1229,7 +1322,7 @@ def main(transport="stdio", port=8000):
     logger.info("=" * 80 + "\n")
 
     if transport == "http":
-        mcp.run(transport="http", port=port, log_level="DEBUG")
+        _run_http_server(port)
     else:
         mcp.run()
 
