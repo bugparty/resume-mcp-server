@@ -3,7 +3,6 @@ FROM python:3.12-slim
 # Install system dependencies and tools
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     curl ca-certificates gnupg unzip \
-    fonts-noto fonts-noto-cjk fonts-noto-color-emoji \
  && rm -rf /var/lib/apt/lists/*
 
 # Install uv for fast Python dependency management
