@@ -416,11 +416,65 @@ Workflow Example:
     - The render_resume_pdf tool uploads the generated PDF to configured object storage and returns a dictionary with a time-limited `signed_url` and `filename`. Download the file using the signed URL when a local copy is required.
 
 
-**Critical Reminder**: 
+**Critical Reminder**:
 - The system does NOT support replacing the entire resume YAML in one call
 - Prefer localized text edits when only a small change is needed
 - Whole-resume text edits must preserve top-level block structure
 - Common sections: 'resume/summary', 'resume/experience', 'resume/projects', 'resume/skills', 'resume/header'
+
+**Section Markdown Format Reference** (for update_resume_section new_content):
+
+Header Section:
+    ## Header
+    first_name: John
+    last_name: Doe
+    position: Senior Software Engineer
+    address: San Francisco, CA
+    mobile: +1-234-567-8900
+    email: john.doe@example.com
+    github: github.com/johndoe
+    linkedin: linkedin.com/in/johndoe
+
+Summary Section:
+    ## Summary
+    - 8+ years of experience in full-stack development and cloud architecture
+    - Expert in Python, JavaScript, and distributed systems
+    - Led teams of 5-10 engineers to deliver scalable products
+
+Skills Section:
+    ## Skills
+    - Programming: Python, JavaScript, Go, SQL
+    - Cloud Platforms: AWS, GCP, Docker, Kubernetes
+    - Tools & Practices: Git, Jenkins, Terraform, Agile/Scrum
+    - Databases: PostgreSQL, MongoDB, Redis
+
+Experience Section:
+    ## Experience
+    ### Software Engineer — TechCorp Inc (San Francisco, CA) | Jan 2020 - Present
+    - Developed microservices using Python and Go
+    - Led team of 5 engineers in agile sprints
+    - Improved system performance by 40%
+
+    ### Junior Developer — StartupXYZ (Remote) | Jun 2018 - Dec 2019
+    - Built REST APIs with Node.js and Express
+    - Implemented CI/CD pipelines using Jenkins
+
+Projects Section:
+    ## Projects
+    ### E-Commerce Platform — Personal Project (GitHub) | 2023
+    - Built full-stack web app with React and Django
+    - Integrated Stripe payment processing
+    - Deployed on AWS with Docker and Kubernetes
+
+    ### Machine Learning Pipeline — University Research | 2022
+    - Developed data processing pipeline for NLP tasks
+    - Achieved 95% accuracy on sentiment analysis
+
+Education Section:
+    ## Education
+    ### Master of Science in Computer Science | Stanford University | 2016 - 2018 | Palo Alto, CA
+
+    ### Bachelor of Science in Computer Engineering | Stanford University | 2012 - 2016 | Palo Alto, CA
 
 Always be helpful, professional, and focused on creating compelling resume content that highlights the user's strengths."""
 
