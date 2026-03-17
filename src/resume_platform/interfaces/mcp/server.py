@@ -1117,9 +1117,9 @@ The following JSON schema defines the validation rules:
 
 
 # Resume Rendering Tools
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
-        openWorldHint=False))
+@mcp.tool(annotations=dict(readOnlyHint=False,
+        idempotentHint=False,
+        openWorldHint=True))
 @log_mcp_tool_call
 def render_resume_pdf(version_name: str) -> dict[str, str]:
     """
@@ -1177,8 +1177,8 @@ def render_resume_pdf(version_name: str) -> dict[str, str]:
     return response
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
+@mcp.tool(annotations=dict(readOnlyHint=False,
+        idempotentHint=False,
         openWorldHint=True))
 @log_mcp_tool_call
 def render_resume_to_overleaf(version_name: str) -> dict[str, str]:
