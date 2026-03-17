@@ -7,7 +7,7 @@ making all resume management tools available via the MCP protocol.
 """
 
 import sys
-import os
+import subprocess
 from pathlib import Path
 
 # Add the src directory to Python path
@@ -22,8 +22,16 @@ def main():
                         help="Transport type (default: stdio)")
     parser.add_argument("--port", type=int, default=8000,
                         help="Port for HTTP transport (default: 8000)")
+    parser.add_argument(
+        "--reload",
+        action="store_true",
+        help="Enable auto-reload in HTTP mode (development only)",
+    )
     
     args = parser.parse_args()
+
+    if args.reload and args.transport != "http":
+        parser.error("--reload only supports --transport http")
     
     print("🚀 Starting Resume Agent MCP Server...")
     print("📋 Available tools:")
@@ -37,6 +45,8 @@ def main():
     if args.transport == "http":
         print(f"🌐 Server will run on HTTP transport at http://localhost:{args.port}")
         print("   You can test it with curl or web browser")
+        if args.reload:
+            print("   Auto-reload enabled")
     else:
         print("💡 Server will run on stdio transport for MCP clients")
     
@@ -44,7 +54,25 @@ def main():
     print("-" * 50)
     
     try:
-        from myagent.mcp_server import main as server_main
+        if args.reload:
+            repo_root = Path(__file__).resolve().parent.parent
+            server_spec = f"{repo_root / 'src/resume_platform/server.py'}:mcp"
+            cmd = [
+                "uv",
+                "run",
+                "fastmcp",
+                "run",
+                server_spec,
+                "--transport",
+                "http",
+                "--port",
+                str(args.port),
+                "--reload",
+            ]
+            subprocess.run(cmd, check=True, cwd=str(repo_root))
+            return
+
+        from resume_platform.interfaces.mcp.server import main as server_main
         server_main(transport=args.transport, port=args.port)
     except KeyboardInterrupt:
         print("\n👋 Resume Agent MCP Server stopped.")

@@ -1,13 +1,13 @@
 source: resume_tesla_ml_performance_intern.tex
 metadata:
-  first_name: Bowen
-  last_name: Han
+  first_name: Test
+  last_name: User
   position: Tesla ML Performance Intern
-  address: Riverside, CA, USA
-  mobile: (+1) 601-555-0000
-  email: example@example.com
-  github: test-github
-  linkedin: test-linkedin
+  address: Anytown, USA
+  mobile: (+1) 555-123-4567
+  email: test@example.com
+  github: github-user
+  linkedin: linkedin-user
 sections:
 - type: summary
   title: Summary
@@ -15,7 +15,7 @@ sections:
   bullets:
   - Focused on optimizing ML workloads for Tesla Dojo using DeepSeek-based pipelines.
   - Experienced with distributed training, profiling, and CUDA performance tuning.
-- type: entries
+- type: education
   title: Education
   id: education
   entries:
@@ -39,7 +39,7 @@ sections:
     - PyTorch
     - Profilers
     - Distributed Systems
-- type: entries
+- type: experience
   title: Work Experience
   id: experience
   entries:

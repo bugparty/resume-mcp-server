@@ -1,20 +1,38 @@
 {
-  "name": "Python + TeX Live (full)",
-  "dockerComposeFile": "../docker-compose.yml",
-  "service": "devcontainer",
-   "workspaceFolder": "/workspace",
-  "shutdownAction": "stopCompose",
+  "name": "Python Workspace",
+  "build": {
+    "dockerfile": "Dockerfile.base"
+  },
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "shutdownAction": "stopContainer",
   "remoteUser": "vscode",
+  "mounts": [
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.codex,target=/home/vscode/.codex,type=bind"
+  ],
+  "remoteEnv": {
+    "CODEX_HOME": "/home/vscode/.codex",
+    "UV_PROJECT_ENVIRONMENT": "/workspace/.venv-linux",
+    "VIRTUAL_ENV": ""
+  },
   "customizations": {
     "vscode": {
       "extensions": [
         "ms-python.python",
         "ms-python.vscode-pylance",
         "ms-azuretools.vscode-docker",
-        "James-Yu.latex-workshop",
-        "github.copilot-chat",
-        "github.copilot"
-      ]
+        "openai.chatgpt"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/workspace/.venv-linux/bin/python",
+        "python.testing.pytestArgs": [
+          "tests",
+          "--ignore=tests/test_remote_renderer.py",
+          "--ignore=tests/test_tool_compile.py"
+        ],
+        "python.testing.pytestEnabled": true,
+        "python.testing.unittestEnabled": false
+      }
     }
   }
 }

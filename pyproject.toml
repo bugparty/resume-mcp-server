@@ -7,7 +7,7 @@ name = "myagent"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.14"
 dependencies = [
     "aiohappyeyeballs==2.4.6",
     "aiohttp==3.11.12",
@@ -22,7 +22,6 @@ dependencies = [
     "blockbuster==1.5.24",
     "bs4==0.0.2",
     "cachetools==5.5.2",
-    "celery==5.4.0",
     "certifi==2025.4.26",
     "cffi==1.17.1",
     "charset-normalizer==3.4.2",
@@ -78,6 +77,7 @@ dependencies = [
     "multidict==6.4.3",
     "mypy-extensions==1.1.0",
     "openai==1.76.0",
+    "openrouter==0.7.11",
     "orjson==3.10.18",
     "ormsgpack==1.9.1",
     "packaging==24.2",
@@ -100,7 +100,6 @@ dependencies = [
     "python-dotenv==1.1.0",
     "pyyaml==6.0.2",
     "regex==2024.11.6",
-    "redis==5.0.4",
     "requests==2.32.3",
     "requests-toolbelt==1.0.0",
     "rsa==4.9.1",
@@ -114,19 +113,23 @@ dependencies = [
     "tiktoken==0.9.0",
     "tqdm==4.67.1",
     "truststore==0.10.1",
-    "typing-extensions==4.13.2",
+    "typing-extensions==4.15.0",
     "typing-inspect==0.9.0",
-    "typing-inspection==0.4.0",
+    "typing-inspection==0.4.2",
     "uritemplate==4.1.1",
     "urllib3==2.4.0",
-    "uvicorn==0.34.2",
+    "uvicorn==0.35.0",
     "watchfiles==1.0.5",
     "xxhash==3.5.0",
     "yarl==1.20.0",
     "zstandard==0.23.0",
-    "fastmcp>=2.12.0",
+    "fastmcp>=3.1.0",
     "fs>=2.4.16",
     "rapidfuzz>=3.14.1",
+    "chromadb>=0.5.15",
+    "langchain-chroma>=0.2.0",
+    "boto3-stubs~=1.35.94",
+    "fs-s3fs>=1.1.1",
 ]
 
 [tool.setuptools]

@@ -4,7 +4,6 @@ This guide explains when the MCP stack reads schema files and what to update whe
 
 ## Schema locations
 - `schemas/resume_schema.json`: Full resume YAML schema (metadata, sections, optional `style.section_order` and `style.section_disabled`).
-- `schemas/resume_summary_schema.json`: Lightweight summary/index schema used for resume summaries.
 
 ## Where schemas are used
 - CLI tools and MCP wrappers rely on valid resume YAMLs loaded via `resume_loader.py` and rendered by `resume_renderer.py`.
@@ -14,7 +13,6 @@ This guide explains when the MCP stack reads schema files and what to update whe
 
 ## When to update schemas
 - Whenever you add/change fields in resume YAML (metadata keys, section shapes, new section types, style options like ordering/disable flags), update `schemas/resume_schema.json` to match.
-- If summary generation/output changes shape, update `schemas/resume_summary_schema.json`.
 - Keep sample YAMLs in sync: `data/resumes/we_bible.yaml` and test fixtures under `tests/fixtures/test_data/resumes/` should reflect the current schema.
 
 ## Change workflow for resume schema

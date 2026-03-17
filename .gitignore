@@ -14,8 +14,10 @@ data/resumes/output/**/*
 server-info.json
 logs/*.log
 samples/**/*
+test_tool_output/
+/.ai/mcp/mcp.json
 data/resumes/*.yaml
-
-# Cloudflare tunnel
-.cloudflared/
-cloudflared
+.claude/worktrees
+data/vector_db
+.cloudflared
+.coverage

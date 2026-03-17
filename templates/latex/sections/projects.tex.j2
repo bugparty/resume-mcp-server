@@ -31,8 +31,8 @@
 \begin{cventries}
 ((* for entry in entries *))
   \cventry
-    {((( entry.title | escape_tex )))}           % Project Name
-  {((( entry.organization | markdown_to_latex )))}    % Context (Personal/Academic/etc.)
+    {((( entry.organization | markdown_to_latex )))}           % Project Name
+  {((( entry.title | escape_tex   )))}    % Context (Personal/Academic/etc.)
     {((( entry.location | escape_tex )))}        % Location (optional)
     {((( entry.period | escape_tex )))}          % Duration/Year
     {

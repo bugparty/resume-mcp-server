@@ -17,7 +17,7 @@ sections:
   - "Second bullet point showcasing technical expertise"
   - "Third bullet point emphasizing achievements and technologies"
   
-- type: entries
+- type: education
   entries:
   - title: "Degree Name"
     organization: "University Name"

@@ -6,7 +6,7 @@
 
 ```bash
 cd resume_mcp
-uv run python src/myagent/mcp_server.py
+uv run python src/resume_platform/server.py
 ```
 
 The server will start at http://localhost:8000 and expose an HTTP API.
@@ -24,7 +24,7 @@ If you want external clients like ChatGPT to access the server, use Cloudflare T
 
 1. **Start the MCP server:**
    ```bash
-   uv run python src/myagent/mcp_server.py
+   uv run python src/resume_platform/server.py
    ```
 
 2. **Start the Cloudflare tunnel:**
@@ -127,13 +127,13 @@ For a persistent tunnel, configure Cloudflare Tunnel:
 
 ```bash
 # Create a tunnel
-cloudflared tunnel create myagent-mcp
+cloudflared tunnel create resume_platform-mcp
 
 # Route DNS
-cloudflared tunnel route dns myagent-mcp myagent-mcp.yourdomain.com
+cloudflared tunnel route dns resume_platform-mcp resume_platform-mcp.yourdomain.com
 
 # Run the tunnel
-cloudflared tunnel run myagent-mcp
+cloudflared tunnel run resume_platform-mcp
 ```
 
 ## 🐛 Troubleshooting
@@ -149,7 +149,7 @@ cloudflared tunnel run myagent-mcp
 
 ```bash
 # Show verbose logs at startup
-python src/myagent/mcp_server.py --verbose
+python src/resume_platform/server.py --verbose
 ```
 
 See the detailed docs: `docs/mcp_server.md`
@@ -179,10 +179,6 @@ Your Resume Agent is now exposed as an MCP server via FastMCP! It supports local
 - `analyze_jd` - analyze a job description
 - `read_jd_file` - read a JD file
 - `tailor_section_for_jd` - tailor a resume section for the JD
-
-#### Resume Summary and Index
-- `summarize_resumes_to_index` - generate resume summary index
-- `read_resume_summary` - read resume summary
 
 #### Resume Rendering
 - `render_resume_to_latex` - render to LaTeX

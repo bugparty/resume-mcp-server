@@ -1,14 +1,13 @@
 # Docker Quick Start Guide
 
 This project provides a ready-to-use Docker image with entry scripts. After container startup, it will:
-- Install and prepare Python dependencies, TeX Live (including `xelatex`) and `cloudflared`
+- Install and prepare Python dependencies
 - Start MCP HTTP service (default `0.0.0.0:8000`)
-- Automatically create Cloudflare temporary tunnel and print public URL `https://*.trycloudflare.com/mcp` for easy use in ChatGPT MCP settings
 
 ## Prerequisites
 
 - Docker installed (recommend latest version)
-- Internet access (for pulling dependencies and creating tunnels)
+- Internet access (for pulling dependencies)
 - Optional: Prepare `.env` in project root (refer to `sample.env`)
 
 ## Build Image
@@ -18,14 +17,14 @@ Execute in project root:
 docker build -t resume-mcp:latest .
 ```
 
-For Apple/ARM if encountering cloudflared architecture issues, try:
+For Apple/ARM compatibility, you can build amd64 image:
 ```bash
 docker buildx build --platform linux/amd64 -t resume-mcp:latest .
 ```
 
 ## Run Container
 
-Simplest run (automatically create temporary tunnel and print public URL):
+Simplest run:
 ```bash
 docker run --rm -p 8000:8000 resume-mcp:latest
 ```
@@ -41,13 +40,10 @@ docker run --rm -p 8000:8000 \
 
 Startup log example:
 ```text
-Cloudflare Tunnel Ready: https://xxxxx.trycloudflare.com/mcp
 Starting MCP server (HTTP) on 0.0.0.0:8000...
 ```
 
-Copy `https://xxxxx.trycloudflare.com/mcp` to ChatGPT MCP server configuration.
-
-> Note: Port 8000 is also mapped for local testing via `curl http://localhost:8000/health`; use Cloudflare URL for external access.
+Use `http://localhost:8000/mcp` as MCP endpoint when running locally.
 
 ## Environment Variables
 
@@ -61,27 +57,13 @@ Local health check:
 curl http://localhost:8000/health
 ```
 
-Tunnel health check (replace with your URL):
-```bash
-curl https://xxxxx.trycloudflare.com/health
-```
-
 ## Directories and Persistence
 
 - `data/`: Resume YAML files, output PDFs (e.g., `data/resumes/output/`)
 - `templates/`: LaTeX template resources
 
-## ChatGPT MCP Configuration Guide
-
-- Server address: `https://*.trycloudflare.com` printed in logs
-- Protocol: HTTP/HTTPS
-- Authentication: None
-
 ## Troubleshooting
 
-- Can't see tunnel URL:
-  - Check if container logs show `Cloudflare Tunnel Ready`
-  - Container tunnel logs: `/tmp/cloudflared.log`
 - Port in use:
   - Adjust `-p 8000:8000` mapping or release host port
 - ARM/Apple Silicon:

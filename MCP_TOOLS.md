@@ -16,7 +16,7 @@
 
 ### Read-Only Tools
 
-**9 tools**
+**8 tools**
 
 #### `list_data_directory`
 
@@ -125,14 +125,6 @@ Example output:
 
 ---
 
-#### `read_resume_summary`
-
-**Description**: Reads the lightweight resume summary YAML and returns it as text.
-
-**Parameters**: None
-
----
-
 #### `get_resume_yaml_format`
 
 **Description**: Returns comprehensive documentation about the Resume YAML format including schema and examples.
@@ -161,7 +153,7 @@ Use this before calling update_main_resume to understand the required YAML struc
 
 ### Write Tools
 
-**10 tools**
+**9 tools**
 
 #### `update_resume_section`
 
@@ -270,17 +262,6 @@ Note:
 
 - `source_version` (string) *(required)*
 - `target_version` (string) *(required)*
-
----
-
-#### `summarize_resumes_to_index`
-
-**Description**: Aggregates resume metadata into resume_summary.yaml for quick scanning.
-
-Returns:
-    Dictionary with yaml_path and message about the indexing process
-
-**Parameters**: None
 
 ---
 

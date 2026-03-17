@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker build:*)",
+      "Bash(docker images:*)",
+      "Bash(find:*)",
+      "Bash(uv run:*)"
+    ]
+  }
+}

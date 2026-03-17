@@ -23,7 +23,7 @@ sections:
     smaller models (8B-32B) with RL, eliminating expensive ChatGPT API dependencies
     and reducing inference costs by orders of magnitude; currently pursuing Master's
     in Computer Engineering at UC Riverside.
-- type: entries
+- type: education
   entries:
   - title: Master of Science in Computer Engineering
     organization: University of California Riverside
@@ -77,7 +77,7 @@ sections:
   - title: Infrastructure / ML Systems Engineer
     organization: Brix
     location: San Francisco, USA
-    period: Jan 2025 - Present
+    period: Jan 2025 - Feb 2026
     bullets:
     - Identified latency bottleneck in production LLM inference pipeline; optimized
       through CUDA kernel optimization on NVIDIA GPUs, reducing inference latency
@@ -201,18 +201,23 @@ sections:
     - Achieved 50% success rate on medium-complexity code samples (up from 30% baseline),
       with PPO converging in ~500 steps using 16 code samples to generate large-scale
       training data.
-  - title: Resume Editing MCP Server & Agent
-    organization: MCP Framework & LLM Agent
+  - title: Resume Agent MCP Platform
+    organization: Personal Project
     location: ''
-    period: 2024–Present
+    period: 2025 - Present
     bullets:
-    - Designed and implemented a Model Context Protocol (MCP) server specialized for
-      structured resume editing and transformation.
-    - Built a task-oriented agent capable of understanding resume semantics (projects,
-      skills, timelines) instead of treating resumes as plain text.
-    - Implemented LaTeX-aware editing ([github.com/bugparty/resume-mcp-server](https://github.com/bugparty/resume-mcp-server)),
-      ensuring commands and formatting remain valid during automated transformations.
-    - The agent plans multi-step edits (analyze → rewrite → validate → format) and
-      executes them through MCP tools rather than ad-hoc text generation.
-    - '**This resume was generated using the agent system itself**, demonstrating
-      practical end-to-end capabilities.'
+    - Built a production-oriented resume editing platform around MCP with strongly
+      constrained Markdown-to-YAML round-tripping, enabling reliable section-level
+      and whole-resume edits without breaking schema validity.
+    - Implemented semantic retrieval and RAG workflows over resume and job-description
+      data, improving targeted resume tailoring through structured search across experience,
+      projects, and skills content.
+    - Designed flexible text-editing tools with precise replace/insert/delete operations
+      on abstracted resume text views, balancing agent autonomy with strict formatting
+      and validation guarantees.
+    - Abstracted artifact persistence behind a filesystem/S3-compatible storage layer,
+      enabling portable resume, PDF, and LaTeX asset management across local and remote
+      environments.
+    - Deployed LaTeX compilation as a distributed Kubernetes-backed service with elastic
+      scaling, decoupling PDF generation from the core MCP server and improving throughput
+      and operational isolation under concurrent workloads.

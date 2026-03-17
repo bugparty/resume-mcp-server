@@ -49,8 +49,6 @@ Uses LangChain + custom tool functions to form a ReAct Agent architecture.
 - `update_main_resume`: Update the main resume file content
 - `read_jd_file`: Read job description file
 - `load_complete_resume`: Load complete resume content
-- `summarize_resumes_to_index`: Extract resume metadata to generate a lightweight index
-- `read_resume_summary`: Read the lightweight resume index file
 
 ## Example Call
 User Input:
@@ -89,7 +87,9 @@ Agent Call Flow:
 
 This project uses `uv` for package management. Please use `uv pip install` to install dependencies.
 
-## New Environment Variables (Async PDF Compilation)
+## 环境变量（PDF 输出与上传）
+
+### New Environment Variables (Async PDF Compilation)
 
 - `CELERY_BROKER_URL`: Celery broker address (default `redis://localhost:6379/0`)
 - `CELERY_RESULT_BACKEND`: Celery result backend (default `redis://localhost:6379/1`)
@@ -97,10 +97,13 @@ This project uses `uv` for package management. Please use `uv pip install` to in
 - `CELERY_TASK_SOFT_TIME_LIMIT`: Compilation task soft timeout (seconds, default 90)
 - `RESUME_PDF_JOB_PREFIX`: S3 job directory prefix (default `resume-jobs/`)
 
-S3 related configurations still use existing variables:
+S3 相关配置使用以下变量：
 - `RESUME_S3_BUCKET_NAME` / `RESUME_S3_BUCKET`
 - `RESUME_S3_ENDPOINT_URL`
 - `RESUME_S3_REGION`
 - `RESUME_S3_ACCESS_KEY_ID` / `RESUME_S3_SECRET_ACCESS_KEY`
 - `RESUME_S3_PUBLIC_BASE_URL`
 - `RESUME_S3_KEY_PREFIX`
+
+LaTeX 编译服务使用：
+- `LATEX_COMPILE_API_URL`（默认 `https://latex-compile.k.0x1f0c.dev`）

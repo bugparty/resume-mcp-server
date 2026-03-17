@@ -1,3 +1,18 @@
 {
-    "python.pipenvPath": ".venv/bin/activate"
+    "chat.tools.terminal.autoApprove": {
+        "Test-Path": true
+    },
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.python",
+        "editor.formatOnSave": true
+    },
+    "python.testing.pytestArgs": [
+        "tests",
+        "--ignore=tests/test_remote_renderer.py",
+        "--ignore=tests/test_tool_compile.py"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": false
 }

@@ -1,2 +1,2 @@
 #!/bin/bash
-./cloudflared tunnel  --config ./.cloudflared/config.yml run
+./cloudflared tunnel  --config ./.cloudflared/config.yml  -origincert /workspace/.cloudflared/cert.pem run

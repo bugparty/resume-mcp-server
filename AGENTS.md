@@ -2,7 +2,7 @@
 
 ## Quick Start
 - From repo root, create/activate env: `uv venv && source .venv/bin/activate` (Python 3.12). Cursor rule also says `cd /home/bowman/myagent && source .venv/bin/activate`; prefer repo root but honor that if Cursor shells are pinned there.
-- Install deps: `uv sync` (locked) or `uv pip install -r requirement.txt` (production mirror).
+- Install deps: `uv sync` (locked).
 - Run the CLI agent: `uv run python main.py [--data-dir DATA_DIR --aggregate-path AGG_PATH]`.
 - Core layout: `src/myagent/` code; `data/` assets ( `jd/`); `templates/` mail-merge and LaTeX; tests under `tests/` and `tests/e2e/`.
 
@@ -18,11 +18,11 @@
 
 ## Repo Structure Notes
 - Entrypoint: `main.py` wires agent flows; helpers live in `src/myagent/tools.py`, `resume_loader.py`, `resume_renderer.py`, `resume_input_parser.py`, `filesystem.py`, `settings.py`, `llm_config.py`, `mcp_server.py`, and `models/`.
-- Data roots default to `data/resumes`, summaries under `src/myagent/resume_summary.yaml`, JDs under `data/jd`, logs under `logs` (fallbacks under `/tmp/resume_mcp/...` if unwritable).
+- Data roots default to `data/resumes`, JDs under `data/jd`, logs under `logs` (fallbacks under `/tmp/resume_mcp/...` if unwritable).
 - Templates: LaTeX assets under `templates/` and `templates/latex`; resume template `templates/resume_template.tex`.
 
 ## Environment & Secrets
-- Copy `sample.env` to `.env`; required: `GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`. Optional overrides: `RESUME_DATA_DIR`, `RESUME_SUMMARY_PATH` (or `RESUME_AGGREGATE_PATH`), `RESUME_JD_DIR`, `LOGS_DIR`, `DEEPSEEK_BASE_URL`, filesystem URLs `RESUME_FS_URL` and `JD_FS_URL`.
+- Copy `sample.env` to `.env`; required: `GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`. Optional overrides: `RESUME_DATA_DIR`, `RESUME_JD_DIR`, `LOGS_DIR`, `DEEPSEEK_BASE_URL`, filesystem URLs `RESUME_FS_URL` and `JD_FS_URL`, `LATEX_COMPILE_API_URL` (URL of the separately deployed latex-compile-service, default `https://latex-compile.k.0x1f0c.dev`). The latex-compile service lives in its own repo at `latex-compile-service/` (to be extracted) — do not add service code here.
 - Never commit secrets; prefer environment vars for CI. Document new keys in `project_docs.md`.
 
 ## Code Style (Python)
@@ -45,11 +45,12 @@
 - Add coverage for resume parsing/manipulation first (`tests/test_resume_operations.py` suggested location). Mirror layout of new code: unit tests near helpers, e2e for CLI flows.
 - Use fixtures in `tests/__init__.py` or `conftest.py` when shared. Avoid global state; reset module-level singletons or use monkeypatch for `_SETTINGS`/LLM caches.
 - To iterate quickly: `uv run pytest tests/path -k keyword -vv` and `-s` for printouts (discouraged in code, fine in tests).
+- **MANDATORY**: Run `./run_tests.sh` after any code modification to verify standard and integration tests pass.
 
 ## Runtime / CLI Notes
 - `load_settings` caches settings; prefer `get_settings()` where possible. If you override paths, pass explicit args to `load_settings` and respect fallback logic.
 - Resume operations should flow through `resume_loader.py` helpers to keep format consistent. When creating versions, avoid deleting base `resume` (enforced in `delete_resume_version_tool`).
-- Rendering: use `render_resume` then `compile_tex` via `compile_resume_pdf_tool`; copy only essential template assets/fonts. Preserve timestamped output naming and `data://resumes/output/` scheme.
+- Rendering: use `render_resume` then `compile_tex_remote` via `compile_resume_pdf_tool`; copy only essential template assets/fonts. Preserve timestamped output naming and `data://resumes/output/` scheme.
 - Input parsing: `resume_input_parser.py` handles CLI args; keep new flags documented in help text.
 
 ## Cursor Rules (from .cursorrules)
@@ -72,6 +73,6 @@
 ## Support Checklist
 - Env ready (`.venv` active, .env populated).
 - Dependencies installed (`uv sync`).
-- Run targeted tests for changed areas (`uv run pytest tests/...`).
+- Run all tests: `./run_tests.sh`.
 - Format code (`uv run black .`).
 - Update docs/config samples if new env vars or templates are added.

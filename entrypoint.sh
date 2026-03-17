@@ -7,10 +7,6 @@ if [ -d "/app/.venv" ]; then
   source /app/.venv/bin/activate
 fi
 
-# Colors
-GREEN="\033[1;32m"
-NC="\033[0m"
-
 # Print basic info
 echo "Starting Resume MCP Server container..."
 echo "Ensuring environment (.env) if present is loaded..."
@@ -19,36 +15,6 @@ if [ -f "/app/.env" ]; then
   # shellcheck disable=SC1091
   . /app/.env
   set +a
-fi
-
-# Start Cloudflare tunnel in the background and capture the public URL
-LOCAL_URL="http://localhost:8000"
-echo "Launching Cloudflare tunnel to ${LOCAL_URL}..."
-TUNNEL_LOG="/tmp/cloudflared.log"
-cloudflared tunnel --no-autoupdate --url "${LOCAL_URL}" --metrics localhost:0 >"${TUNNEL_LOG}" 2>&1 &
-CLOUDFLARED_PID=$!
-
-# Wait for the URL to appear in logs
-TUNNEL_URL=""
-echo "Waiting for Cloudflare public URL..."
-for i in {1..60}; do
-  if grep -Eo 'https://[a-zA-Z0-9.-]+\.trycloudflare\.com' "${TUNNEL_LOG}" >/dev/null 2>&1; then
-    TUNNEL_URL=$(grep -Eo 'https://[a-zA-Z0-9.-]+\.trycloudflare\.com' "${TUNNEL_LOG}" | head -n1)
-    break
-  fi
-  sleep 1
-done
-
-if [ -z "${TUNNEL_URL}" ]; then
-  echo "Warning: Could not detect Cloudflare URL from logs; falling back to reading entire log:"
-  echo "----- cloudflared log -----"
-  tail -n +1 "${TUNNEL_LOG}" || true
-  echo "---------------------------"
-else
-  # Append /mcp suffix for client configuration display
-  TUNNEL_DISPLAY_URL="${TUNNEL_URL%/}/mcp"
-  # Print in green for visibility
-  echo -e "${GREEN}Cloudflare Tunnel Ready: ${TUNNEL_DISPLAY_URL}${NC}"
 fi
 
 echo
@@ -63,22 +29,8 @@ if ! python -c 'import starlette' >/dev/null 2>&1; then
 fi
 
 # Start MCP server bound to all interfaces for container networking
-python -c 'import sys; import os; sys.path.insert(0, "/app/src"); from myagent.mcp_server import main; main(transport="http", port=8000)'
-
-# If MCP server exits, stop cloudflared
-if kill -0 ${CLOUDFLARED_PID} 2>/dev/null; then
-  kill ${CLOUDFLARED_PID} || true
-fi
+python -c 'import sys; import os; sys.path.insert(0, "/app/src"); from resume_platform.interfaces.mcp.server import main; main(transport="http", port=8000)'
 
 echo
-echo "If you are using ChatGPT MCP client, configure the server URL as:"
-if [ -n "${TUNNEL_URL:-}" ]; then
-  # Ensure display URL is set (if not from above)
-  TUNNEL_DISPLAY_URL="${TUNNEL_DISPLAY_URL:-${TUNNEL_URL%/}/mcp}"
-  echo "  ${TUNNEL_DISPLAY_URL}"
-  # Reprint as the final line in green for easy copy/paste
-  echo -e "${GREEN}Cloudflare Tunnel Ready: ${TUNNEL_DISPLAY_URL}${NC}"
-else
-  echo "  <cloudflare-url> (check logs above)"
-fi
+echo "MCP server exited."
 
