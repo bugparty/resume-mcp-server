@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Dict, Any, List, Tuple
 
 import rapidfuzz
@@ -82,9 +82,26 @@ def _save_resume(version: str, data: Dict[str, Any]) -> None:
 def find_resume_versions() -> List[str]:
     resume_fs = get_resume_fs()
     try:
-        # Get all yaml files and extract their stems (names without extension)
-        yaml_files = [name for name in resume_fs.listdir(".") if name.endswith(".yaml")]
-        return sorted(name[:-5] for name in yaml_files)  # Remove .yaml extension
+        # Prefer top-level scan first for local filesystems.
+        try:
+            yaml_files = [
+                name for name in resume_fs.listdir(".") if name.endswith(".yaml")
+            ]
+        except FSError:
+            # If top-level listing fails (common on some remote backends),
+            # fall back to recursive walk-based discovery.
+            yaml_files = []
+
+        # S3 backends may expose objects under nested prefixes even when listdir('.')
+        # is empty (for example when RESUME_FS_URL points to bucket root).
+        if not yaml_files:
+            yaml_files = [
+                PurePosixPath(path).name
+                for path in resume_fs.walk.files(filter=["*.yaml"])
+            ]
+
+        versions = sorted({name[:-5] for name in yaml_files if name.endswith(".yaml")})
+        return versions
     except FSError as e:
         logger.warning("Could not list resume versions: %s", e)
         return []

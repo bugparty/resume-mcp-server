@@ -19,7 +19,7 @@ from pathlib import Path
 import mimetypes
 from urllib.parse import quote
 from enum import Enum
-from typing import Union, Callable
+from typing import Union, Callable, Any
 from functools import wraps
 from contextlib import asynccontextmanager
 try:
@@ -136,6 +136,8 @@ try:
     from resume_platform.infrastructure.settings import load_settings, get_settings
     from resume_platform.infrastructure.filesystem import (
         init_filesystems,
+        get_resume_fs,
+        get_jd_fs,
         get_output_fs,
         is_initialized,
     )
@@ -167,6 +169,8 @@ except ImportError:
     from resume_platform.infrastructure.settings import load_settings, get_settings
     from resume_platform.infrastructure.filesystem import (
         init_filesystems,
+        get_resume_fs,
+        get_jd_fs,
         get_output_fs,
         is_initialized,
     )
@@ -265,8 +269,26 @@ def _ensure_server_filesystems_initialized() -> None:
 
     try:
         init_filesystems(resume_fs_url, jd_fs_url)
-    except Exception:
-        init_filesystems("mem://", "mem://")
+    except Exception as exc:
+        allow_fallback = (
+            os.getenv("RESUME_ALLOW_MEM_FS_FALLBACK", "").strip().lower()
+            in {"1", "true", "yes", "on"}
+        )
+        logger.exception(
+            "Failed to initialize filesystems. resume_fs_url=%s jd_fs_url=%s",
+            resume_fs_url,
+            jd_fs_url,
+        )
+        if allow_fallback:
+            logger.warning(
+                "RESUME_ALLOW_MEM_FS_FALLBACK is enabled; falling back to mem:// filesystems."
+            )
+            init_filesystems("mem://", "mem://")
+            return
+        raise RuntimeError(
+            "Filesystem initialization failed. Check RESUME_FS_URL/JD_FS_URL and S3 credentials. "
+            "Set RESUME_ALLOW_MEM_FS_FALLBACK=true only for temporary debugging."
+        ) from exc
 
 
 _ensure_server_filesystems_initialized()
@@ -596,6 +618,140 @@ def list_data_directory(path: str = "") -> str:
         items.append(item_info)
 
     return json.dumps({"path": path, "items": items, "total_items": len(items)}, indent=2)
+
+
+def _safe_listdir_summary(fs_obj: Any, path: str = ".", sample_size: int = 20) -> dict[str, Any]:
+    try:
+        entries = fs_obj.listdir(path)
+        sorted_entries = sorted(entries)
+        return {
+            "ok": True,
+            "path": path,
+            "count": len(sorted_entries),
+            "sample": sorted_entries[:sample_size],
+        }
+    except Exception as exc:
+        return {
+            "ok": False,
+            "path": path,
+            "error": str(exc),
+            "error_type": type(exc).__name__,
+        }
+
+
+def _safe_yaml_walk_summary(fs_obj: Any, sample_size: int = 20) -> dict[str, Any]:
+    try:
+        yaml_paths = list(fs_obj.walk.files(filter=["*.yaml"]))
+        versions = sorted(
+            {
+                path.rsplit("/", 1)[-1][:-5]
+                for path in yaml_paths
+                if path.rsplit("/", 1)[-1].endswith(".yaml")
+            }
+        )
+        return {
+            "ok": True,
+            "yaml_path_count": len(yaml_paths),
+            "yaml_paths_sample": yaml_paths[:sample_size],
+            "version_count": len(versions),
+            "versions_sample": versions[:sample_size],
+        }
+    except Exception as exc:
+        return {
+            "ok": False,
+            "error": str(exc),
+            "error_type": type(exc).__name__,
+        }
+
+
+def _fs_backend_summary(fs_obj: Any) -> dict[str, str]:
+    cls = fs_obj.__class__
+    return {
+        "class_name": cls.__name__,
+        "module": cls.__module__,
+    }
+
+
+@mcp.tool(
+annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
+@log_mcp_tool_call
+def diagnose_filesystems() -> str:
+    """Diagnose MCP filesystem state and resume version discovery behavior.
+
+    Returns:
+        JSON string with active settings, backend types, directory summaries,
+        and list_resume_versions output for quick troubleshooting.
+    """
+    settings = None
+    try:
+        settings = get_settings()
+    except Exception as exc:
+        settings = {"error": str(exc), "error_type": type(exc).__name__}
+
+    payload: dict[str, Any] = {
+        "initialized": is_initialized(),
+        "settings": {
+            "resume_fs_url": getattr(settings, "resume_fs_url", None),
+            "jd_fs_url": getattr(settings, "jd_fs_url", None),
+        }
+        if not isinstance(settings, dict)
+        else settings,
+        "env_hints": {
+            "RESUME_FS_URL": os.getenv("RESUME_FS_URL"),
+            "RESUME_FS_UR": os.getenv("RESUME_FS_UR"),
+            "JD_FS_URL": os.getenv("JD_FS_URL"),
+            "RESUME_ALLOW_MEM_FS_FALLBACK": os.getenv("RESUME_ALLOW_MEM_FS_FALLBACK"),
+        },
+    }
+
+    try:
+        resume_fs = get_resume_fs()
+        payload["resume_fs"] = {
+            "backend": _fs_backend_summary(resume_fs),
+            "top_level": _safe_listdir_summary(resume_fs, "."),
+            "yaml_walk": _safe_yaml_walk_summary(resume_fs),
+        }
+    except Exception as exc:
+        payload["resume_fs"] = {
+            "error": str(exc),
+            "error_type": type(exc).__name__,
+        }
+
+    try:
+        jd_fs = get_jd_fs()
+        payload["jd_fs"] = {
+            "backend": _fs_backend_summary(jd_fs),
+            "top_level": _safe_listdir_summary(jd_fs, "."),
+        }
+    except Exception as exc:
+        payload["jd_fs"] = {
+            "error": str(exc),
+            "error_type": type(exc).__name__,
+        }
+
+    try:
+        output_fs = get_output_fs()
+        payload["output_fs"] = {
+            "backend": _fs_backend_summary(output_fs),
+            "top_level": _safe_listdir_summary(output_fs, "."),
+        }
+    except Exception as exc:
+        payload["output_fs"] = {
+            "error": str(exc),
+            "error_type": type(exc).__name__,
+        }
+
+    try:
+        payload["list_resume_versions"] = json.loads(list_resume_versions_tool())
+    except Exception as exc:
+        payload["list_resume_versions"] = {
+            "error": str(exc),
+            "error_type": type(exc).__name__,
+        }
+
+    return json.dumps(payload, ensure_ascii=False, indent=2)
 
 
 # Resume Version Management Tools
