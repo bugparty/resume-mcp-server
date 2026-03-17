@@ -113,10 +113,13 @@ def load_settings(
     ).lower()
     
     # Filesystem URLs - default to local filesystem using resolved paths
+    # Keep RESUME_FS_UR as a backward-compatible alias for historical typoed envs.
     resolved_resume_fs = (
         resume_fs_url
         or (str(resolved_data_dir) if data_dir is not None else None)
-        or os.getenv("RESUME_FS_URL", str(resolved_data_dir))
+        or os.getenv("RESUME_FS_URL")
+        or os.getenv("RESUME_FS_UR")
+        or str(resolved_data_dir)
     )
     resolved_jd_fs = (
         jd_fs_url

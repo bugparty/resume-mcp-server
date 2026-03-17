@@ -7,9 +7,11 @@ memory, and S3 backends.
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Any
+import os
 import warnings
 from pathlib import Path
+from urllib.parse import urlparse
 warnings.filterwarnings(
     "ignore",
     message="pkg_resources is deprecated as an API",
@@ -27,7 +29,6 @@ warnings.filterwarnings(
 from fs.base import FS
 from fs.osfs import OSFS
 from fs.memoryfs import MemoryFS
-from fs import open_fs
 
 
 def _join_fs_url(base_url: str, child: str) -> str:
@@ -35,6 +36,37 @@ def _join_fs_url(base_url: str, child: str) -> str:
     if base_url.startswith(("s3://", "mem://")):
         return f"{base_url.rstrip('/')}/{child.strip('/')}"
     return str(Path(base_url) / child)
+
+
+def _s3_open_kwargs() -> dict[str, Any]:
+    """Build kwargs for fs-s3fs opener from project and AWS env aliases."""
+    kwargs: dict[str, Any] = {}
+
+    endpoint_url = os.getenv("RESUME_S3_ENDPOINT_URL") or os.getenv("S3_ENDPOINT_URL")
+    region = os.getenv("RESUME_S3_REGION") or os.getenv("AWS_REGION")
+    access_key_id = (
+        os.getenv("RESUME_S3_ACCESS_KEY_ID")
+        or os.getenv("RESUME_S3_ACCESS_KEY")
+        or os.getenv("S3_ACCESS_KEY_ID")
+        or os.getenv("AWS_ACCESS_KEY_ID")
+    )
+    secret_access_key = (
+        os.getenv("RESUME_S3_SECRET_ACCESS_KEY")
+        or os.getenv("RESUME_S3_SECRET_KEY")
+        or os.getenv("S3_SECRET_ACCESS_KEY")
+        or os.getenv("AWS_SECRET_ACCESS_KEY")
+    )
+
+    if endpoint_url:
+        kwargs["endpoint_url"] = endpoint_url
+    if region:
+        kwargs["region"] = region
+    if access_key_id:
+        kwargs["aws_access_key_id"] = access_key_id
+    if secret_access_key:
+        kwargs["aws_secret_access_key"] = secret_access_key
+
+    return kwargs
 
 
 def create_filesystem(fs_url: str) -> FS:
@@ -59,14 +91,20 @@ def create_filesystem(fs_url: str) -> FS:
     if fs_url.startswith("s3://"):
         try:
             # Ensure S3 opener is registered for `open_fs("s3://...")`.
-            import fs_s3fs  # noqa: F401
+            from fs_s3fs import S3FS
         except ImportError as exc:
             raise RuntimeError(
                 "S3 filesystem support requires package 'fs-s3fs'. "
                 "Install it with: uv add fs-s3fs"
             ) from exc
 
-        return open_fs(fs_url, create=True)
+        parsed = urlparse(fs_url)
+        bucket_name = parsed.netloc
+        if not bucket_name:
+            raise ValueError(f"Invalid S3 filesystem URL: {fs_url}")
+        dir_path = parsed.path or "/"
+
+        return S3FS(bucket_name=bucket_name, dir_path=dir_path, **_s3_open_kwargs())
     elif fs_url.startswith("mem://"):
         # Memory filesystem for testing
         return MemoryFS()

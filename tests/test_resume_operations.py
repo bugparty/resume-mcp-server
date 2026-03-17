@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import unittest
 from pathlib import Path
 from starlette.testclient import TestClient
@@ -494,6 +495,16 @@ class TestResumeTextEditing(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("access-control-allow-origin"), "*")
+
+    def test_mcp_server_list_data_directory_root(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        payload = mcp_server.list_data_directory("")
+        data = json.loads(payload)
+
+        self.assertEqual(data["path"], "")
+        self.assertIn("items", data)
+        self.assertIn("total_items", data)
 
 
 if __name__ == "__main__":

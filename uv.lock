@@ -880,6 +880,20 @@ wheels = [
 ]
 
 [[package]]
+name = "fs-s3fs"
+version = "1.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "boto3" },
+    { name = "fs" },
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/be/f1/b641963f8694cdf7c3daed0276fef361c2b51717bf5f3e8a89b63c8ba237/fs-s3fs-1.1.1.tar.gz", hash = "sha256:b57f8c7664460ff7b451b4b44ca2ea9623a374d74e1284c2d5e6df499dc7976c", size = 10353, upload-time = "2019-08-14T10:59:30.626Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/14/71/9b36a6dbd28386e2028e4ab9aac9c30874fc9c74d6b8fa0c8c2806548311/fs_s3fs-1.1.1-py2.py3-none-any.whl", hash = "sha256:9ba160eaa93390cc5992a857675666cb2fbb3721b872474dfdc659a715c39280", size = 9675, upload-time = "2019-08-14T10:59:32.547Z" },
+]
+
+[[package]]
 name = "fsspec"
 version = "2026.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1969,6 +1983,7 @@ dependencies = [
     { name = "forbiddenfruit" },
     { name = "frozenlist" },
     { name = "fs" },
+    { name = "fs-s3fs" },
     { name = "google-ai-generativelanguage" },
     { name = "google-api-core" },
     { name = "google-api-python-client" },
@@ -2093,6 +2108,7 @@ requires-dist = [
     { name = "forbiddenfruit", specifier = "==0.1.4" },
     { name = "frozenlist", specifier = "==1.6.0" },
     { name = "fs", specifier = ">=2.4.16" },
+    { name = "fs-s3fs", specifier = ">=1.1.1" },
     { name = "google-ai-generativelanguage", specifier = "==0.6.15" },
     { name = "google-api-core", specifier = "==2.24.2" },
     { name = "google-api-python-client", specifier = "==2.169.0" },

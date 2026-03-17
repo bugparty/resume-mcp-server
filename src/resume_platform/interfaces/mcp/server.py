@@ -501,9 +501,8 @@ def get_data_dir():
     """Get the data directory path."""
     global DATA_DIR
     if DATA_DIR is None:
-        # Get the project root directory (two levels up from this file)
-        project_root = Path(__file__).resolve().parents[2]
-        DATA_DIR = project_root / "data"
+        DATA_DIR = PROJECT_ROOT / "data"
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
     return DATA_DIR
 
 
@@ -575,6 +574,8 @@ def list_data_directory(path: str = "") -> str:
 
     if not target_dir.is_relative_to(data_dir):
         raise ValueError("Path outside data directory not allowed")
+    if not target_dir.exists() and path == "":
+        target_dir.mkdir(parents=True, exist_ok=True)
     if not target_dir.exists():
         raise FileNotFoundError(f"Directory not found: {path}")
     if not target_dir.is_dir():
