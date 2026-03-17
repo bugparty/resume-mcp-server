@@ -32,8 +32,7 @@ class TestQuickVersionWorkflow(unittest.TestCase):
         if resume_fs.exists(target_filename):
             resume_fs.remove(target_filename)
 
-        result = create_new_version(version)
-        self.assertIn("[Success]", result)
+        create_new_version(version)
         self.assertTrue(resume_fs.exists(target_filename))
 
         modules = list_modules_in_version(f"{version}.yaml")
@@ -43,8 +42,7 @@ class TestQuickVersionWorkflow(unittest.TestCase):
         _, markdown = section_output.split("\n\n", 1)
         self.assertIn("## Summary", markdown)
 
-        updated = update_resume_section(f"{version}/summary:## Summary\n- Updated bullet")
-        self.assertIn("[Success]", updated)
+        update_resume_section(f"{version}/summary:## Summary\n- Updated bullet")
 
         # Clean up
         if resume_fs.exists(target_filename):

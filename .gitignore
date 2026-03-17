@@ -16,3 +16,4 @@ logs/*.log
 samples/**/*
 test_tool_output/
 
+/.ai/mcp/mcp.json

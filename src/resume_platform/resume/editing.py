@@ -92,7 +92,7 @@ def _build_format_error(
     details: str | None = None,
 ) -> str:
     lines = [
-        f"[Error] Failed to parse updated content for '{module_path}'.",
+        f"Failed to parse updated content for '{module_path}'.",
         f"{reason} The update was not saved.",
     ]
     if details:
@@ -233,12 +233,12 @@ def _build_match_error(
 ) -> str:
     if match_count == 0:
         return (
-            f"[Error] Could not {action} in '{target_path}': {needle_name} was not found. "
+            f"Could not {action} in '{target_path}': {needle_name} was not found. "
             "Call `read_resume_text` first and use a more exact snippet."
         )
     preview = needle[:80].replace("\n", "\\n")
     return (
-        f"[Error] Could not {action} in '{target_path}': {needle_name} matched "
+        f"Could not {action} in '{target_path}': {needle_name} matched "
         f"{match_count} times. Use a more specific snippet or anchor. "
         f"Preview: '{preview}'"
     )
@@ -299,8 +299,8 @@ def _write_resume_text_body(version: str, section_id: str | None, markdown: str)
         if isinstance(section, dict) and isinstance(section.get("id"), str)
     )
     if len(edited_blocks) != len(expected_section_ids):
-        return (
-            f"[Error] Failed to update '{version}': whole-resume editing cannot add, "
+        raise ValueError(
+            f"Failed to update '{version}': whole-resume editing cannot add, "
             "remove, or reorder top-level '##' blocks."
         )
 
@@ -309,10 +309,10 @@ def _write_resume_text_body(version: str, section_id: str | None, markdown: str)
         module_path = f"{version}/{current_section_id}" if current_section_id != HEADER_SECTION_ID else f"{version}/header"
         error = _apply_section_markdown(working_copy, version, current_section_id, block, module_path)
         if error:
-            return error
+            raise ValueError(error)
 
     _save_resume(version, working_copy)
-    return f"[Success] Updated {version} via editable text view."
+    return f"Updated {version} via editable text view."
 
 
 def update_resume_section(module_path: str, new_content: str | None = None) -> str:
@@ -320,67 +320,61 @@ def update_resume_section(module_path: str, new_content: str | None = None) -> s
     if new_content is None and ":" in module_path:
         module_path, new_content = module_path.split(":", 1)
     if new_content is None:
-        return "[Error] Missing new content for section update."
+        raise ValueError("Missing new content for section update.")
     new_content = new_content.strip()
     if "/" not in module_path:
-        return "[Error] Module path must follow 'version/section' format."
+        raise ValueError("Module path must follow 'version/section' format.")
 
     version, section_id = module_path.split("/", 1)
-    try:
-        if section_id == HEADER_SECTION_ID:
-            header_error = _validate_common_markdown(module_path, section_id, HEADER_SECTION_ID, new_content)
-            if header_error:
-                return header_error
-            data = _load_resume(version)
-            metadata_updates = parse_header_markdown(new_content)
-            if not metadata_updates:
-                return _build_format_error(
-                    module_path,
-                    section_id,
-                    HEADER_SECTION_ID,
-                    "Header content must contain at least one 'key: value' pair.",
-                    details="Example: 'email: john.doe@example.com'",
-                )
-            data.setdefault("metadata", {}).update(metadata_updates)
-            _save_resume(version, data)
-            return f"[Success] Updated {module_path}. updated metadata: {metadata_updates}"
-
+    if section_id == HEADER_SECTION_ID:
+        header_error = _validate_common_markdown(module_path, section_id, HEADER_SECTION_ID, new_content)
+        if header_error:
+            raise ValueError(header_error)
         data = _load_resume(version)
-        section = next(
-            (item for item in data.get("sections", []) if isinstance(item, dict) and item.get("id") == section_id),
-            None,
-        )
-        if section is None:
-            from .repository import _get_section
-
-            _get_section(version, section_id)
-        assert section is not None
-        section_before = copy.deepcopy(section)
-        section_type = section.get("type", "raw")
-        _update_section_from_markdown(version, section_id, section, new_content)
-        validation_error = _validate_parsed_section(
-            module_path, new_content, section_before, section, section_id, section_type
-        )
-        if validation_error:
-            return validation_error
+        metadata_updates = parse_header_markdown(new_content)
+        if not metadata_updates:
+            raise ValueError(_build_format_error(
+                module_path,
+                section_id,
+                HEADER_SECTION_ID,
+                "Header content must contain at least one 'key: value' pair.",
+                details="Example: 'email: john.doe@example.com'",
+            ))
+        data.setdefault("metadata", {}).update(metadata_updates)
         _save_resume(version, data)
-        result = f"[Success] Updated {module_path}. updated section: {section}"
-        if section_before == section:
-            result += " No effective content change detected."
-        return result
-    except (FileNotFoundError, KeyError) as exc:
-        return f"[Error] {exc}"
+        return f"Updated {module_path}. updated metadata: {metadata_updates}"
+
+    data = _load_resume(version)
+    section = next(
+        (item for item in data.get("sections", []) if isinstance(item, dict) and item.get("id") == section_id),
+        None,
+    )
+    if section is None:
+        from .repository import _get_section
+
+        _get_section(version, section_id)
+    assert section is not None
+    section_before = copy.deepcopy(section)
+    section_type = section.get("type", "raw")
+    _update_section_from_markdown(version, section_id, section, new_content)
+    validation_error = _validate_parsed_section(
+        module_path, new_content, section_before, section, section_id, section_type
+    )
+    if validation_error:
+        raise ValueError(validation_error)
+    _save_resume(version, data)
+    result = f"Updated {module_path}. updated section: {section}"
+    if section_before == section:
+        result += " No effective content change detected."
+    return result
 
 
 def replace_resume_text(target_path: str, old_text: str, new_text: str) -> str:
-    try:
-        version, section_id = _target_to_version_and_section(target_path)
-        current_text = _render_resume_text_body(version) if section_id is None else _read_section_text_body(version, section_id)
-    except (FileNotFoundError, KeyError, ValueError) as exc:
-        return f"[Error] {exc}"
+    version, section_id = _target_to_version_and_section(target_path)
+    current_text = _render_resume_text_body(version) if section_id is None else _read_section_text_body(version, section_id)
     match_count = _count_matches(current_text, old_text)
     if match_count != 1:
-        return _build_match_error("replace text", target_path, "old_text", old_text, match_count)
+        raise ValueError(_build_match_error("replace text", target_path, "old_text", old_text, match_count))
     return _write_resume_text_body(version, section_id, _replace_once(current_text, old_text, new_text))
 
 
@@ -390,20 +384,17 @@ def insert_resume_text(
     position: Literal["start", "end", "before", "after"] | str,
     anchor_text: str | None = None,
 ) -> str:
-    try:
-        version, section_id = _target_to_version_and_section(target_path)
-        current_text = _render_resume_text_body(version) if section_id is None else _read_section_text_body(version, section_id)
-    except (FileNotFoundError, KeyError, ValueError) as exc:
-        return f"[Error] {exc}"
+    version, section_id = _target_to_version_and_section(target_path)
+    current_text = _render_resume_text_body(version) if section_id is None else _read_section_text_body(version, section_id)
     if position not in INSERT_POSITIONS:
         allowed = ", ".join(sorted(INSERT_POSITIONS))
-        return f"[Error] Invalid insert position '{position}'. Expected one of: {allowed}."
+        raise ValueError(f"Invalid insert position '{position}'. Expected one of: {allowed}.")
     if position in {"before", "after"}:
         if not anchor_text:
-            return f"[Error] Insert position '{position}' requires `anchor_text` in '{target_path}'."
+            raise ValueError(f"Insert position '{position}' requires `anchor_text` in '{target_path}'.")
         match_count = _count_matches(current_text, anchor_text)
         if match_count != 1:
-            return _build_match_error("insert text", target_path, "anchor_text", anchor_text, match_count)
+            raise ValueError(_build_match_error("insert text", target_path, "anchor_text", anchor_text, match_count))
         updated_text = (
             _replace_once(current_text, anchor_text, new_text + anchor_text)
             if position == "before"
@@ -417,14 +408,11 @@ def insert_resume_text(
 
 
 def delete_resume_text(target_path: str, old_text: str) -> str:
-    try:
-        version, section_id = _target_to_version_and_section(target_path)
-        current_text = _render_resume_text_body(version) if section_id is None else _read_section_text_body(version, section_id)
-    except (FileNotFoundError, KeyError, ValueError) as exc:
-        return f"[Error] {exc}"
+    version, section_id = _target_to_version_and_section(target_path)
+    current_text = _render_resume_text_body(version) if section_id is None else _read_section_text_body(version, section_id)
     match_count = _count_matches(current_text, old_text)
     if match_count != 1:
-        return _build_match_error("delete text", target_path, "old_text", old_text, match_count)
+        raise ValueError(_build_match_error("delete text", target_path, "old_text", old_text, match_count))
     return _write_resume_text_body(version, section_id, _replace_once(current_text, old_text, ""))
 
 
@@ -433,29 +421,26 @@ def update_main_resume(file_name: str, file_content: str) -> str:
     try:
         data = yaml.safe_load(file_content)
     except yaml.YAMLError as exc:
-        return f"[Error] Invalid YAML content: {exc}"
+        raise ValueError(f"Invalid YAML content: {exc}") from exc
     _save_resume(version, data)
-    return f"[Success] Replaced resume definition for {version}."
+    return f"Replaced resume definition for {version}."
 
 
 def create_new_version(new_version_name: str) -> str:
     new_version_name = new_version_name.strip()
     if not new_version_name:
-        return "[Error] Version name cannot be empty."
+        raise ValueError("Version name cannot be empty.")
     target_filename = _resume_filename(new_version_name)
     resume_fs = get_resume_fs()
     if resume_fs.exists(target_filename):
-        return f"[Error] Version '{new_version_name}' already exists."
+        raise ValueError(f"Version '{new_version_name}' already exists.")
     template_path = Path(__file__).resolve().parents[3] / "templates" / "resume_template.yaml"
     if not template_path.exists():
-        return "[Error] Standard resume template not found at templates/resume_template.yaml."
-    try:
-        with template_path.open("r", encoding="utf-8") as handle:
-            base = yaml.safe_load(handle)
-        _save_resume(new_version_name, base)
-        return f"[Success] Created new resume version '{new_version_name}' from standard template."
-    except Exception as exc:
-        return f"[Error] Failed to load template: {exc}"
+        raise FileNotFoundError("Standard resume template not found at templates/resume_template.yaml.")
+    with template_path.open("r", encoding="utf-8") as handle:
+        base = yaml.safe_load(handle)
+    _save_resume(new_version_name, base)
+    return f"Created new resume version '{new_version_name}' from standard template."
 
 
 def tailor_section_for_jd(module_path: str, section_content: str, jd_analysis: str) -> str:
@@ -485,7 +470,7 @@ Return revised Markdown for the section. Use concise bullet points and keep any 
             return response.strip()
         return str(response).strip()
     except Exception as exc:
-        return f"[Error] Failed to tailor section with LLM: {exc}"
+        raise RuntimeError(f"Failed to tailor section with LLM: {exc}") from exc
 
 
 def tailor_complete_resume(main_resume_filename: str, jd_analysis: str) -> Dict[str, Any]:
@@ -558,7 +543,7 @@ def summarize_resumes_to_index() -> Dict[str, Any]:
 def read_resume_summary() -> Dict[str, str]:
     summary_path = get_settings().summary_path
     if not summary_path.exists():
-        return {"content": "[Error] File resume_summary.yaml not found."}
+        raise FileNotFoundError("File resume_summary.yaml not found.")
     return {"content": summary_path.read_text(encoding="utf-8")}
 
 
@@ -583,6 +568,6 @@ def read_aggregated_resumes_yaml() -> Dict[str, str]:  # pragma: no cover - lega
 def read_file_content(file_path: str, max_length: int = 0) -> str:
     path = Path(file_path)
     if not path.exists():
-        return f"[Error] File not found: {file_path}"
+        raise FileNotFoundError(f"File not found: {file_path}")
     text = path.read_text(encoding="utf-8")
     return text if max_length == 0 else text[:max_length]

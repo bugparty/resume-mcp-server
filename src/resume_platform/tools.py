@@ -163,15 +163,6 @@ class SearchResumeEntriesInput(BaseModel):
     top_k: int = Field(default=5, description="Maximum number of matches to return.")
 
 # --- Tool Implementation Functions ---
-def _is_success_message(result: str) -> bool:
-    return isinstance(result, str) and result.strip().startswith("[Success]")
-
-
-def _mark_stale_after_success(result: str, reason: str) -> None:
-    if _is_success_message(result):
-        mark_index_stale(reason)
-
-
 def list_resume_versions_tool() -> str:
     """Return the available resume versions as a JSON payload."""
     versions = find_resume_versions()
@@ -204,7 +195,7 @@ def update_resume_section_tool(module_path: str, new_content: str) -> str:
     - new_content: Markdown to replace the section body while preserving headings/bullets
     """
     result = update_resume_section(module_path, new_content)
-    _mark_stale_after_success(result, "update_resume_section")
+    mark_index_stale("update_resume_section")
     return result
 
 def replace_resume_text_tool(target_path: str, old_text: str, new_text: str) -> str:
@@ -212,7 +203,7 @@ def replace_resume_text_tool(target_path: str, old_text: str, new_text: str) -> 
     Replace one exact text snippet in a resume text view.
     """
     result = replace_resume_text(target_path, old_text, new_text)
-    _mark_stale_after_success(result, "replace_resume_text")
+    mark_index_stale("replace_resume_text")
     return result
 
 def insert_resume_text_tool(
@@ -225,7 +216,7 @@ def insert_resume_text_tool(
     Insert text into a resume text view using a semantic position or anchor.
     """
     result = insert_resume_text(target_path, new_text, position, anchor_text)
-    _mark_stale_after_success(result, "insert_resume_text")
+    mark_index_stale("insert_resume_text")
     return result
 
 def delete_resume_text_tool(target_path: str, old_text: str) -> str:
@@ -233,7 +224,7 @@ def delete_resume_text_tool(target_path: str, old_text: str) -> str:
     Delete one exact text snippet from a resume text view.
     """
     result = delete_resume_text(target_path, old_text)
-    _mark_stale_after_success(result, "delete_resume_text")
+    mark_index_stale("delete_resume_text")
     return result
 
 def analyze_jd_tool(jd_text: str) -> str:
@@ -295,91 +286,58 @@ def analyze_jd_tool(jd_text: str) -> str:
              # If LLM already provided the structure, just add the header
              return f"JD Analysis:\n{analysis}"
     except Exception as e:
-        return f"[Error] Failed to analyze JD with LLM: {e}"
+        raise RuntimeError(f"Failed to analyze JD with LLM: {e}") from e
 
 def create_new_version_tool(new_version_name: str) -> str:
     """Create a new resume YAML version by copying the base template."""
     result = create_new_version(new_version_name)
-    _mark_stale_after_success(result, "create_new_version")
+    mark_index_stale("create_new_version")
     return result
 
 def delete_resume_version_tool(version_name: str) -> str:
-    """
-    Delete a resume version permanently.
-    Input:
-    - version_name: The name of the resume version to delete (without .yaml extension)
-    Note: This operation cannot be undone. Ensure you have backups if needed.
-    """
+    """Delete a resume version permanently."""
     from resume_platform.infrastructure.filesystem import get_resume_fs
-    
-    # Validate input
+
     version_name = version_name.strip()
     if not version_name:
-        return "[Error] Version name cannot be empty."
-    
-    # Check if it's the base resume
+        raise ValueError("Version name cannot be empty.")
     if version_name == "resume":
-        return "[Error] Cannot delete the base resume version 'resume'. This is the main template."
-    
-    # Get filename and filesystem
+        raise ValueError("Cannot delete the base resume version 'resume'. This is the main template.")
+
     filename = f"{version_name}.yaml"
     resume_fs = get_resume_fs()
-    
-    # Check if version exists
     if not resume_fs.exists(filename):
-        return f"[Error] Resume version '{version_name}' does not exist."
-    
-    try:
-        # Delete the file
-        resume_fs.remove(filename)
-        result = f"[Success] Resume version '{version_name}' has been deleted successfully."
-        _mark_stale_after_success(result, "delete_resume_version")
-        return result
-    except Exception as e:
-        return f"[Error] Failed to delete resume version '{version_name}': {str(e)}"
+        raise FileNotFoundError(f"Resume version '{version_name}' does not exist.")
+
+    resume_fs.remove(filename)
+    mark_index_stale("delete_resume_version")
+    return f"Resume version '{version_name}' deleted."
 
 def copy_resume_version_tool(source_version: str, target_version: str) -> str:
-    """
-    Copy a resume version to a new version.
-    Input:
-    - source_version: The name of the source resume version to copy from (without .yaml extension)
-    - target_version: The name of the target resume version to copy to (without .yaml extension)
-    """
+    """Copy a resume version to a new version."""
     from resume_platform.infrastructure.filesystem import get_resume_fs
-    
-    # Validate input
+
     source_version = source_version.strip()
     target_version = target_version.strip()
-    
     if not source_version:
-        return "[Error] Source version name cannot be empty."
+        raise ValueError("Source version name cannot be empty.")
     if not target_version:
-        return "[Error] Target version name cannot be empty."
+        raise ValueError("Target version name cannot be empty.")
     if source_version == target_version:
-        return "[Error] Source and target version names must be different."
-    
-    # Get filenames and filesystem
+        raise ValueError("Source and target version names must be different.")
+
     source_filename = f"{source_version}.yaml"
     target_filename = f"{target_version}.yaml"
     resume_fs = get_resume_fs()
-    
-    # Check if source version exists
     if not resume_fs.exists(source_filename):
-        return f"[Error] Source resume version '{source_version}' does not exist."
-    
-    # Check if target version already exists
+        raise FileNotFoundError(f"Source resume version '{source_version}' does not exist.")
     if resume_fs.exists(target_filename):
-        return f"[Error] Target resume version '{target_version}' already exists. Delete it first or choose a different name."
-    
-    try:
-        # Copy the file
-        content = resume_fs.readtext(source_filename)
-        resume_fs.writetext(target_filename, content)
-        result = f"[Success] Resume version '{source_version}' has been copied to '{target_version}' successfully."
-        _mark_stale_after_success(result, "copy_resume_version")
-        return result
-    except Exception as e:
-        return f"[Error] Failed to copy resume version '{source_version}' to '{target_version}': {str(e)}"
+        raise ValueError(f"Target resume version '{target_version}' already exists. Delete it first or choose a different name.")
+
+    content = resume_fs.readtext(source_filename)
+    resume_fs.writetext(target_filename, content)
+    mark_index_stale("copy_resume_version")
+    return f"Copied '{source_version}' to '{target_version}'."
 
 def list_modules_in_version_tool(filename: str) -> str:
     """
@@ -408,7 +366,7 @@ def update_main_resume_tool(file_name: str, file_content: str) -> str:
     Note: When modifying submodules after creating a new version, update their include paths here first
     """
     result = update_main_resume(file_name, file_content)
-    _mark_stale_after_success(result, "update_main_resume")
+    mark_index_stale("update_main_resume")
     return result
 
 def read_jd_file_tool(filename: str) -> str:
@@ -416,22 +374,14 @@ def read_jd_file_tool(filename: str) -> str:
     Reads a job description file from the JD filesystem.
     Input:
     - filename: JD filename (e.g., 'job1.txt')
-    Function: Reads and returns the content of the specified job description file
     Note: Only .txt files are supported
     """
     if not filename.endswith('.txt'):
-        return "[Error] Only .txt files are supported."
-
-    try:
-        jd_fs = get_jd_fs()
-        
-        if not jd_fs.exists(filename):
-            return f"[Error] JD file '{filename}' not found."
-
-        content = jd_fs.readtext(filename, encoding='utf-8')
-        return content
-    except Exception as e:
-        return f"[Error] Failed to read JD file: {str(e)}"
+        raise ValueError("Only .txt files are supported.")
+    jd_fs = get_jd_fs()
+    if not jd_fs.exists(filename):
+        raise FileNotFoundError(f"JD file '{filename}' not found.")
+    return jd_fs.readtext(filename, encoding='utf-8')
 
 def load_complete_resume_tool(filename: str) -> str:
     """
@@ -453,31 +403,22 @@ def read_resume_summary_tool() -> ReadResumeSummaryOutput:
 
 def set_section_visibility_tool(version: str, section_id: str, enabled: bool = True) -> str:
     """Enable or disable a section by updating style.section_disabled."""
-    try:
-        result = set_section_visibility(version, section_id, enabled)
-        mark_index_stale("set_section_visibility")
-        return json.dumps({"version": version, "section_id": section_id, "enabled": enabled, **result})
-    except Exception as exc:
-        return json.dumps({"error": str(exc)})
+    result = set_section_visibility(version, section_id, enabled)
+    mark_index_stale("set_section_visibility")
+    return json.dumps({"version": version, "section_id": section_id, "enabled": enabled, **result})
 
 
 def set_section_order_tool(version: str, order: list[str]) -> str:
     """Set preferred section ordering for rendering."""
-    try:
-        result = set_section_order(version, order)
-        mark_index_stale("set_section_order")
-        return json.dumps({"version": version, "order": order, **result})
-    except Exception as exc:
-        return json.dumps({"error": str(exc)})
+    result = set_section_order(version, order)
+    mark_index_stale("set_section_order")
+    return json.dumps({"version": version, "order": order, **result})
 
 
 def get_section_style_tool(version: str) -> str:
     """Get current section order and disabled map for a version."""
-    try:
-        result = get_section_style(version)
-        return json.dumps({"version": version, **result})
-    except Exception as exc:
-        return json.dumps({"error": str(exc)})
+    result = get_section_style(version)
+    return json.dumps({"version": version, **result})
 
 
 def render_resume_to_latex_tool(version: str) -> RenderResumeOutput:

@@ -445,17 +445,11 @@ async def read_data_file(path: str) -> Union[str, bytes]:
     Returns:
         File content as string for text files, bytes for binary files
     """
-    data_dir = get_data_dir()
-    file_path = data_dir / path
+    data_dir = get_data_dir().resolve()
+    file_path = (data_dir / path).resolve()
 
-    # Security check: ensure the path is within data directory
-    try:
-        file_path = file_path.resolve()
-        data_dir = data_dir.resolve()
-        if not str(file_path).startswith(str(data_dir)):
-            raise ValueError("Path outside data directory not allowed")
-    except (OSError, ValueError) as e:
-        raise ValueError(f"Invalid file path: {e}")
+    if not file_path.is_relative_to(data_dir):
+        raise ValueError("Path outside data directory not allowed")
 
     if not file_path.exists():
         raise FileNotFoundError(f"File not found: {path}")
@@ -503,48 +497,31 @@ def list_data_directory(path: str = "") -> str:
     """
     import json
 
-    data_dir = get_data_dir()
-    target_dir = data_dir / path if path else data_dir
+    data_dir = get_data_dir().resolve()
+    target_dir = (data_dir / path).resolve() if path else data_dir
 
-    # Security check: ensure the path is within data directory
-    try:
-        target_dir = target_dir.resolve()
-        data_dir = data_dir.resolve()
-        if not str(target_dir).startswith(str(data_dir)):
-            raise ValueError("Path outside data directory not allowed")
-    except (OSError, ValueError) as e:
-        return json.dumps({"error": f"Invalid directory path: {e}"})
-
+    if not target_dir.is_relative_to(data_dir):
+        raise ValueError("Path outside data directory not allowed")
     if not target_dir.exists():
-        return json.dumps({"error": f"Directory not found: {path}"})
-
+        raise FileNotFoundError(f"Directory not found: {path}")
     if not target_dir.is_dir():
-        return json.dumps({"error": f"Path is not a directory: {path}"})
+        raise NotADirectoryError(f"Path is not a directory: {path}")
 
-    try:
-        items = []
-        for item in sorted(target_dir.iterdir()):
-            relative_path = str(item.relative_to(data_dir))
-            item_info = {
-                "name": item.name,
-                "path": relative_path,
-                "type": "directory" if item.is_dir() else "file",
-                "size": item.stat().st_size if item.is_file() else None,
-            }
+    items = []
+    for item in sorted(target_dir.iterdir()):
+        relative_path = str(item.relative_to(data_dir))
+        item_info = {
+            "name": item.name,
+            "path": relative_path,
+            "type": "directory" if item.is_dir() else "file",
+            "size": item.stat().st_size if item.is_file() else None,
+        }
+        if item.is_file():
+            mime_type, _ = mimetypes.guess_type(str(item))
+            item_info["mime_type"] = mime_type
+        items.append(item_info)
 
-            # Add MIME type for files
-            if item.is_file():
-                mime_type, _ = mimetypes.guess_type(str(item))
-                item_info["mime_type"] = mime_type
-
-            items.append(item_info)
-
-        return json.dumps(
-            {"path": path, "items": items, "total_items": len(items)}, indent=2
-        )
-
-    except Exception as e:
-        return json.dumps({"error": f"Failed to list directory: {e}"})
+    return json.dumps({"path": path, "items": items, "total_items": len(items)}, indent=2)
 
 
 # Resume Version Management Tools
@@ -656,8 +633,8 @@ def delete_resume_text(target_path: str, old_text: str) -> str:
     return delete_resume_text_tool(target_path, old_text)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
+@mcp.tool(annotations=dict(readOnlyHint=False,
+        idempotentHint=False,
         openWorldHint=False))
 @log_mcp_tool_call
 def update_resume_section(module_path: str, new_content: str) -> str:
@@ -725,8 +702,8 @@ def update_resume_section(module_path: str, new_content: str) -> str:
     return update_resume_section_tool(module_path, new_content)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
+@mcp.tool(annotations=dict(readOnlyHint=False,
+        idempotentHint=False,
         openWorldHint=False))
 @log_mcp_tool_call
 def set_section_visibility(version: str, section_id: str, enabled: bool = True) -> str:
@@ -738,20 +715,11 @@ def set_section_visibility(version: str, section_id: str, enabled: bool = True) 
         section_id: Section id to toggle (e.g., 'summary', 'experience')
         enabled: True to show, False to hide
     """
-    try:
-        result = set_section_visibility_tool(version, section_id, enabled)
-        payload = {"version": version, "section_id": section_id, "enabled": enabled}
-        try:
-            payload.update(result if isinstance(result, dict) else {})
-        except Exception:
-            pass
-        return json.dumps(payload)
-    except Exception as exc:
-        return json.dumps({"error": str(exc)})
+    return set_section_visibility_tool(version, section_id, enabled)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
+@mcp.tool(annotations=dict(readOnlyHint=False,
+        idempotentHint=False,
         openWorldHint=False))
 @log_mcp_tool_call
 def set_section_order(version: str, order: list[str]) -> str:
@@ -762,16 +730,7 @@ def set_section_order(version: str, order: list[str]) -> str:
         version: Resume version name (without .yaml)
         order: List of section ids in desired order; unknown ids are skipped and remaining sections are appended automatically.
     """
-    try:
-        result = set_section_order_tool(version, order)
-        payload = {"version": version, "order": order}
-        try:
-            payload.update(result if isinstance(result, dict) else {})
-        except Exception:
-            pass
-        return json.dumps(payload)
-    except Exception as exc:
-        return json.dumps({"error": str(exc)})
+    return set_section_order_tool(version, order)
 
 
 @mcp.tool(annotations=dict(readOnlyHint=True,
@@ -785,20 +744,11 @@ def get_section_style(version: str) -> str:
     Args:
         version: Resume version name (without .yaml)
     """
-    try:
-        result = get_section_style_tool(version)
-        payload = {"version": version}
-        try:
-            payload.update(json.loads(result)) if isinstance(result, str) else payload.update(result)
-        except Exception:
-            payload["raw"] = result
-        return json.dumps(payload)
-    except Exception as exc:
-        return json.dumps({"error": str(exc)})
+    return get_section_style_tool(version)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
+@mcp.tool(annotations=dict(readOnlyHint=False,
+        idempotentHint=False,
         openWorldHint=False))
 @log_mcp_tool_call
 def create_new_version(new_version_name: str) -> str:
@@ -811,8 +761,8 @@ def create_new_version(new_version_name: str) -> str:
     return create_new_version_tool(new_version_name)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
+@mcp.tool(annotations=dict(readOnlyHint=False,
+        idempotentHint=False,
         openWorldHint=False))
 @log_mcp_tool_call
 def delete_resume_version(version_name: str) -> str:
@@ -825,13 +775,12 @@ def delete_resume_version(version_name: str) -> str:
     Note:
         - Cannot delete the base 'resume' version
         - This operation cannot be undone
-        - Ensure you have backups if needed
     """
     return delete_resume_version_tool(version_name)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
+@mcp.tool(annotations=dict(readOnlyHint=False,
+        idempotentHint=False,
         openWorldHint=False))
 @log_mcp_tool_call
 def copy_resume_version(source_version: str, target_version: str) -> str:
@@ -887,16 +836,7 @@ def build_vector_index(force_rebuild: bool = False) -> str:
     Args:
         force_rebuild: When true, recompute embeddings for all indexed chunks.
     """
-    try:
-        return build_vector_index_tool(force_rebuild)
-    except Exception as exc:
-        return json.dumps(
-            {
-                "error": str(exc),
-                "hint": "Check embedding provider/model/base URL configuration and whether the embedding endpoint supports /embeddings.",
-            },
-            ensure_ascii=False,
-        )
+    return build_vector_index_tool(force_rebuild)
 
 
 @mcp.tool(annotations=dict(readOnlyHint=True,
@@ -918,16 +858,7 @@ def search_resume_entries(
         chunk_level: Search granularity, 'entry' or 'bullet'
         top_k: Number of matches to return
     """
-    try:
-        return search_resume_entries_tool(query, entry_type, chunk_level, top_k)
-    except Exception as exc:
-        return json.dumps(
-            {
-                "error": str(exc),
-                "hint": "Check embedding provider/model/base URL configuration, then rebuild the vector index.",
-            },
-            ensure_ascii=False,
-        )
+    return search_resume_entries_tool(query, entry_type, chunk_level, top_k)
 
 
 @mcp.tool(annotations=dict(readOnlyHint=True,

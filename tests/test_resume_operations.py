@@ -53,14 +53,10 @@ class TestResumeOperations(unittest.TestCase):
         instructions, original_markdown = section.split("\n\n", 1)
 
         updated_markdown = "## Summary\n- Tailored bullet"
-        self.assertIn(
-            "[Success]", update_resume_section("resume/summary", updated_markdown)
-        )
+        update_resume_section("resume/summary", updated_markdown)
 
         # restore original content to keep fixture clean
-        self.assertIn(
-            "[Success]", update_resume_section("resume/summary", original_markdown)
-        )
+        update_resume_section("resume/summary", original_markdown)
 
     def test_summary_generation_and_read_yaml(self):
         result = summarize_resumes_to_index()
@@ -79,8 +75,7 @@ class TestResumeOperationsE2E(unittest.TestCase):
 
     def test_create_and_delete_version(self):
         resume_fs = get_resume_fs()
-        result = create_new_version(self.version)
-        self.assertIn("[Success]", result)
+        create_new_version(self.version)
         self.assertTrue(resume_fs.exists(f"{self.version}.yaml"))
         # Clean up by removing the test version
         resume_fs.remove(f"{self.version}.yaml")
@@ -99,9 +94,9 @@ class TestResumeOperationsE2E2(unittest.TestCase):
 
     def test_wrong_section_id(self):
         module_path = f"{self.version}/work experience"
-        result = update_resume_section(module_path, "## Work Experience")
-        self.assertIn("[Error]", result)
-        self.assertIn("did you mean 'experience'?", result)
+        with self.assertRaises(KeyError) as ctx:
+            update_resume_section(module_path, "## Work Experience")
+        self.assertIn("did you mean 'experience'?", str(ctx.exception))
 
     def test_load_complete_resume_respects_section_order(self):
         set_section_order(self.version, ["skills", "summary", "experience"])
@@ -125,8 +120,7 @@ class TestResumeOperationsE2E2(unittest.TestCase):
 - Collaborated with DevOps team to implement CI/CD pipelines, reducing deployment times by 50%. 
 - Conducted code reviews and mentored junior developers, fostering team growth."""
 
-        result = update_resume_section(module_path, new_content)
-        self.assertIn("[Success]", result)
+        update_resume_section(module_path, new_content)
 
 
 class TestResumeAddSkills(unittest.TestCase):
@@ -146,8 +140,7 @@ class TestResumeAddSkills(unittest.TestCase):
         - Cloud Platforms: AWS, GCP, Docker, Kubernetes
         - Tools & Practices: Git, Jenkins, Terraform, Agile/Scrum
         - Other: Data analysis, system design, mentoring"""
-        result = update_resume_section(module_path, new_content)
-        self.assertIn("[Success]", result)
+        update_resume_section(module_path, new_content)
 
     def test_add_skills_with_bold_non_bullet_categories(self):
         module_path = f"{self.version}/skills"
@@ -157,8 +150,7 @@ class TestResumeAddSkills(unittest.TestCase):
 **Systems & Software**: Linux, Docker, networking diagnostics
 
 **Tools**: Multimeter, Oscilloscope"""
-        result = update_resume_section(module_path, new_content)
-        self.assertIn("[Success]", result)
+        update_resume_section(module_path, new_content)
 
         rendered = load_resume_section(module_path)
         self.assertIn("- Programming: Python, C++, Rust", rendered)
@@ -178,7 +170,6 @@ class TestResumeAddSkills(unittest.TestCase):
         - Conducted code reviews and mentored junior developers, fostering team growth."""
 
         result = update_resume_section(module_path, new_content)
-        self.assertIn("[Success]", result)
         self.assertIn("Software Engineer", result)
         self.assertIn("Backend Developer", result)
         self.assertIn("Conducted code reviews and mentored junior developers", result)
@@ -191,8 +182,7 @@ class TestResumeAddSkills(unittest.TestCase):
         ### Backend Developer | CloudSphere Inc. (Shanghai, China) | 2017 - 2020
         - Developed RESTful APIs supporting mobile and web applications."""
 
-        result = update_resume_section(module_path, new_content)
-        self.assertIn("[Success]", result)
+        update_resume_section(module_path, new_content)
 
         rendered = load_resume_section(module_path)
         self.assertIn("Software Engineer", rendered)
@@ -213,9 +203,6 @@ class TestResumeAddSkills(unittest.TestCase):
         - Designed cross-platform data ingestion & cleansing workflows.
         - Built unified APIs (REST & GraphQL), improving developer adoption"""
         result = update_resume_section(module_path, new_content)
-        self.assertIn("[Success]", result)
-
-        # Verify projects section was updated correctly
         self.assertIn("Projects", result)
         self.assertIn("Intelligent Recommendation Engine Optimization", result)
     def test_add_education_pipe_format(self):
@@ -223,7 +210,6 @@ class TestResumeAddSkills(unittest.TestCase):
         new_content = """## Education
         ### Master of Science in Computer Science | Stanford University | 2016 - 2018 | Palo Alto, CA"""
         result = update_resume_section(module_path, new_content)
-        self.assertIn("[Success]", result)
         self.assertIn("Master of Science in Computer Science", result)
         self.assertIn("Stanford University", result)
         self.assertIn("2016 - 2018", result)
@@ -239,8 +225,7 @@ class TestResumeAddSkills(unittest.TestCase):
         module_path = f"{self.version}/education"
         new_content = """## Education
         ### Bachelor of Science in Computer Engineering | Stanford University | 2012 - 2016"""
-        result = update_resume_section(module_path, new_content)
-        self.assertIn("[Success]", result)
+        update_resume_section(module_path, new_content)
 
         rendered = load_resume_section(module_path)
         self.assertIn(
@@ -254,7 +239,6 @@ class TestResumeAddSkills(unittest.TestCase):
         **Master of Science in Computer Science**
         Stanford University | 2016 - 2018"""
         result = update_resume_section(module_path, new_content)
-        self.assertIn("[Success]", result)
         self.assertIn("Master of Science in Computer Science", result)
         self.assertIn("Stanford University", result)
         self.assertIn("2016 - 2018", result)
@@ -263,8 +247,7 @@ class TestResumeAddSkills(unittest.TestCase):
         module_path = f"{self.version}/education"
         new_content = """## Education
         ### Master of Science in Computer Science — Stanford University (Palo Alto, CA) | 2016 - 2018"""
-        result = update_resume_section(module_path, new_content)
-        self.assertIn("[Success]", result)
+        update_resume_section(module_path, new_content)
 
         rendered = load_resume_section(module_path)
         self.assertIn(
@@ -287,102 +270,94 @@ class TestResumeSectionValidation(unittest.TestCase):
     def test_experience_invalid_format_does_not_overwrite_section(self):
         module_path = f"{self.version}/experience"
         before = load_resume_section(module_path)
-        result = update_resume_section(
-            module_path,
-            "## Experience\nThis is a long paragraph without supported entry headings.",
-        )
+        with self.assertRaises(ValueError) as ctx:
+            update_resume_section(
+                module_path,
+                "## Experience\nThis is a long paragraph without supported entry headings.",
+            )
+        self.assertIn("Failed to parse updated content", str(ctx.exception))
+        self.assertIn("The parsed section became empty", str(ctx.exception))
         after = load_resume_section(module_path)
-
-        self.assertIn("[Error]", result)
-        self.assertIn("Failed to parse updated content", result)
-        self.assertIn("The parsed section became empty", result)
         self.assertEqual(before, after)
 
     def test_projects_invalid_format_returns_hint(self):
         module_path = f"{self.version}/projects"
-        result = update_resume_section(
-            module_path,
-            "## Projects\n### Wrong heading without dates\nThis line never becomes a bullet",
-        )
-
-        self.assertIn("[Error]", result)
-        self.assertIn("The parsed section became empty", result)
-        self.assertIn("Projects Section:", result)
+        with self.assertRaises(ValueError) as ctx:
+            update_resume_section(
+                module_path,
+                "## Projects\n### Wrong heading without dates\nThis line never becomes a bullet",
+            )
+        self.assertIn("The parsed section became empty", str(ctx.exception))
+        self.assertIn("Projects Section:", str(ctx.exception))
 
     def test_education_invalid_format_returns_error(self):
         module_path = f"{self.version}/education"
         before = load_resume_section(module_path)
-        result = update_resume_section(
-            module_path,
-            "## Education\nUniversity of Somewhere only plain text without degree structure",
-        )
-        after = load_resume_section(module_path)
-
-        self.assertIn("[Error]", result)
-        self.assertIn("The parsed section became empty", result)
+        with self.assertRaises(ValueError) as ctx:
+            update_resume_section(
+                module_path,
+                "## Education\nUniversity of Somewhere only plain text without degree structure",
+            )
+        self.assertIn("The parsed section became empty", str(ctx.exception))
         self.assertIn(
             "### M.S. Computer Science | Stanford University | 2016 - 2018 | Palo Alto, CA",
-            result,
+            str(ctx.exception),
         )
+        after = load_resume_section(module_path)
         self.assertEqual(before, after)
 
     def test_skills_invalid_format_returns_error(self):
         module_path = f"{self.version}/skills"
         before = load_resume_section(module_path)
-        result = update_resume_section(
-            module_path,
-            "## Skills\nThis paragraph ignores categories entirely and should be rejected.",
-        )
+        with self.assertRaises(ValueError) as ctx:
+            update_resume_section(
+                module_path,
+                "## Skills\nThis paragraph ignores categories entirely and should be rejected.",
+            )
+        self.assertIn("could not be parsed into valid categories/items", str(ctx.exception))
         after = load_resume_section(module_path)
-
-        self.assertIn("[Error]", result)
-        self.assertIn("could not be parsed into valid categories/items", result)
         self.assertEqual(before, after)
 
     def test_header_invalid_format_returns_example(self):
-        result = update_resume_section(
-            f"{self.version}/header",
-            "## Header\njust some words without colon pairs",
-        )
-
-        self.assertIn("[Error]", result)
-        self.assertIn("key: value", result)
-        self.assertIn("email: john.doe@example.com", result)
+        with self.assertRaises(ValueError) as ctx:
+            update_resume_section(
+                f"{self.version}/header",
+                "## Header\njust some words without colon pairs",
+            )
+        self.assertIn("key: value", str(ctx.exception))
+        self.assertIn("email: john.doe@example.com", str(ctx.exception))
 
     def test_loader_comment_is_rejected(self):
         module_path = f"{self.version}/summary"
-        result = update_resume_section(
-            module_path,
-            "<!-- Edit the markdown below. Preserve headings and bullet structure so we can parse updates reliably. -->\n\n## Summary\n- Focused bullet",
-        )
-
-        self.assertIn("[Error]", result)
-        self.assertIn("loader instruction comment", result)
+        with self.assertRaises(ValueError) as ctx:
+            update_resume_section(
+                module_path,
+                "<!-- Edit the markdown below. Preserve headings and bullet structure so we can parse updates reliably. -->\n\n## Summary\n- Focused bullet",
+            )
+        self.assertIn("loader instruction comment", str(ctx.exception))
 
     def test_multi_section_input_is_rejected(self):
         module_path = f"{self.version}/summary"
         before = load_resume_section(module_path)
-        result = update_resume_section(
-            module_path,
-            "## Summary\n- Focused bullet\n\n## Skills\n- Python: FastAPI",
-        )
+        with self.assertRaises(ValueError) as ctx:
+            update_resume_section(
+                module_path,
+                "## Summary\n- Focused bullet\n\n## Skills\n- Python: FastAPI",
+            )
+        self.assertIn("only one section at a time", str(ctx.exception))
         after = load_resume_section(module_path)
-
-        self.assertIn("[Error]", result)
-        self.assertIn("only one section at a time", result)
         self.assertEqual(before, after)
 
     def test_title_mismatch_is_rejected(self):
         module_path = f"{self.version}/experience"
         before = load_resume_section(module_path)
-        result = update_resume_section(
-            module_path,
-            "## Skills\n- Programming: Python, Go",
-        )
+        with self.assertRaises(ValueError) as ctx:
+            update_resume_section(
+                module_path,
+                "## Skills\n- Programming: Python, Go",
+            )
+        self.assertIn("title/type may not match", str(ctx.exception))
         after = load_resume_section(module_path)
-
-        self.assertIn("[Error]", result)
-        self.assertIn("title/type may not match", result)
         self.assertEqual(before, after)
 
     def test_success_without_effective_change_mentions_it(self):
@@ -390,8 +365,6 @@ class TestResumeSectionValidation(unittest.TestCase):
         section_output = load_resume_section(module_path)
         _, markdown = section_output.split("\n\n", 1)
         result = update_resume_section(module_path, markdown)
-
-        self.assertIn("[Success]", result)
         self.assertIn("No effective content change detected.", result)
 
 
@@ -412,80 +385,58 @@ class TestResumeTextEditing(unittest.TestCase):
         )
 
     def test_replace_resume_text_updates_single_section(self):
-        result = replace_resume_text(
+        replace_resume_text(
             f"{self.version}/summary",
             "Brief professional summary highlighting key experience and skills",
             "Updated professional summary highlighting platform engineering depth",
         )
-
-        self.assertIn("[Success]", result)
         rendered = load_resume_section(f"{self.version}/summary")
         self.assertIn("Updated professional summary highlighting platform engineering depth", rendered)
 
     def test_insert_resume_text_after_anchor_updates_experience(self):
-        result = insert_resume_text(
+        insert_resume_text(
             f"{self.version}/experience",
             "\n- Improved p99 latency by 35% across critical APIs.",
             "after",
             "- Key responsibility or achievement",
         )
-
-        self.assertIn("[Success]", result)
         rendered = load_resume_section(f"{self.version}/experience")
         self.assertIn("Improved p99 latency by 35%", rendered)
 
     def test_insert_resume_text_start_and_end_on_raw_section(self):
-        result_start = insert_resume_text(
-            f"{self.version}/summary",
-            "- Top-of-section addition\n",
-            "start",
-        )
-        self.assertIn("[Success]", result_start)
-
-        result_end = insert_resume_text(
-            f"{self.version}/summary",
-            "\n- End-of-section addition",
-            "end",
-        )
-        self.assertIn("[Success]", result_end)
+        insert_resume_text(f"{self.version}/summary", "- Top-of-section addition\n", "start")
+        insert_resume_text(f"{self.version}/summary", "\n- End-of-section addition", "end")
 
         rendered = load_resume_section(f"{self.version}/summary")
         self.assertIn("- Top-of-section addition", rendered)
         self.assertIn("- End-of-section addition", rendered)
 
     def test_delete_resume_text_removes_single_snippet(self):
-        result = delete_resume_text(
+        delete_resume_text(
             f"{self.version}/skills",
             "- Technologies: Technology 1, Technology 2, Technology 3",
         )
-
-        self.assertIn("[Success]", result)
         rendered = load_resume_section(f"{self.version}/skills")
         self.assertNotIn("- Technologies: Technology 1, Technology 2, Technology 3", rendered)
 
     def test_replace_resume_text_requires_match(self):
         before = load_resume_section(f"{self.version}/summary")
-        result = replace_resume_text(
-            f"{self.version}/summary",
-            "this string does not exist",
-            "replacement",
-        )
+        with self.assertRaises(ValueError) as ctx:
+            replace_resume_text(
+                f"{self.version}/summary",
+                "this string does not exist",
+                "replacement",
+            )
+        self.assertIn("was not found", str(ctx.exception))
         after = load_resume_section(f"{self.version}/summary")
-
-        self.assertIn("[Error]", result)
-        self.assertIn("was not found", result)
         self.assertEqual(before, after)
 
     def test_delete_resume_text_rejects_ambiguous_match(self):
         before = load_resume_section(f"{self.version}/summary")
-        result = delete_resume_text(
-            f"{self.version}/summary",
-            "bullet",
-        )
+        with self.assertRaises(ValueError) as ctx:
+            delete_resume_text(f"{self.version}/summary", "bullet")
+        self.assertIn("matched", str(ctx.exception))
         after = load_resume_section(f"{self.version}/summary")
-
-        self.assertIn("[Error]", result)
-        self.assertIn("matched", result)
         self.assertEqual(before, after)
 
     def test_read_resume_text_for_whole_resume_includes_header_and_sections(self):
@@ -495,27 +446,20 @@ class TestResumeTextEditing(unittest.TestCase):
         self.assertIn("## Experience", rendered)
 
     def test_replace_resume_text_updates_whole_resume_view(self):
-        result = replace_resume_text(
-            self.version,
-            "## Header",
-            "## Header\nfirst_name: Taylor",
-        )
-        self.assertIn("[Success]", result)
-
+        replace_resume_text(self.version, "## Header", "## Header\nfirst_name: Taylor")
         whole = read_resume_text(self.version)
         self.assertIn("first_name: Taylor", whole)
 
     def test_whole_resume_edit_failure_does_not_write_partial_changes(self):
         before = read_resume_text(self.version)
-        result = replace_resume_text(
-            self.version,
-            "## Experience\n### Job Title — Company Name (City, State) | Start Date - End Date\n- Key responsibility or achievement\n- Quantifiable result or impact\n- Technologies used or skills demonstrated\n\n### Previous Job Title — Previous Company (City, State) | Start Date - End Date\n- Major project or responsibility\n- Achievement with metrics\n- Technical skills applied",
-            "## Experience\nThis paragraph breaks the parser for the whole section.",
-        )
+        with self.assertRaises(ValueError) as ctx:
+            replace_resume_text(
+                self.version,
+                "## Experience\n### Job Title — Company Name (City, State) | Start Date - End Date\n- Key responsibility or achievement\n- Quantifiable result or impact\n- Technologies used or skills demonstrated\n\n### Previous Job Title — Previous Company (City, State) | Start Date - End Date\n- Major project or responsibility\n- Achievement with metrics\n- Technical skills applied",
+                "## Experience\nThis paragraph breaks the parser for the whole section.",
+            )
+        self.assertIn("The parsed section became empty", str(ctx.exception))
         after = read_resume_text(self.version)
-
-        self.assertIn("[Error]", result)
-        self.assertIn("The parsed section became empty", result)
         self.assertEqual(before, after)
 
     def test_whole_resume_rejects_top_level_block_removal(self):
@@ -524,14 +468,10 @@ class TestResumeTextEditing(unittest.TestCase):
         skills_start = body.index("\n\n## Technical Skills")
         skills_end = body.index("\n\n## Experience")
         skills_block = body[skills_start:skills_end]
-        result = delete_resume_text(
-            self.version,
-            skills_block,
-        )
+        with self.assertRaises(ValueError) as ctx:
+            delete_resume_text(self.version, skills_block)
+        self.assertIn("cannot add, remove, or reorder", str(ctx.exception))
         after = read_resume_text(self.version)
-
-        self.assertIn("[Error]", result)
-        self.assertIn("cannot add, remove, or reorder", result)
         self.assertEqual(before, after)
 
     def test_mcp_server_exposes_new_text_read_tool(self):
