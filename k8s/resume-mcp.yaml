@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: resume-mcp-server
-        image: resume-mcp-server:test
+        image: ghcr.io/bugparty/resume-mcp-server:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
