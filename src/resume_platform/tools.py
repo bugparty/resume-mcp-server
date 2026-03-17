@@ -200,7 +200,7 @@ def list_resume_versions_tool() -> str:
 
 def get_resume_section_tool(version_name: str, section_id: str) -> str:
     """Load the Markdown content of a resume section."""
-    return get_resume_section(version_name, section_id)
+    return load_resume_section(f"{version_name}/{section_id}")
 
 def read_resume_text_tool(target_path: str) -> str:
     """
