@@ -4,13 +4,11 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
-import warnings
 
 
 @dataclass
 class AppSettings:
     data_dir: Path
-    summary_path: Path
     jd_dir: Path
     logs_dir: Path
     vector_db_dir: Path
@@ -19,15 +17,6 @@ class AppSettings:
     # Filesystem URLs for PyFilesystem2
     resume_fs_url: str
     jd_fs_url: str
-
-    @property
-    def aggregate_path(self) -> Path:  # pragma: no cover - compatibility shim
-        warnings.warn(
-            "AppSettings.aggregate_path is deprecated; use summary_path instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self.summary_path
 
 
 _SETTINGS: Optional[AppSettings] = None
@@ -62,8 +51,6 @@ def _is_directory_writable(path: Path) -> bool:
 def load_settings(
     *,
     data_dir: str | Path | None = None,
-    summary_path: str | Path | None = None,
-    aggregate_path: str | Path | None = None,
     jd_dir: str | Path | None = None,
     vector_db_dir: str | Path | None = None,
     index_status_path: str | Path | None = None,
@@ -77,7 +64,6 @@ def load_settings(
     fallback_base = Path(os.getenv("TMPDIR", "/tmp")) / "resume_mcp"
 
     default_data_dir = root_dir / "data" / "resumes"
-    default_summary = root_dir / "src" / "resume_platform" / "resume_summary.yaml"
     default_jd_dir = root_dir / "data" / "jd"
     default_logs_dir = root_dir / "logs"
     default_vector_db_dir = root_dir / "data" / "vector_db"
@@ -92,24 +78,14 @@ def load_settings(
     if defaults_use_fallback:
         fallback_data_dir = fallback_base / "data" / "resumes"
         fallback_jd_dir = fallback_base / "data" / "jd"
-        fallback_summary = fallback_base / "resume_summary.yaml"
         fallback_logs_dir = fallback_base / "logs"
 
         default_data_dir = fallback_data_dir
         default_jd_dir = fallback_jd_dir
-        default_summary = fallback_summary
         default_logs_dir = fallback_logs_dir
 
     resolved_data_dir = _resolve_path(
         data_dir or os.getenv("RESUME_DATA_DIR") or default_data_dir,
-        base_dir=root_dir,
-    )
-    resolved_summary = _resolve_path(
-        summary_path
-        or os.getenv("RESUME_SUMMARY_PATH")
-        or aggregate_path
-        or os.getenv("RESUME_AGGREGATE_PATH")
-        or default_summary,
         base_dir=root_dir,
     )
     resolved_jd_dir = _resolve_path(
@@ -154,7 +130,6 @@ def load_settings(
     resolved_index_status_path.parent.mkdir(parents=True, exist_ok=True)
     _SETTINGS = AppSettings(
         data_dir=resolved_data_dir,
-        summary_path=resolved_summary,
         jd_dir=resolved_jd_dir,
         logs_dir=resolved_logs_dir,
         vector_db_dir=resolved_vector_db_dir,

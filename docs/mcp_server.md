@@ -10,7 +10,7 @@ This MCP server exposes the Resume Agent tools (FastMCP) for MCP-aware clients (
 
 ## Environment Variables
 - LLM keys (required for analysis tools): `GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`.
-- Data/paths (optional overrides): `RESUME_DATA_DIR`, `RESUME_SUMMARY_PATH` or `RESUME_AGGREGATE_PATH`, `RESUME_JD_DIR`, `LOGS_DIR`, `RESUME_FS_URL`, `JD_FS_URL`.
+- Data/paths (optional overrides): `RESUME_DATA_DIR`, `RESUME_JD_DIR`, `LOGS_DIR`, `RESUME_FS_URL`, `JD_FS_URL`.
 - S3/R2 output (for PDF uploads): `RESUME_S3_BUCKET_NAME` or `S3_BUCKET_NAME`; `RESUME_S3_PUBLIC_BASE_URL` (required when uploading PDFs); optional `RESUME_S3_ENDPOINT_URL`, `RESUME_S3_REGION`/`AWS_REGION`, `RESUME_S3_KEY_PREFIX`, `RESUME_S3_ADDRESSING_STYLE`, `RESUME_S3_ACCESS_KEY_ID`/`RESUME_S3_ACCESS_KEY`/`S3_ACCESS_KEY_ID`/`AWS_ACCESS_KEY_ID`, `RESUME_S3_SECRET_ACCESS_KEY`/`RESUME_S3_SECRET_KEY`/`S3_SECRET_ACCESS_KEY`/`AWS_SECRET_ACCESS_KEY`.
 - Configure external compile service via `LATEX_COMPILE_API_URL` for PDF compilation.
 
@@ -38,8 +38,6 @@ This MCP server exposes the Resume Agent tools (FastMCP) for MCP-aware clients (
 - `create_new_version(new_version_name)`: copy base template into a new version.
 - `delete_resume_version(version_name)`: remove a non-base resume version.
 - `list_modules_in_version(filename)`: list section identifiers in a resume file.
-- `summarize_resumes_to_index`: build lightweight `resume_summary.yaml` and return its path/message.
-- `read_resume_summary`: read the summary YAML.
 - `render_resume_to_latex(version)`: produce LaTeX string.
 - `compile_resume_pdf(tex_content, version_name="resume")`: compile via external LaTeX compile API; uploads PDF/latex assets to configured output filesystem or S3 (requires output FS/S3 config).
 - `get_resume_yaml_format`: return schema + example YAML for resumes.
@@ -61,7 +59,7 @@ This MCP server exposes the Resume Agent tools (FastMCP) for MCP-aware clients (
 ## Typical workflows
 1) JD tailoring: `read_jd_file` (from tools layer), `analyze_jd`, `load_resume_section`, edit content, `update_resume_section`, then `render_resume_to_latex` + `compile_resume_pdf`.
 2) New version: `create_new_version`, inspect with `list_modules_in_version`, edit via `load_resume_section` → `update_resume_section`.
-3) Overview: `list_resume_versions`, `summarize_resumes_to_index`, `read_resume_summary`.
+3) Overview: `list_resume_versions`.
 
 ## Development notes
 - Server code lives in `src/myagent/mcp_server.py`; it decorates functions from `src/myagent/tools.py` and uses FastMCP.

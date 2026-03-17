@@ -18,11 +18,11 @@
 
 ## Repo Structure Notes
 - Entrypoint: `main.py` wires agent flows; helpers live in `src/myagent/tools.py`, `resume_loader.py`, `resume_renderer.py`, `resume_input_parser.py`, `filesystem.py`, `settings.py`, `llm_config.py`, `mcp_server.py`, and `models/`.
-- Data roots default to `data/resumes`, summaries under `src/myagent/resume_summary.yaml`, JDs under `data/jd`, logs under `logs` (fallbacks under `/tmp/resume_mcp/...` if unwritable).
+- Data roots default to `data/resumes`, JDs under `data/jd`, logs under `logs` (fallbacks under `/tmp/resume_mcp/...` if unwritable).
 - Templates: LaTeX assets under `templates/` and `templates/latex`; resume template `templates/resume_template.tex`.
 
 ## Environment & Secrets
-- Copy `sample.env` to `.env`; required: `GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`. Optional overrides: `RESUME_DATA_DIR`, `RESUME_SUMMARY_PATH` (or `RESUME_AGGREGATE_PATH`), `RESUME_JD_DIR`, `LOGS_DIR`, `DEEPSEEK_BASE_URL`, filesystem URLs `RESUME_FS_URL` and `JD_FS_URL`, `LATEX_COMPILE_API_URL` (URL of the separately deployed latex-compile-service, default `https://latex-compile.k.0x1f0c.dev`). The latex-compile service lives in its own repo at `latex-compile-service/` (to be extracted) — do not add service code here.
+- Copy `sample.env` to `.env`; required: `GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`, `OPENAI_API_KEY`. Optional overrides: `RESUME_DATA_DIR`, `RESUME_JD_DIR`, `LOGS_DIR`, `DEEPSEEK_BASE_URL`, filesystem URLs `RESUME_FS_URL` and `JD_FS_URL`, `LATEX_COMPILE_API_URL` (URL of the separately deployed latex-compile-service, default `https://latex-compile.k.0x1f0c.dev`). The latex-compile service lives in its own repo at `latex-compile-service/` (to be extracted) — do not add service code here.
 - Never commit secrets; prefer environment vars for CI. Document new keys in `project_docs.md`.
 
 ## Code Style (Python)

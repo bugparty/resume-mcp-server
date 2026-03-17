@@ -16,8 +16,6 @@ from resume_platform.resume.views import (
 )
 from resume_platform.resume.editing import (
     tailor_section_for_jd,
-    summarize_resumes_to_index,
-    read_resume_summary,
     update_resume_section,
     replace_resume_text,
     insert_resume_text,
@@ -142,13 +140,6 @@ class TailorSectionForJDInput(BaseModel):
 
 class ReadJDInput(BaseModel):
     filename: str = Field(..., description="The filename of the JD file to read, e.g., 'job1.txt'")
-
-class SummarizeResumesToIndexOutput(BaseModel):
-    yaml_path: str = Field(..., description="The path to the generated YAML file.")
-    message: str = Field(..., description="Summary of the indexing process.")
-
-class ReadResumeSummaryOutput(BaseModel):
-    content: str = Field(..., description="The content of the lightweight resume summary YAML file.")
 
 
 class RenderResumeInput(BaseModel):
@@ -420,17 +411,6 @@ def load_complete_resume_tool(version_name: str) -> str:
     """
     return load_complete_resume(version_name)
 
-def summarize_resumes_to_index_tool() -> SummarizeResumesToIndexOutput:
-    """Generate a lightweight resume_summary.yaml for quick scanning."""
-    result = summarize_resumes_to_index()
-    return SummarizeResumesToIndexOutput(**result)
-
-
-def read_resume_summary_tool() -> ReadResumeSummaryOutput:
-    """Read the content of the lightweight resume summary YAML."""
-    result = read_resume_summary()
-    return ReadResumeSummaryOutput(**result)
-
 
 def set_section_visibility_tool(version_name: str, section_id: str, enabled: bool = True) -> str:
     """Enable or disable a section by updating style.section_disabled."""
@@ -664,20 +644,6 @@ tools = [
         name="ReadJDFile",
         description="Reads a job description file from the data/jd directory. Input: - filename: JD filename (e.g., 'job1.txt') Function: Reads and returns the content of the specified job description file Note: Only .txt files are supported",
         args_schema=ReadJDInput,
-        return_direct=False,
-    ),
-    StructuredTool.from_function(
-        func=summarize_resumes_to_index_tool,
-        name="SummarizeResumesToIndex",
-        description="Aggregates resume metadata into resume_summary.yaml for quick scanning.",
-        args_schema=EmptyInput,
-        return_direct=False,
-    ),
-    StructuredTool.from_function(
-        func=read_resume_summary_tool,
-        name="ReadResumeSummary",
-        description="Reads the lightweight resume summary YAML and returns it as text.",
-        args_schema=EmptyInput,
         return_direct=False,
     ),
     StructuredTool.from_function(

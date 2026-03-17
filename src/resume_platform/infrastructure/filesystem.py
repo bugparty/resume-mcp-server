@@ -1,14 +1,15 @@
 """
 Filesystem abstraction layer using PyFilesystem2.
 
-This module provides a unified interface for file operations, supporting
-local filesystem and future S3 integration through configuration.
+This module provides a unified interface for file operations across local,
+memory, and S3 backends.
 """
 
 from __future__ import annotations
 
 from typing import Optional
 import warnings
+from pathlib import Path
 warnings.filterwarnings(
     "ignore",
     message="pkg_resources is deprecated as an API",
@@ -26,6 +27,14 @@ warnings.filterwarnings(
 from fs.base import FS
 from fs.osfs import OSFS
 from fs.memoryfs import MemoryFS
+from fs import open_fs
+
+
+def _join_fs_url(base_url: str, child: str) -> str:
+    """Join a backend URL/path with a child segment."""
+    if base_url.startswith(("s3://", "mem://")):
+        return f"{base_url.rstrip('/')}/{child.strip('/')}"
+    return str(Path(base_url) / child)
 
 
 def create_filesystem(fs_url: str) -> FS:
@@ -33,26 +42,31 @@ def create_filesystem(fs_url: str) -> FS:
     Create a filesystem instance based on the provided URL.
     
     Args:
-        fs_url: Filesystem URL. Supported formats:
-               - Local path: "/path/to/directory"
-               - Memory filesystem: "mem://" (for testing)
-               - S3 (future): "s3://bucket/path"
+         fs_url: Filesystem URL. Supported formats:
+             - Local path: "/path/to/directory"
+             - Memory filesystem: "mem://" (for testing)
+             - S3: "s3://bucket/path" (requires fs-s3fs)
     
     Returns:
         FS: A PyFilesystem2 filesystem instance
         
     Raises:
-        NotImplementedError: For unsupported filesystem types
         ValueError: For invalid URLs
     """
     if not fs_url:
         raise ValueError("Filesystem URL cannot be empty")
         
     if fs_url.startswith("s3://"):
-        # Future S3 implementation
-        # from fs.s3fs import S3FS
-        # return S3FS.from_url(fs_url)
-        raise NotImplementedError("S3 filesystem not implemented yet")
+        try:
+            # Ensure S3 opener is registered for `open_fs("s3://...")`.
+            import fs_s3fs  # noqa: F401
+        except ImportError as exc:
+            raise RuntimeError(
+                "S3 filesystem support requires package 'fs-s3fs'. "
+                "Install it with: uv add fs-s3fs"
+            ) from exc
+
+        return open_fs(fs_url, create=True)
     elif fs_url.startswith("mem://"):
         # Memory filesystem for testing
         return MemoryFS()
@@ -103,11 +117,10 @@ def init_filesystems(resume_fs_url: str, jd_fs_url: str, output_fs_url: str = No
     
     # If no output_fs_url provided, create output subdirectory in resume filesystem
     if output_fs_url is None:
-        from pathlib import Path
         if resume_fs_url.startswith("mem://"):
             output_fs_url = "mem://"
         else:
-            output_fs_url = str(Path(resume_fs_url) / "output")
+            output_fs_url = _join_fs_url(resume_fs_url, "output")
     
     _output_fs = create_filesystem(output_fs_url)
 

@@ -154,7 +154,6 @@ try:
         copy_resume_version_tool,
         update_main_resume_tool,
         list_modules_in_version_tool,
-        read_resume_summary_tool,
         render_resume_to_latex_tool,
         compile_resume_pdf_tool,
         set_section_visibility_tool,
@@ -186,8 +185,6 @@ except ImportError:
         copy_resume_version_tool,
         update_main_resume_tool,
         list_modules_in_version_tool,
-        summarize_resumes_to_index_tool,
-        read_resume_summary_tool,
         render_resume_to_latex_tool,
         compile_resume_pdf_tool,
         set_section_visibility_tool,
@@ -886,18 +883,6 @@ def list_resume_sections(version_name: str) -> str:
     """
     return list_modules_in_version_tool(version_name)
 
-
-
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        openWorldHint=False,
-        idempotentHint=True))
-@log_mcp_tool_call
-def read_resume_summary() -> str:
-    """
-    Reads the lightweight resume summary YAML and returns it as text.
-    """
-    result = read_resume_summary_tool()
-    return result.content
 
 
 @mcp.tool(annotations=dict(readOnlyHint=False,

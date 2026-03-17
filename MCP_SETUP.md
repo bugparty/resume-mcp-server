@@ -180,10 +180,6 @@ Your Resume Agent is now exposed as an MCP server via FastMCP! It supports local
 - `read_jd_file` - read a JD file
 - `tailor_section_for_jd` - tailor a resume section for the JD
 
-#### Resume Summary and Index
-- `summarize_resumes_to_index` - generate resume summary index
-- `read_resume_summary` - read resume summary
-
 #### Resume Rendering
 - `render_resume_to_latex` - render to LaTeX
 - `compile_resume_pdf` - compile to PDF

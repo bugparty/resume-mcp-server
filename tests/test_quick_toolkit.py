@@ -11,8 +11,6 @@ FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "test_data"
 
 settings = load_settings(
     data_dir=os.getenv("TEST_RESUME_DATA_DIR") or (FIXTURE_ROOT / "resumes"),
-    summary_path=os.getenv("TEST_RESUME_SUMMARY_PATH")
-    or (FIXTURE_ROOT / "resume_summary.yaml"),
     jd_dir=os.getenv("TEST_RESUME_JD_DIR") or (FIXTURE_ROOT / "jd"),
 )
 
@@ -20,18 +18,11 @@ settings = load_settings(
 init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
 
 from resume_platform.resume.views import load_resume_section
-from resume_platform.resume.editing import summarize_resumes_to_index, read_resume_summary, tailor_section_for_jd
+from resume_platform.resume.editing import tailor_section_for_jd
 
 
 class TestQuickToolkit(unittest.TestCase):
-    def test_summary_and_tailor_workflow(self):
-        result = summarize_resumes_to_index()
-        self.assertIn("Summarized", result["message"])
-        self.assertTrue(Path(result["yaml_path"]).exists())
-
-        summary_content = read_resume_summary()["content"]
-        self.assertIn("resume", summary_content)
-
+    def test_tailor_workflow(self):
         section_output = load_resume_section("resume/summary")
         _, markdown = section_output.split("\n\n", 1)
 

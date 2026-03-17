@@ -17,8 +17,6 @@ FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "test_data"
 
 settings = load_settings(
     data_dir=os.getenv("TEST_RESUME_DATA_DIR") or (FIXTURE_ROOT / "resumes"),
-    summary_path=os.getenv("TEST_RESUME_SUMMARY_PATH")
-    or (FIXTURE_ROOT / "resume_summary.yaml"),
     jd_dir=os.getenv("TEST_RESUME_JD_DIR") or (FIXTURE_ROOT / "jd"),
 )
 
@@ -31,8 +29,6 @@ from resume_platform.resume.editing import (
     replace_resume_text,
     insert_resume_text,
     delete_resume_text,
-    summarize_resumes_to_index,
-    read_resume_summary,
     create_new_version,
 )
 from resume_platform.resume.repository import find_resume_versions, set_section_order
@@ -57,14 +53,6 @@ class TestResumeOperations(unittest.TestCase):
 
         # restore original content to keep fixture clean
         update_resume_section("resume/summary", original_markdown)
-
-    def test_summary_generation_and_read_yaml(self):
-        result = summarize_resumes_to_index()
-        self.assertTrue(Path(result["yaml_path"]).exists())
-
-        content = read_resume_summary()["content"]
-        self.assertIn("resumes:", content)
-
 
 class TestResumeOperationsE2E(unittest.TestCase):
     def setUp(self):

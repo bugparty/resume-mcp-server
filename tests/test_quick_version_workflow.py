@@ -10,8 +10,6 @@ FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "test_data"
 
 settings = load_settings(
     data_dir=os.getenv("TEST_RESUME_DATA_DIR") or (FIXTURE_ROOT / "resumes"),
-    summary_path=os.getenv("TEST_RESUME_SUMMARY_PATH")
-    or (FIXTURE_ROOT / "resume_summary.yaml"),
     jd_dir=os.getenv("TEST_RESUME_JD_DIR") or (FIXTURE_ROOT / "jd"),
 )
 

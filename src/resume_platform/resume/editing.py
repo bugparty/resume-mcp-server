@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import copy
 import re
-import warnings
 from pathlib import Path
 from typing import Any, Dict, List, Literal
 
@@ -11,7 +10,6 @@ from langchain_core.messages import HumanMessage
 
 from resume_platform.infrastructure.filesystem import get_resume_fs
 from resume_platform.infrastructure.llm_config import get_llm
-from resume_platform.infrastructure.settings import get_settings
 from resume_platform.resume_input_parser import (
     SECTION_PARSERS,
     parse_header_markdown,
@@ -19,14 +17,9 @@ from resume_platform.resume_input_parser import (
 )
 
 from .repository import (
-    SUMMARY_MAX_BULLETS,
-    SUMMARY_MAX_ENTRIES,
-    SUMMARY_MAX_SKILLS,
-    _dedupe_preserve_order,
     _load_resume,
     _resume_filename,
     _save_resume,
-    find_resume_versions,
 )
 from .views import (
     FORMAT_INSTRUCTION_COMMENT,
@@ -488,81 +481,6 @@ def tailor_complete_resume(main_resume_filename: str, jd_analysis: str) -> Dict[
             "tailored": tailor_section_for_jd(f"{version}/{section_id}", markdown, jd_analysis),
         }
     return result
-
-
-def summarize_resumes_to_index() -> Dict[str, Any]:
-    settings = get_settings()
-    summary_path = settings.summary_path
-    summaries = []
-    for version in find_resume_versions():
-        data = _load_resume(version)
-        metadata = data.get("metadata", {})
-        sections = data.get("sections", [])
-        summary_bullets: List[str] = []
-        skills: List[str] = []
-        entries: List[str] = []
-        for section in sections:
-            section_type = section.get("type")
-            if section_type == "summary":
-                summary_bullets.extend(section.get("bullets", []))
-            elif section_type == "skills":
-                for group in section.get("groups", []):
-                    skills.extend(group.get("items", []))
-            elif section_type in {"experience", "projects"}:
-                for entry in section.get("entries", []):
-                    title = (entry.get("title") or "").strip()
-                    organization = (entry.get("organization") or "").strip()
-                    if title and organization:
-                        entries.append(f"{title} - {organization}")
-                    elif title:
-                        entries.append(title)
-                    elif organization:
-                        entries.append(organization)
-        summaries.append(
-            {
-                "version": version,
-                "metadata": {
-                    key: metadata.get(key)
-                    for key in ["position", "email", "mobile", "github", "linkedin"]
-                    if metadata.get(key)
-                },
-                "highlights": {
-                    "summary": _dedupe_preserve_order(summary_bullets, SUMMARY_MAX_BULLETS),
-                    "skills": _dedupe_preserve_order(skills, SUMMARY_MAX_SKILLS),
-                    "entries": _dedupe_preserve_order(entries, SUMMARY_MAX_ENTRIES),
-                },
-            }
-        )
-    payload = {"resumes": summaries}
-    summary_path.parent.mkdir(parents=True, exist_ok=True)
-    with summary_path.open("w", encoding="utf-8") as handle:
-        yaml.safe_dump(payload, handle, allow_unicode=True, sort_keys=False)
-    return {"yaml_path": str(summary_path), "message": f"Summarized {len(summaries)} resumes."}
-
-
-def read_resume_summary() -> Dict[str, str]:
-    summary_path = get_settings().summary_path
-    if not summary_path.exists():
-        raise FileNotFoundError("File resume_summary.yaml not found.")
-    return {"content": summary_path.read_text(encoding="utf-8")}
-
-
-def aggregate_resumes_to_yaml() -> Dict[str, Any]:  # pragma: no cover - legacy shim
-    warnings.warn(
-        "aggregate_resumes_to_yaml is deprecated; use summarize_resumes_to_index instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return summarize_resumes_to_index()
-
-
-def read_aggregated_resumes_yaml() -> Dict[str, str]:  # pragma: no cover - legacy shim
-    warnings.warn(
-        "read_aggregated_resumes_yaml is deprecated; use read_resume_summary instead.",
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    return read_resume_summary()
 
 
 def read_file_content(file_path: str, max_length: int = 0) -> str:

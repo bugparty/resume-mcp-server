@@ -49,8 +49,6 @@ Uses LangChain + custom tool functions to form a ReAct Agent architecture.
 - `update_main_resume`: Update the main resume file content
 - `read_jd_file`: Read job description file
 - `load_complete_resume`: Load complete resume content
-- `summarize_resumes_to_index`: Extract resume metadata to generate a lightweight index
-- `read_resume_summary`: Read the lightweight resume index file
 
 ## Example Call
 User Input:
