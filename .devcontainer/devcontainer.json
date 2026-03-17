@@ -1,15 +1,14 @@
 {
   "name": "Python Workspace",
-  "dockerComposeFile": "../docker-compose.yml",
-  "service": "devcontainer",
-  "workspaceFolder": "/workspace",
-  "shutdownAction": "stopCompose",
-  "containerEnv": {
-    "VIRTUAL_ENV": ""
+  "build": {
+    "dockerfile": "Dockerfile.base"
   },
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind",
+  "shutdownAction": "stopContainer",
   "remoteUser": "vscode",
   "mounts": [
-    "source=${localEnv:USERPROFILE}/.codex,target=/home/vscode/.codex,type=bind"
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.codex,target=/home/vscode/.codex,type=bind"
   ],
   "remoteEnv": {
     "CODEX_HOME": "/home/vscode/.codex",
