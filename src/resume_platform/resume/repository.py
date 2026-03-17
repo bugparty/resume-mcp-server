@@ -112,8 +112,12 @@ def _get_section(
     sections = [section.get("id") for section in sections]
     all_available_section_ids = ", ".join(sections)
     closer_sections = rapidfuzz.process.extract(section_id, sections, limit=1)
-    closer_section_ids = [section[0] for section in closer_sections]
-    error_message = f"Section '{section_id}' not found, did you mean '{closer_section_ids[0]}'?, all available section ids are: {all_available_section_ids}"
+
+    if closer_sections:
+        closer_section_ids = [section[0] for section in closer_sections]
+        error_message = f"Section '{section_id}' not found, did you mean '{closer_section_ids[0]}'?, all available section ids are: {all_available_section_ids}"
+    else:
+        error_message = f"Section '{section_id}' not found, no close match found. Available section ids are: {all_available_section_ids}"
     raise KeyError(error_message)
 
 
