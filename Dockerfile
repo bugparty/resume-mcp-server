@@ -6,10 +6,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     fonts-noto fonts-noto-cjk fonts-noto-color-emoji \
  && rm -rf /var/lib/apt/lists/*
 
-# Install cloudflared (official Debian repo provides a static binary via GitHub as well)
-RUN curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /usr/local/bin/cloudflared \
- && chmod +x /usr/local/bin/cloudflared
-
 # Install uv for fast Python dependency management
 RUN pip install --no-cache-dir uv
 
@@ -17,7 +13,7 @@ WORKDIR /app
 
 # Copy project files
 COPY pyproject.toml uv.lock* ./
-RUN uv venv && . .venv/bin/activate && uv sync --frozen
+RUN uv venv && . .venv/bin/activate && uv sync --frozen --no-install-project
 
 COPY . .
 
