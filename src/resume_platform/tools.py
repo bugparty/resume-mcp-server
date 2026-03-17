@@ -396,7 +396,7 @@ def update_main_resume_tool(version_name: str, file_content: str) -> str:
     - file_content: New resume content
     Note: When modifying submodules after creating a new version, update their include paths here first
     """
-    result = update_main_resume(file_name, file_content)
+    result = update_main_resume(version_name, file_content)
     mark_index_stale("update_main_resume")
     return result
 
