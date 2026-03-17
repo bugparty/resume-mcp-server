@@ -113,8 +113,8 @@ class EntriesSection(Section):
         """Validate if section meets schema requirements"""
         valid = len(self.entries) > 0
 
-        # Validate title based on id
-        if self.id == "experience":
+        # Validate title based on type
+        if self.type == SectionType.EXPERIENCE:
             valid = (
                 valid and "Experience" in self.title and "Projects" not in self.title
             )
