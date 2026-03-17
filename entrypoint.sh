@@ -63,7 +63,7 @@ if ! python -c 'import starlette' >/dev/null 2>&1; then
 fi
 
 # Start MCP server bound to all interfaces for container networking
-python -c 'import sys; import os; sys.path.insert(0, "/app/src"); from resume_platform.mcp_server import main; main(transport="http", port=8000)'
+python -c 'import sys; import os; sys.path.insert(0, "/app/src"); from resume_platform.interfaces.mcp.server import main; main(transport="http", port=8000)'
 
 # If MCP server exits, stop cloudflared
 if kill -0 ${CLOUDFLARED_PID} 2>/dev/null; then
