@@ -1,5 +1,8 @@
 FROM python:3.12-slim
 
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+
 # Install system dependencies and tools
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     curl ca-certificates gnupg unzip \
