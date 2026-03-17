@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import logging
 import os
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
 
 import rapidfuzz
 import yaml
+from fs.errors import FSError
 
 from resume_platform.infrastructure.filesystem import get_resume_fs
+
+logger = logging.getLogger(__name__)
 
 SUMMARY_MAX_BULLETS = 3
 SUMMARY_MAX_SKILLS = 12
@@ -81,7 +85,8 @@ def find_resume_versions() -> List[str]:
         # Get all yaml files and extract their stems (names without extension)
         yaml_files = [name for name in resume_fs.listdir(".") if name.endswith(".yaml")]
         return sorted(name[:-5] for name in yaml_files)  # Remove .yaml extension
-    except Exception:
+    except FSError as e:
+        logger.warning("Could not list resume versions: %s", e)
         return []
 
 
