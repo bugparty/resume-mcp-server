@@ -109,7 +109,7 @@ def _get_section(
         if section.get("id") == section_id:
             return data, section
     sections = data.get("sections", [])
-    sections = [section.get("id") for section in sections]
+    sections = [str(section.get("id")) for section in sections if section.get("id") is not None]
     all_available_section_ids = ", ".join(sections)
     closer_sections = rapidfuzz.process.extract(section_id, sections, limit=1)
 
