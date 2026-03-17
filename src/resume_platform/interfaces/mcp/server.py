@@ -265,8 +265,26 @@ def _ensure_server_filesystems_initialized() -> None:
 
     try:
         init_filesystems(resume_fs_url, jd_fs_url)
-    except Exception:
-        init_filesystems("mem://", "mem://")
+    except Exception as exc:
+        allow_fallback = (
+            os.getenv("RESUME_ALLOW_MEM_FS_FALLBACK", "").strip().lower()
+            in {"1", "true", "yes", "on"}
+        )
+        logger.exception(
+            "Failed to initialize filesystems. resume_fs_url=%s jd_fs_url=%s",
+            resume_fs_url,
+            jd_fs_url,
+        )
+        if allow_fallback:
+            logger.warning(
+                "RESUME_ALLOW_MEM_FS_FALLBACK is enabled; falling back to mem:// filesystems."
+            )
+            init_filesystems("mem://", "mem://")
+            return
+        raise RuntimeError(
+            "Filesystem initialization failed. Check RESUME_FS_URL/JD_FS_URL and S3 credentials. "
+            "Set RESUME_ALLOW_MEM_FS_FALLBACK=true only for temporary debugging."
+        ) from exc
 
 
 _ensure_server_filesystems_initialized()
