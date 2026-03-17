@@ -21,34 +21,39 @@ if [ -f "/app/.env" ]; then
   set +a
 fi
 
-# Start Cloudflare tunnel in the background and capture the public URL
-LOCAL_URL="http://localhost:8000"
-echo "Launching Cloudflare tunnel to ${LOCAL_URL}..."
-TUNNEL_LOG="/tmp/cloudflared.log"
-cloudflared tunnel --no-autoupdate --url "${LOCAL_URL}" --metrics localhost:0 >"${TUNNEL_LOG}" 2>&1 &
-CLOUDFLARED_PID=$!
-
-# Wait for the URL to appear in logs
+# Start Cloudflare tunnel in the background and capture the public URL (optional)
 TUNNEL_URL=""
-echo "Waiting for Cloudflare public URL..."
-for i in {1..60}; do
-  if grep -Eo 'https://[a-zA-Z0-9.-]+\.trycloudflare\.com' "${TUNNEL_LOG}" >/dev/null 2>&1; then
-    TUNNEL_URL=$(grep -Eo 'https://[a-zA-Z0-9.-]+\.trycloudflare\.com' "${TUNNEL_LOG}" | head -n1)
-    break
-  fi
-  sleep 1
-done
+CLOUDFLARED_PID=""
+if command -v cloudflared >/dev/null 2>&1; then
+  LOCAL_URL="http://localhost:8000"
+  echo "Launching Cloudflare tunnel to ${LOCAL_URL}..."
+  TUNNEL_LOG="/tmp/cloudflared.log"
+  cloudflared tunnel --no-autoupdate --url "${LOCAL_URL}" --metrics localhost:0 >"${TUNNEL_LOG}" 2>&1 &
+  CLOUDFLARED_PID=$!
 
-if [ -z "${TUNNEL_URL}" ]; then
-  echo "Warning: Could not detect Cloudflare URL from logs; falling back to reading entire log:"
-  echo "----- cloudflared log -----"
-  tail -n +1 "${TUNNEL_LOG}" || true
-  echo "---------------------------"
+  # Wait for the URL to appear in logs
+  echo "Waiting for Cloudflare public URL..."
+  for i in {1..60}; do
+    if grep -Eo 'https://[a-zA-Z0-9.-]+\.trycloudflare\.com' "${TUNNEL_LOG}" >/dev/null 2>&1; then
+      TUNNEL_URL=$(grep -Eo 'https://[a-zA-Z0-9.-]+\.trycloudflare\.com' "${TUNNEL_LOG}" | head -n1)
+      break
+    fi
+    sleep 1
+  done
+
+  if [ -z "${TUNNEL_URL}" ]; then
+    echo "Warning: Could not detect Cloudflare URL from logs; falling back to reading entire log:"
+    echo "----- cloudflared log -----"
+    tail -n +1 "${TUNNEL_LOG}" || true
+    echo "---------------------------"
+  else
+    # Append /mcp suffix for client configuration display
+    TUNNEL_DISPLAY_URL="${TUNNEL_URL%/}/mcp"
+    # Print in green for visibility
+    echo -e "${GREEN}Cloudflare Tunnel Ready: ${TUNNEL_DISPLAY_URL}${NC}"
+  fi
 else
-  # Append /mcp suffix for client configuration display
-  TUNNEL_DISPLAY_URL="${TUNNEL_URL%/}/mcp"
-  # Print in green for visibility
-  echo -e "${GREEN}Cloudflare Tunnel Ready: ${TUNNEL_DISPLAY_URL}${NC}"
+  echo "cloudflared not found, skipping tunnel. MCP server will be available locally only."
 fi
 
 echo
@@ -65,8 +70,8 @@ fi
 # Start MCP server bound to all interfaces for container networking
 python -c 'import sys; import os; sys.path.insert(0, "/app/src"); from resume_platform.interfaces.mcp.server import main; main(transport="http", port=8000)'
 
-# If MCP server exits, stop cloudflared
-if kill -0 ${CLOUDFLARED_PID} 2>/dev/null; then
+# If MCP server exits, stop cloudflared if it was started
+if [ -n "${CLOUDFLARED_PID}" ] && kill -0 ${CLOUDFLARED_PID} 2>/dev/null; then
   kill ${CLOUDFLARED_PID} || true
 fi
 
