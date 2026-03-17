@@ -1,0 +1,723 @@
+{
+  "server": {
+    "name": "Resume Agent Tools",
+    "instructions": null,
+    "version": null,
+    "generation": 2,
+    "capabilities": {
+      "tools": {
+        "listChanged": true
+      },
+      "resources": {
+        "subscribe": false,
+        "listChanged": false
+      },
+      "prompts": {
+        "listChanged": false
+      },
+      "logging": {}
+    }
+  },
+  "environment": {
+    "fastmcp": "2.12.4",
+    "mcp": "1.17.0"
+  },
+  "tools": [
+    {
+      "key": "list_data_directory",
+      "name": "list_data_directory",
+      "description": "List contents of the data directory or a subdirectory within it.\n\nArgs:\n    path: Relative path within the data directory (empty string for root)\n\nReturns:\n    JSON string containing directory listing with file/folder info",
+      "input_schema": {
+        "properties": {
+          "path": {
+            "default": "",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      },
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": null,
+        "openWorldHint": null
+      },
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    },
+    {
+      "key": "list_resume_versions",
+      "name": "list_resume_versions",
+      "description": "Lists all available resume versions stored as YAML files.\n\nReturns:\n    JSON string containing the version names and total count.",
+      "input_schema": {
+        "properties": {},
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      },
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": null,
+        "openWorldHint": null
+      },
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    },
+    {
+      "key": "load_complete_resume",
+      "name": "load_complete_resume",
+      "description": "Renders the full resume as Markdown.\n\nArgs:\n    version_name: Resume version name WITHOUT .yaml extension (e.g., 'resume')",
+      "input_schema": {
+        "properties": {
+          "version_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_name"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      },
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": null,
+        "openWorldHint": null
+      },
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    },
+    {
+      "key": "get_resume_section",
+      "name": "get_resume_section",
+      "description": "Load a specific section from a resume file.\n\nArgs:\n    version_name: Resume file name WITHOUT .yaml extension (e.g., 'resume')\n    section_id: Section identifier to load (must be one of: header, summary, \n               skills, experience, projects, education, custom)\n\nReturns:\n    Markdown content of the requested section\n    \nExample:\n    get_resume_section(version_name=\"resume\", section_id=\"summary\")",
+      "input_schema": {
+        "properties": {
+          "version_name": {
+            "type": "string"
+          },
+          "section_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_name",
+          "section_id"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      },
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": null,
+        "openWorldHint": null
+      },
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    },
+    {
+      "key": "update_resume_section",
+      "name": "update_resume_section",
+      "description": "Update a specific section in a resume file with new Markdown content.\n\nArgs:\n    version_name: Resume file name WITHOUT .yaml extension (e.g., 'resume')\n    section_id: Section identifier to update (must be one of: header, summary,\n               skills, experience, projects, education, custom)\n    new_content: New Markdown content for the section\n\nReturns:\n    Success or error message\n    \nImportant:\n    - Input must be in Markdown format\n    - Cannot update entire resume at once\n    - Must update ONE section at a time\n    \nSee get_resume_yaml_format() for content format examples.",
+      "input_schema": {
+        "properties": {
+          "version_name": {
+            "type": "string"
+          },
+          "section_id": {
+            "type": "string"
+          },
+          "new_content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_name",
+          "section_id",
+          "new_content"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      },
+      "annotations": null,
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    },
+    {
+      "key": "set_section_visibility",
+      "name": "set_section_visibility",
+      "description": "Enable or disable rendering of a specific section in a resume version.\n\nArgs:\n    version: Resume version name (without .yaml)\n    section_id: Section id to toggle (e.g., 'summary', 'experience')\n    enabled: True to show, False to hide",
+      "input_schema": {
+        "properties": {
+          "version_name": {
+            "type": "string"
+          },
+          "section_id": {
+            "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "version_name",
+          "section_id"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      },
+      "annotations": null,
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    },
+    {
+      "key": "set_section_order",
+      "name": "set_section_order",
+      "description": "Set the rendering order of sections for a resume version.\n\nArgs:\n    version: Resume version name (without .yaml)\n    order: List of section ids in desired order; unknown ids are skipped and remaining sections are appended automatically.",
+      "input_schema": {
+        "properties": {
+          "version_name": {
+            "type": "string"
+          },
+          "order": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "version_name",
+          "order"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      },
+      "annotations": null,
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    },
+    {
+      "key": "get_resume_layout",
+      "name": "get_resume_layout",
+      "description": "Get current section order and disabled flags for a resume version.",
+      "input_schema": {
+        "properties": {
+          "version_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_name"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      },
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": null,
+        "openWorldHint": null
+      },
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    },
+    {
+      "key": "create_new_version",
+      "name": "create_new_version",
+      "description": "Creates a new resume version by copying the default YAML template.\n\nArgs:\n    new_version_name: The name for the new resume version (e.g., 'resume_for_google')",
+      "input_schema": {
+        "properties": {
+          "new_version_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "new_version_name"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      },
+      "annotations": null,
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    },
+    {
+      "key": "delete_resume_version",
+      "name": "delete_resume_version",
+      "description": "Permanently deletes a resume version.\n\nArgs:\n    version_name: The name of the resume version to delete (without .yaml extension)\n\nNote:\n    - Cannot delete the base 'resume' version\n    - This operation cannot be undone\n    - Ensure you have backups if needed",
+      "input_schema": {
+        "properties": {
+          "version_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_name"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      },
+      "annotations": null,
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    },
+    {
+      "key": "copy_resume_version",
+      "name": "copy_resume_version",
+      "description": "Copies an existing resume version to a new version.\n\nArgs:\n    source_version: The name of the source resume version to copy from (without .yaml extension)\n    target_version: The name of the target resume version to copy to (without .yaml extension)\n\nNote:\n    - The source version must exist\n    - The target version must not already exist",
+      "input_schema": {
+        "properties": {
+          "source_version": {
+            "type": "string"
+          },
+          "target_version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_version",
+          "target_version"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      },
+      "annotations": null,
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    },
+    {
+      "key": "list_resume_sections",
+      "name": "list_resume_sections",
+      "description": "List all section identifiers available in a resume file.\n\nArgs:\n    version_name: Resume version name WITHOUT .yaml extension (e.g., 'resume')\n\nReturns:\n    JSON string containing section identifiers and their types\n    \nExample output:\n    {\n        \"sections\": [\n            {\"id\": \"header\", \"type\": \"header\"},\n            {\"id\": \"summary\", \"type\": \"summary\"},\n            {\"id\": \"skills\", \"type\": \"skills\"},\n            {\"id\": \"experience\", \"type\": \"entries\"},\n            {\"id\": \"projects\", \"type\": \"entries\"},\n            {\"id\": \"education\", \"type\": \"entries\"},\n            {\"id\": \"additional\", \"type\": \"raw\"}\n        ],\n        \"total\": 7\n    }",
+      "input_schema": {
+        "properties": {
+          "version_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_name"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      },
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": null,
+        "openWorldHint": null
+      },
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    },
+    {
+      "key": "summarize_resumes_to_index",
+      "name": "summarize_resumes_to_index",
+      "description": "Aggregates resume metadata into resume_summary.yaml for quick scanning.\n\nReturns:\n    Dictionary with yaml_path and message about the indexing process",
+      "input_schema": {
+        "properties": {},
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "annotations": null,
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    },
+    {
+      "key": "read_resume_summary",
+      "name": "read_resume_summary",
+      "description": "Reads the lightweight resume summary YAML and returns it as text.",
+      "input_schema": {
+        "properties": {},
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      },
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": null,
+        "openWorldHint": null
+      },
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    },
+    {
+      "key": "get_resume_yaml_format",
+      "name": "get_resume_yaml_format",
+      "description": "Returns comprehensive documentation about the Resume YAML format including schema and examples.\n\nThis function provides:\n1. The JSON schema that validates resume YAML files\n2. A complete example of a properly formatted resume YAML\n3. Detailed explanations of each section type\n\nUse this before calling update_main_resume to understand the required YAML structure.",
+      "input_schema": {
+        "properties": {},
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "result": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "type": "object",
+        "x-fastmcp-wrap-result": true
+      },
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": null,
+        "openWorldHint": null
+      },
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    },
+    {
+      "key": "render_resume_pdf",
+      "name": "render_resume_pdf",
+      "description": "Render a resume version directly to PDF file. **This is a WRITE tool** because it\ngenerates a new PDF under data/output.\n\nThis function combines LaTeX generation and PDF compilation in one step,\npersists the PDF to the configured output filesystem, uploads the file to\nthe configured S3-compatible storage, and returns a public download link\nfor downstream clients.\n\nArgs:\n    version_name: Resume version name without extension (e.g., 'resume')\n\nReturns:\n    Dictionary with keys:\n    - `public_url`: Direct URL to download the uploaded PDF.\n    - `filename`: Suggested filename (including `.pdf` extension) for the rendered resume.\n    - `pdf_path`: Filesystem URI for the saved PDF.\n    - `latex_assets_dir`: Optional directory containing LaTeX sources for debugging.",
+      "input_schema": {
+        "properties": {
+          "version_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_name"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "type": "object"
+      },
+      "annotations": null,
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    },
+    {
+      "key": "submit_resume_pdf_job",
+      "name": "submit_resume_pdf_job",
+      "description": "Submit an async resume render+compile job.\n\nThis tool renders LaTeX, uploads the LaTeX and assets bundle to S3, and\nenqueues a Celery job for PDF compilation. It returns job/task identifiers.",
+      "input_schema": {
+        "properties": {
+          "version_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_name"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "type": "object"
+      },
+      "annotations": null,
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    },
+    {
+      "key": "get_resume_pdf_job_status",
+      "name": "get_resume_pdf_job_status",
+      "description": "Query the status of an async resume PDF job by Celery task id.",
+      "input_schema": {
+        "properties": {
+          "task_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_id"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "type": "object"
+      },
+      "annotations": {
+        "title": null,
+        "readOnlyHint": true,
+        "destructiveHint": null,
+        "idempotentHint": null,
+        "openWorldHint": null
+      },
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    },
+    {
+      "key": "render_resume_to_overleaf",
+      "name": "render_resume_to_overleaf",
+      "description": "Render a resume version to a LaTeX project suitable for Overleaf import.\n\nThis tool generates the LaTeX sources without compiling them, bundles the\nassets into a ZIP archive, uploads the archive to S3-compatible storage, and\nreturns an Overleaf import URL.\n\nArgs:\n    version_name: Resume version name without extension (e.g., 'resume')\n\nReturns:\n    Dictionary with keys:\n    - `overleaf_url`: Direct link that opens the project in Overleaf via snip URI.\n    - `public_url`: Public URL of the uploaded ZIP archive.\n    - `filename`: Name of the ZIP archive stored in output storage.\n    - `zip_path`: Filesystem URI for the saved ZIP archive.\n    - `latex_assets_dir`: Directory containing the LaTeX sources for debugging.",
+      "input_schema": {
+        "properties": {
+          "version_name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_name"
+        ],
+        "type": "object"
+      },
+      "output_schema": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "type": "object"
+      },
+      "annotations": null,
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    }
+  ],
+  "prompts": [
+    {
+      "key": "resume_agent_prompt",
+      "name": "resume_agent_prompt",
+      "description": "System prompt for the Resume Agent MCP Server.\n\nThis prompt guides AI assistants on how to use this server effectively\nfor resume management and job application optimization.",
+      "arguments": null,
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    }
+  ],
+  "resources": [],
+  "templates": [
+    {
+      "key": "data://{path}",
+      "uri_template": "data://{path}",
+      "name": "read_data_file",
+      "description": "Read files from the data directory.\n\nArgs:\n    path: Relative path within the data directory\n\nReturns:\n    File content as string for text files, bytes for binary files",
+      "mime_type": "text/plain",
+      "parameters": {
+        "properties": {
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "type": "object"
+      },
+      "annotations": null,
+      "tags": null,
+      "enabled": true,
+      "title": null,
+      "meta": null
+    }
+  ]
+}

@@ -18,6 +18,7 @@ import zipfile
 from pathlib import Path
 import mimetypes
 from urllib.parse import quote
+from enum import Enum
 from typing import Union, Callable
 from functools import wraps
 from contextlib import asynccontextmanager
@@ -53,6 +54,27 @@ from fastmcp.server.context import reset_transport, set_transport
 # Configure logging for MCP server
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+class ResumeSectionId(str, Enum):
+    """Enumeration of valid resume section identifiers.
+    
+    Available sections:
+        HEADER: Personal information (name, contact, links)
+        SUMMARY: Professional summary/bio
+        SKILLS: Technical skills organized by category
+        EXPERIENCE: Work history
+        PROJECTS: Personal or open-source projects
+        EDUCATION: Academic background
+        CUSTOM: Custom/free-form content (e.g., languages, interests)
+    """
+    
+    HEADER = "header"
+    SUMMARY = "summary"
+    SKILLS = "skills"
+    EXPERIENCE = "experience"
+    PROJECTS = "projects"
+    EDUCATION = "education"
+    CUSTOM = "raw"  # Maps to 'raw' type in YAML schema
 
 
 def log_mcp_tool_call(func: Callable) -> Callable:
@@ -121,7 +143,7 @@ try:
     from resume_platform.tools import (
         list_resume_versions_tool,
         load_complete_resume_tool,
-        load_resume_section_tool,
+        get_resume_section_tool,
         read_resume_text_tool,
         update_resume_section_tool,
         replace_resume_text_tool,
@@ -137,7 +159,7 @@ try:
         compile_resume_pdf_tool,
         set_section_visibility_tool,
         set_section_order_tool,
-        get_section_style_tool,
+        get_resume_layout_tool,
         build_vector_index_tool,
         search_resume_entries_tool,
         get_vector_index_status_tool,
@@ -153,7 +175,7 @@ except ImportError:
     from resume_platform.tools import (
         list_resume_versions_tool,
         load_complete_resume_tool,
-        load_resume_section_tool,
+        get_resume_section_tool,
         read_resume_text_tool,
         update_resume_section_tool,
         replace_resume_text_tool,
@@ -170,7 +192,7 @@ except ImportError:
         compile_resume_pdf_tool,
         set_section_visibility_tool,
         set_section_order_tool,
-        get_section_style_tool,
+        get_resume_layout_tool,
         build_vector_index_tool,
         search_resume_entries_tool,
         get_vector_index_status_tool,
@@ -542,28 +564,36 @@ def list_resume_versions() -> str:
         idempotentHint=True,
         openWorldHint=False))
 @log_mcp_tool_call
-def load_complete_resume(filename: str) -> str:
+def load_complete_resume(version_name: str) -> str:
     """
     Renders the full resume as Markdown.
 
     Args:
-        filename: Resume YAML filename (e.g., 'resume.yaml')
+        version_name: Resume version name WITHOUT .yaml extension (e.g., 'resume')
     """
-    return load_complete_resume_tool(filename)
+    return load_complete_resume_tool(version_name)
 
 
 @mcp.tool(annotations=dict(readOnlyHint=True,
         idempotentHint=True,
         openWorldHint=False))
 @log_mcp_tool_call
-def load_resume_section(module_path: str) -> str:
+def get_resume_section(version_name: str, section_id: str) -> str:
     """
-    Loads the Markdown content of a specific resume section.
-
+    Load a specific section from a resume file.
+    
     Args:
-        module_path: Version/section identifier (e.g., 'resume/summary')
+        version_name: Resume file name WITHOUT .yaml extension (e.g., 'resume')
+        section_id: Section identifier to load (must be one of: header, summary, 
+                   skills, experience, projects, education, custom)
+    
+    Returns:
+        Markdown content of the requested section
+        
+    Example:
+        get_resume_section(version_name="resume", section_id="summary")
     """
-    return load_resume_section_tool(module_path)
+    return get_resume_section_tool(version_name, section_id)
 
 
 @mcp.tool(annotations=dict(readOnlyHint=True,
@@ -637,76 +667,50 @@ def delete_resume_text(target_path: str, old_text: str) -> str:
         idempotentHint=False,
         openWorldHint=False))
 @log_mcp_tool_call
-def update_resume_section(module_path: str, new_content: str) -> str:
+def update_resume_section(
+    version_name: str,
+    section_id: str,
+    new_content: str
+) -> str:
     """
-    Overwrite a resume section with new Markdown content.
-
+    Update a specific section in a resume file with new Markdown content.
+    
     Args:
-        module_path: Version/section identifier (e.g., 'resume/summary', 'resume/experience', 'resume/projects', 'resume/skills', 'resume/header')
-        new_content: Replacement Markdown preserving headings and bullet lists
+        version_name: Resume file name WITHOUT .yaml extension (e.g., 'resume')
+        section_id: Section identifier to update (must be one of: header, summary,
+                   skills, experience, projects, education, custom)
+        new_content: New Markdown content for the section
     
-    Format Examples:
-    
-    Header Section:
-        ## Header
-        first_name: John
-        last_name: Doe
-        position: Senior Software Engineer
-        address: San Francisco, CA
-        mobile: +1-234-567-8900
-        email: john.doe@example.com
-        github: github.com/johndoe
-        linkedin: linkedin.com/in/johndoe
-    
-    Summary Section:
-        ## Summary
-        - 8+ years of experience in full-stack development and cloud architecture
-        - Expert in Python, JavaScript, and distributed systems
-        - Led teams of 5-10 engineers to deliver scalable products
-    
-    Skills Section:
-        ## Skills
-        - Programming: Python, JavaScript, Go, SQL
-        - Cloud Platforms: AWS, GCP, Docker, Kubernetes
-        - Tools & Practices: Git, Jenkins, Terraform, Agile/Scrum
-        - Databases: PostgreSQL, MongoDB, Redis
-    
-    Experience Section:
-        ## Experience
-        ### Software Engineer — TechCorp Inc (San Francisco, CA) | Jan 2020 - Present
-        - Developed microservices using Python and Go
-        - Led team of 5 engineers in agile sprints
-        - Improved system performance by 40%
+    Returns:
+        Success or error message
         
-        ### Junior Developer — StartupXYZ (Remote) | Jun 2018 - Dec 2019
-        - Built REST APIs with Node.js and Express
-        - Implemented CI/CD pipelines using Jenkins
-    
-    Projects Section:
-        ## Projects
-        ### E-Commerce Platform — Personal Project (GitHub) | 2023
-        - Built full-stack web app with React and Django
-        - Integrated Stripe payment processing
-        - Deployed on AWS with Docker and Kubernetes
+    Important:
+        - Input must be in Markdown format
+        - Cannot update entire resume at once
+        - Must update ONE section at a time
         
         ### Machine Learning Pipeline — University Research | 2022
         - Developed data processing pipeline for NLP tasks
         - Achieved 95% accuracy on sentiment analysis
-    
+
     Education Section:
         ## Education
         ### Master of Science in Computer Science | Stanford University | 2016 - 2018 | Palo Alto, CA
-        
+
         ### Bachelor of Science in Computer Engineering | Stanford University | 2012 - 2016 | Palo Alto, CA
+
+    See get_resume_yaml_format() for content format examples.
     """
-    return update_resume_section_tool(module_path, new_content)
+    return update_resume_section_tool(version_name, section_id, new_content)
 
 
 @mcp.tool(annotations=dict(readOnlyHint=False,
         idempotentHint=False,
         openWorldHint=False))
 @log_mcp_tool_call
-def set_section_visibility(version: str, section_id: str, enabled: bool = True) -> str:
+def set_section_visibility(
+    version_name: str, section_id: str, enabled: bool = True
+) -> str:
     """
     Enable or disable rendering of a specific section in a resume version.
 
@@ -715,14 +719,14 @@ def set_section_visibility(version: str, section_id: str, enabled: bool = True) 
         section_id: Section id to toggle (e.g., 'summary', 'experience')
         enabled: True to show, False to hide
     """
-    return set_section_visibility_tool(version, section_id, enabled)
+    return set_section_visibility_tool(version_name, section_id, enabled)
 
 
 @mcp.tool(annotations=dict(readOnlyHint=False,
         idempotentHint=False,
         openWorldHint=False))
 @log_mcp_tool_call
-def set_section_order(version: str, order: list[str]) -> str:
+def set_section_order(version_name: str, order: list[str]) -> str:
     """
     Set the rendering order of sections for a resume version.
 
@@ -730,7 +734,7 @@ def set_section_order(version: str, order: list[str]) -> str:
         version: Resume version name (without .yaml)
         order: List of section ids in desired order; unknown ids are skipped and remaining sections are appended automatically.
     """
-    return set_section_order_tool(version, order)
+    return set_section_order_tool(version_name, order)
 
 
 @mcp.tool(annotations=dict(readOnlyHint=True,
@@ -744,7 +748,7 @@ def get_section_style(version: str) -> str:
     Args:
         version: Resume version name (without .yaml)
     """
-    return get_section_style_tool(version)
+    return get_resume_layout_tool(version)
 
 
 @mcp.tool(annotations=dict(readOnlyHint=False,
@@ -802,14 +806,31 @@ def copy_resume_version(source_version: str, target_version: str) -> str:
         idempotentHint=True,
         openWorldHint=False))
 @log_mcp_tool_call
-def list_modules_in_version(filename: str) -> str:
+def list_resume_sections(version_name: str) -> str:
     """
-    Lists all section identifiers defined in a resume YAML file.
+    List all section identifiers available in a resume file.
 
     Args:
-        filename: Resume filename (e.g., 'resume.yaml')
+        version_name: Resume version name WITHOUT .yaml extension (e.g., 'resume')
+    
+    Returns:
+        JSON string containing section identifiers and their types
+        
+    Example output:
+        {
+            "sections": [
+                {"id": "header", "type": "header"},
+                {"id": "summary", "type": "summary"},
+                {"id": "skills", "type": "skills"},
+                {"id": "experience", "type": "entries"},
+                {"id": "projects", "type": "entries"},
+                {"id": "education", "type": "entries"},
+                {"id": "additional", "type": "raw"}
+            ],
+            "total": 7
+        }
     """
-    return list_modules_in_version_tool(filename)
+    return list_modules_in_version_tool(version_name)
 
 
 
@@ -1046,7 +1067,7 @@ The following JSON schema defines the validation rules:
         idempotentHint=True,
         openWorldHint=False))
 @log_mcp_tool_call
-def render_resume_pdf(version: str) -> dict[str, str]:
+def render_resume_pdf(version_name: str) -> dict[str, str]:
     """
     Render a resume version directly to PDF file. **This is a WRITE tool** because it
     generates a new PDF under data/output.
@@ -1057,7 +1078,7 @@ def render_resume_pdf(version: str) -> dict[str, str]:
     for downstream clients.
 
     Args:
-        version: Resume version name without extension (e.g., 'resume')
+        version_name: Resume version name without extension (e.g., 'resume')
 
     Returns:
         Dictionary with keys:
@@ -1067,11 +1088,11 @@ def render_resume_pdf(version: str) -> dict[str, str]:
         - `latex_assets_dir`: Optional directory containing LaTeX sources for debugging.
     """
     # First render to LaTeX
-    latex_result = render_resume_to_latex_tool(version)
+    latex_result = render_resume_to_latex_tool(version_name)
     latex_content = latex_result.latex
 
     # Then compile to PDF - the tool now saves to data/output directory
-    pdf_result = compile_resume_pdf_tool(latex_content, version)
+    pdf_result = compile_resume_pdf_tool(latex_content, version_name)
     output_fs = get_output_fs()
 
     # Extract filename from returned resource path (e.g., data://resumes/output/foo.pdf)
@@ -1106,7 +1127,7 @@ def render_resume_pdf(version: str) -> dict[str, str]:
         idempotentHint=True,
         openWorldHint=True))
 @log_mcp_tool_call
-def render_resume_to_overleaf(version: str) -> dict[str, str]:
+def render_resume_to_overleaf(version_name: str) -> dict[str, str]:
     """
     Render a resume version to a LaTeX project suitable for Overleaf import.
 
@@ -1115,7 +1136,7 @@ def render_resume_to_overleaf(version: str) -> dict[str, str]:
     returns an Overleaf import URL.
 
     Args:
-        version: Resume version name without extension (e.g., 'resume')
+        version_name: Resume version name without extension (e.g., 'resume')
 
     Returns:
         Dictionary with keys:
@@ -1126,12 +1147,12 @@ def render_resume_to_overleaf(version: str) -> dict[str, str]:
         - `latex_assets_dir`: Directory containing the LaTeX sources for debugging.
     """
 
-    latex_result = render_resume_to_latex_tool(version)
+    latex_result = render_resume_to_latex_tool(version_name)
     latex_content = latex_result.latex
 
     timestamp = time.strftime("%Y%m%d_%H%M%S")
-    zip_filename = f"{version}_{timestamp}_overleaf.zip"
-    latex_dir_name = f"{version}_{timestamp}_latex"
+    zip_filename = f"{version_name}_{timestamp}_overleaf.zip"
+    latex_dir_name = f"{version_name}_{timestamp}_latex"
 
     template_root = PROJECT_ROOT / "templates"
     output_fs = get_output_fs()

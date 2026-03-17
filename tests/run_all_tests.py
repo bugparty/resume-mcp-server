@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-运行所有测试用例的主文件
+Main file to run all test cases
 """
 import unittest
 import sys
@@ -18,17 +18,17 @@ from tests.test_basic_functions import TestResumeBasics
 from tests.test_resume_operations import TestResumeOperations
 
 if __name__ == "__main__":
-    # 创建测试套件
+    # Create test suite
     test_suite = unittest.TestSuite()
     
-    # 添加所有测试用例
+    # Add all test cases
     test_suite.addTest(unittest.makeSuite(TestResumeBasics))
     test_suite.addTest(unittest.makeSuite(TestResumeOperations))
     # LLM-dependent JD tests removed for MCP-only setup
     
-    # 运行测试
+    # Run tests
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(test_suite)
     
-    # 返回适当的退出代码
+    # Return appropriate exit code
     sys.exit(not result.wasSuccessful())

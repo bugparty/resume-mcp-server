@@ -1,33 +1,33 @@
 #!/usr/bin/env python3
 """
-查看和分析 Markdown 解析日志的工具脚本
+Tool script for viewing and analyzing Markdown parsing logs
 """
 import sys
 from pathlib import Path
 
-# 日志文件路径
+# Log file path
 LOG_FILE = Path(__file__).resolve().parents[1] / "logs" / "markdown_parsing.log"
 
 
 def view_all_logs():
-    """显示所有日志内容"""
+    """Display all log content"""
     if not LOG_FILE.exists():
-        print(f"日志文件不存在: {LOG_FILE}")
+        print(f"Log file does not exist: {LOG_FILE}")
         return
     
-    print(f"读取日志文件: {LOG_FILE}")
+    print(f"Reading log file: {LOG_FILE}")
     print("=" * 80)
     with open(LOG_FILE, "r", encoding="utf-8") as f:
         print(f.read())
 
 
 def view_recent_logs(lines=50):
-    """显示最近的日志条目"""
+    """Display recent log entries"""
     if not LOG_FILE.exists():
-        print(f"日志文件不存在: {LOG_FILE}")
+        print(f"Log file does not exist: {LOG_FILE}")
         return
     
-    print(f"显示最近 {lines} 行日志:")
+    print(f"Displaying recent {lines} log lines:")
     print("=" * 80)
     with open(LOG_FILE, "r", encoding="utf-8") as f:
         all_lines = f.readlines()
@@ -36,12 +36,12 @@ def view_recent_logs(lines=50):
 
 
 def filter_logs_by_function(function_name):
-    """按函数名过滤日志"""
+    """Filter logs by function name"""
     if not LOG_FILE.exists():
-        print(f"日志文件不存在: {LOG_FILE}")
+        print(f"Log file does not exist: {LOG_FILE}")
         return
     
-    print(f"过滤函数: {function_name}")
+    print(f"Filtering function: {function_name}")
     print("=" * 80)
     
     with open(LOG_FILE, "r", encoding="utf-8") as f:
@@ -59,9 +59,9 @@ def filter_logs_by_function(function_name):
 
 
 def get_statistics():
-    """获取日志统计信息"""
+    """Get log statistics"""
     if not LOG_FILE.exists():
-        print(f"日志文件不存在: {LOG_FILE}")
+        print(f"Log file does not exist: {LOG_FILE}")
         return
     
     stats = {
@@ -79,39 +79,39 @@ def get_statistics():
                 if f"=== {func_name} START ===" in line:
                     stats[func_name] += 1
     
-    print("日志统计信息:")
+    print("Log Statistics:")
     print("=" * 80)
     for func_name, count in stats.items():
-        print(f"{func_name:30s}: {count:3d} 次调用")
+        print(f"{func_name:30s}: {count:3d} calls")
     print("=" * 80)
     total = sum(stats.values())
-    print(f"总计: {total} 次解析操作")
+    print(f"Total: {total} parse operations")
 
 
 def clear_logs():
-    """清空日志文件"""
+    """Clear log file"""
     if not LOG_FILE.exists():
-        print(f"日志文件不存在: {LOG_FILE}")
+        print(f"Log file does not exist: {LOG_FILE}")
         return
     
-    confirm = input(f"确定要清空日志文件 {LOG_FILE}? (yes/no): ")
+    confirm = input(f"Are you sure you want to clear log file {LOG_FILE}? (yes/no): ")
     if confirm.lower() == "yes":
         LOG_FILE.write_text("")
-        print("日志文件已清空")
+        print("Log file cleared")
     else:
-        print("操作已取消")
+        print("Operation cancelled")
 
 
 def main():
     if len(sys.argv) < 2:
-        print("用法:")
-        print(f"  {sys.argv[0]} all              - 显示所有日志")
-        print(f"  {sys.argv[0]} recent [N]       - 显示最近N行日志 (默认50)")
-        print(f"  {sys.argv[0]} filter FUNC_NAME - 按函数名过滤日志")
-        print(f"  {sys.argv[0]} stats            - 显示统计信息")
-        print(f"  {sys.argv[0]} clear            - 清空日志文件")
+        print("Usage:")
+        print(f"  {sys.argv[0]} all              - Show all logs")
+        print(f"  {sys.argv[0]} recent [N]       - Show recent N lines (default 50)")
+        print(f"  {sys.argv[0]} filter FUNC_NAME - Filter logs by function name")
+        print(f"  {sys.argv[0]} stats            - Show statistics")
+        print(f"  {sys.argv[0]} clear            - Clear log file")
         print()
-        print("示例:")
+        print("Examples:")
         print(f"  {sys.argv[0]} all")
         print(f"  {sys.argv[0]} recent 100")
         print(f"  {sys.argv[0]} filter _parse_summary_markdown")
@@ -127,7 +127,7 @@ def main():
         view_recent_logs(lines)
     elif command == "filter":
         if len(sys.argv) < 3:
-            print("错误: 请指定函数名")
+            print("Error: Please specify function name")
             return
         filter_logs_by_function(sys.argv[2])
     elif command == "stats":
@@ -135,10 +135,8 @@ def main():
     elif command == "clear":
         clear_logs()
     else:
-        print(f"未知命令: {command}")
+        print(f"Unknown command: {command}")
 
 
 if __name__ == "__main__":
     main()
-
-

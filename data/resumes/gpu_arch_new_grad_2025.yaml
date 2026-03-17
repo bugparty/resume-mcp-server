@@ -23,7 +23,7 @@ sections:
     smaller models (8B-32B) with RL, eliminating expensive ChatGPT API dependencies
     and reducing inference costs by orders of magnitude; currently pursuing Master's
     in Computer Engineering at UC Riverside.
-- type: entries
+- type: education
   entries:
   - title: Master of Science in Computer Engineering
     organization: University of California Riverside

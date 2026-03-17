@@ -33,7 +33,7 @@ sections:
   - Currently pursuing Master's in Computer Engineering at UC Riverside with focus
     on distributed systems and software engineering; passionate about building consumer-facing
     products that directly impact millions of users.
-- type: entries
+- type: education
   entries:
   - title: Master of Science in Computer Engineering
     organization: University of California Riverside
@@ -114,7 +114,7 @@ sections:
   - title: Intern Backend Engineer
     organization: Brix
     location: San Francisco, CA
-    period: Jan 2025 - Present
+    period: Jan 2025 - Feb 2026
     bullets:
     - Developed Gmail integration service using Python and FastAPI with OAuth 2.0
       authentication and Gmail API; implemented real-time email notification system
@@ -177,18 +177,23 @@ sections:
   title: Projects
   id: projects
   entries:
-  - title: Resume Editing MCP Server & Agent
-    organization: MCP Framework & LLM Agent
+  - title: Resume Agent MCP Platform
+    organization: Personal Project
     location: ''
-    period: 2024–Present
+    period: 2025 - Present
     bullets:
-    - Designed and implemented a Model Context Protocol (MCP) server specialized for
-      structured resume editing and transformation.
-    - Built a task-oriented agent capable of understanding resume semantics (projects,
-      skills, timelines) instead of treating resumes as plain text.
-    - Implemented LaTeX-aware editing ([github.com/bugparty/resume-mcp-server](https://github.com/bugparty/resume-mcp-server)),
-      ensuring commands and formatting remain valid during automated transformations.
-    - The agent plans multi-step edits (analyze → rewrite → validate → format) and
-      executes them through MCP tools rather than ad-hoc text generation.
-    - '**This resume was generated using the agent system itself**, demonstrating
-      practical end-to-end capabilities.'
+    - Built a production-oriented resume editing platform around MCP with strongly
+      constrained Markdown-to-YAML round-tripping, enabling reliable section-level
+      and whole-resume edits without breaking schema validity.
+    - Implemented semantic retrieval and RAG workflows over resume and job-description
+      data, improving targeted resume tailoring through structured search across experience,
+      projects, and skills content.
+    - Designed flexible text-editing tools with precise replace/insert/delete operations
+      on abstracted resume text views, balancing agent autonomy with strict formatting
+      and validation guarantees.
+    - Abstracted artifact persistence behind a filesystem/S3-compatible storage layer,
+      enabling portable resume, PDF, and LaTeX asset management across local and remote
+      environments.
+    - Deployed LaTeX compilation as a distributed Kubernetes-backed service with elastic
+      scaling, decoupling PDF generation from the core MCP server and improving throughput
+      and operational isolation under concurrent workloads.

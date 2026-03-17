@@ -636,6 +636,7 @@ def parse_raw_markdown(
 SECTION_PARSERS = {
     "summary": parse_summary_markdown,
     "skills": parse_skills_markdown,
+    "entries": parse_experience_markdown,  # Deprecated, use experience/projects instead
     "experience": parse_experience_markdown,
     "projects": parse_projects_markdown,
     "education": parse_education_markdown,

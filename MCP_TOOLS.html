@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Agent Tools Documentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 2rem;
+        }
+        
+        .section {
+            margin-bottom: 2.5rem;
+        }
+        
+        .section-title {
+            font-size: 1.8rem;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .summary-card {
+            background: #f7fafc;
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .summary-card .number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .summary-card .label {
+            color: #4a5568;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        
+        .tool-card {
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+        
+        .tool-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .tool-card.write {
+            border-left-color: #ed8936;
+        }
+        
+        .tool-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 0.75rem;
+        }
+        
+        .tool-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.75rem;
+            text-transform: uppercase;
+        }
+        
+        .badge-read {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .badge-write {
+            background: #ed8936;
+            color: white;
+        }
+        
+        .tool-description {
+            color: #4a5568;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+        
+        .params-section {
+            margin-top: 1rem;
+        }
+        
+        .params-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+        }
+        
+        .params-list {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .param-item {
+            background: white;
+            padding: 0.75rem;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            border-left: 3px solid #cbd5e0;
+        }
+        
+        .param-name {
+            font-family: 'Monaco', 'Consolas', Monaco, monospace;
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .param-meta {
+            color: #718096;
+            font-size: 0.85rem;
+        }
+        
+        .no-params {
+            color: #718096;
+            font-style: italic;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 1.5rem;
+            background: #f7fafc;
+            color: #718096;
+            font-size: 0.9rem;
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        
+        .section-count {
+            background: #667eea;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Resume Agent Tools</h1>
+            <p class="subtitle">MCP Version 2 - Complete API Documentation</p>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <h2 class="section-title">Summary</h2>
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <div class="number">19</div>
+                        <div class="label">Total Tools</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="number">9</div>
+                        <div class="label">Read-Only</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="number">10</div>
+                        <div class="label">Write</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="number">1</div>
+                        <div class="label">Prompts</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Read-Only Tools</h2>
+                    <span class="section-count">9 tools</span>
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-name">
+                        list_data_directory
+                        <span class="tool-badge badge-read">Read</span>
+                    </div>
+                    <div class="tool-description">
+                        List contents of the data directory or a subdirectory within it.<br><br>Args:<br>    path: Relative path within the data directory (empty string for root)<br><br>Returns:<br>    JSON string containing directory listing with file/folder info
+                    </div>
+
+                    <div class="params-section">
+                        <div class="params-title">Parameters</div>
+
+                        <li class="param-item">
+                            <span class="param-name">path</span>
+                            <span class="param-meta"> — string <span style="color: #718096;">(optional)</span>, default: <code></code></span>
+                        </li>
+
+                    </div>
+
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-name">
+                        list_resume_versions
+                        <span class="tool-badge badge-read">Read</span>
+                    </div>
+                    <div class="tool-description">
+                        Lists all available resume versions stored as YAML files.<br><br>Returns:<br>    JSON string containing the version names and total count.
+                    </div>
+
+                    <div class="params-section">
+                        <span class="no-params">No parameters</span>
+                    </div>
+
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-name">
+                        load_complete_resume
+                        <span class="tool-badge badge-read">Read</span>
+                    </div>
+                    <div class="tool-description">
+                        Renders the full resume as Markdown.<br><br>Args:<br>    version_name: Resume version name WITHOUT .yaml extension (e.g., 'resume')
+                    </div>
+
+                    <div class="params-section">
+                        <div class="params-title">Parameters</div>
+
+                        <li class="param-item">
+                            <span class="param-name">version_name</span>
+                            <span class="param-meta"> — string <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                    </div>
+
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-name">
+                        get_resume_section
+                        <span class="tool-badge badge-read">Read</span>
+                    </div>
+                    <div class="tool-description">
+                        Load a specific section from a resume file.<br><br>Args:<br>    version_name: Resume file name WITHOUT .yaml extension (e.g., 'resume')<br>    section_id: Section identifier to load (must be one of: header, summary, <br>               skills, experience, projects, education, custom)<br><br>Returns:<br>    Markdown content of the requested section<br>    <br>Example:<br>    get_resume_section(version_name="resume", section_id="summary")
+                    </div>
+
+                    <div class="params-section">
+                        <div class="params-title">Parameters</div>
+
+                        <li class="param-item">
+                            <span class="param-name">version_name</span>
+                            <span class="param-meta"> — string <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                        <li class="param-item">
+                            <span class="param-name">section_id</span>
+                            <span class="param-meta"> — string <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                    </div>
+
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-name">
+                        get_resume_layout
+                        <span class="tool-badge badge-read">Read</span>
+                    </div>
+                    <div class="tool-description">
+                        Get current section order and disabled flags for a resume version.
+                    </div>
+
+                    <div class="params-section">
+                        <div class="params-title">Parameters</div>
+
+                        <li class="param-item">
+                            <span class="param-name">version_name</span>
+                            <span class="param-meta"> — string <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                    </div>
+
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-name">
+                        list_resume_sections
+                        <span class="tool-badge badge-read">Read</span>
+                    </div>
+                    <div class="tool-description">
+                        List all section identifiers available in a resume file.<br><br>Args:<br>    version_name: Resume version name WITHOUT .yaml extension (e.g., 'resume')<br><br>Returns:<br>    JSON string containing section identifiers and their types<br>    <br>Example output:<br>    {<br>        "sections": [<br>            {"id": "header", "type": "header"},<br>            {"id": "summary", "type": "summary"},<br>            {"id": "skills", "type": "skills"},<br>            {"id": "experience", "type": "entries"},<br>            {"id": "projects", "type": "entries"},<br>            {"id": "education", "type": "entries"},<br>            {"id": "additional", "type": "raw"}<br>        ],<br>        "total": 7<br>    }
+                    </div>
+
+                    <div class="params-section">
+                        <div class="params-title">Parameters</div>
+
+                        <li class="param-item">
+                            <span class="param-name">version_name</span>
+                            <span class="param-meta"> — string <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                    </div>
+
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-name">
+                        read_resume_summary
+                        <span class="tool-badge badge-read">Read</span>
+                    </div>
+                    <div class="tool-description">
+                        Reads the lightweight resume summary YAML and returns it as text.
+                    </div>
+
+                    <div class="params-section">
+                        <span class="no-params">No parameters</span>
+                    </div>
+
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-name">
+                        get_resume_yaml_format
+                        <span class="tool-badge badge-read">Read</span>
+                    </div>
+                    <div class="tool-description">
+                        Returns comprehensive documentation about the Resume YAML format including schema and examples.<br><br>This function provides:<br>1. The JSON schema that validates resume YAML files<br>2. A complete example of a properly formatted resume YAML<br>3. Detailed explanations of each section type<br><br>Use this before calling update_main_resume to understand the required YAML structure.
+                    </div>
+
+                    <div class="params-section">
+                        <span class="no-params">No parameters</span>
+                    </div>
+
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-name">
+                        get_resume_pdf_job_status
+                        <span class="tool-badge badge-read">Read</span>
+                    </div>
+                    <div class="tool-description">
+                        Query the status of an async resume PDF job by Celery task id.
+                    </div>
+
+                    <div class="params-section">
+                        <div class="params-title">Parameters</div>
+
+                        <li class="param-item">
+                            <span class="param-name">task_id</span>
+                            <span class="param-meta"> — string <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Write Tools</h2>
+                    <span class="section-count">10 tools</span>
+                </div>
+
+                <div class="tool-card write">
+                    <div class="tool-name">
+                        update_resume_section
+                        <span class="tool-badge badge-write">Write</span>
+                    </div>
+                    <div class="tool-description">
+                        Update a specific section in a resume file with new Markdown content.<br><br>Args:<br>    version_name: Resume file name WITHOUT .yaml extension (e.g., 'resume')<br>    section_id: Section identifier to update (must be one of: header, summary,<br>               skills, experience, projects, education, custom)<br>    new_content: New Markdown content for the section<br><br>Returns:<br>    Success or error message<br>    <br>Important:<br>    - Input must be in Markdown format<br>    - Cannot update entire resume at once<br>    - Must update ONE section at a time<br>    <br>See get_resume_yaml_format() for content format examples.
+                    </div>
+
+                    <div class="params-section">
+                        <div class="params-title">Parameters</div>
+
+                        <li class="param-item">
+                            <span class="param-name">version_name</span>
+                            <span class="param-meta"> — string <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                        <li class="param-item">
+                            <span class="param-name">section_id</span>
+                            <span class="param-meta"> — string <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                        <li class="param-item">
+                            <span class="param-name">new_content</span>
+                            <span class="param-meta"> — string <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                    </div>
+
+                </div>
+
+                <div class="tool-card write">
+                    <div class="tool-name">
+                        set_section_visibility
+                        <span class="tool-badge badge-write">Write</span>
+                    </div>
+                    <div class="tool-description">
+                        Enable or disable rendering of a specific section in a resume version.<br><br>Args:<br>    version: Resume version name (without .yaml)<br>    section_id: Section id to toggle (e.g., 'summary', 'experience')<br>    enabled: True to show, False to hide
+                    </div>
+
+                    <div class="params-section">
+                        <div class="params-title">Parameters</div>
+
+                        <li class="param-item">
+                            <span class="param-name">version_name</span>
+                            <span class="param-meta"> — string <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                        <li class="param-item">
+                            <span class="param-name">section_id</span>
+                            <span class="param-meta"> — string <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                        <li class="param-item">
+                            <span class="param-name">enabled</span>
+                            <span class="param-meta"> — boolean <span style="color: #718096;">(optional)</span>, default: <code>True</code></span>
+                        </li>
+
+                    </div>
+
+                </div>
+
+                <div class="tool-card write">
+                    <div class="tool-name">
+                        set_section_order
+                        <span class="tool-badge badge-write">Write</span>
+                    </div>
+                    <div class="tool-description">
+                        Set the rendering order of sections for a resume version.<br><br>Args:<br>    version: Resume version name (without .yaml)<br>    order: List of section ids in desired order; unknown ids are skipped and remaining sections are appended automatically.
+                    </div>
+
+                    <div class="params-section">
+                        <div class="params-title">Parameters</div>
+
+                        <li class="param-item">
+                            <span class="param-name">version_name</span>
+                            <span class="param-meta"> — string <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                        <li class="param-item">
+                            <span class="param-name">order</span>
+                            <span class="param-meta"> — array <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                    </div>
+
+                </div>
+
+                <div class="tool-card write">
+                    <div class="tool-name">
+                        create_new_version
+                        <span class="tool-badge badge-write">Write</span>
+                    </div>
+                    <div class="tool-description">
+                        Creates a new resume version by copying the default YAML template.<br><br>Args:<br>    new_version_name: The name for the new resume version (e.g., 'resume_for_google')
+                    </div>
+
+                    <div class="params-section">
+                        <div class="params-title">Parameters</div>
+
+                        <li class="param-item">
+                            <span class="param-name">new_version_name</span>
+                            <span class="param-meta"> — string <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                    </div>
+
+                </div>
+
+                <div class="tool-card write">
+                    <div class="tool-name">
+                        delete_resume_version
+                        <span class="tool-badge badge-write">Write</span>
+                    </div>
+                    <div class="tool-description">
+                        Permanently deletes a resume version.<br><br>Args:<br>    version_name: The name of the resume version to delete (without .yaml extension)<br><br>Note:<br>    - Cannot delete the base 'resume' version<br>    - This operation cannot be undone<br>    - Ensure you have backups if needed
+                    </div>
+
+                    <div class="params-section">
+                        <div class="params-title">Parameters</div>
+
+                        <li class="param-item">
+                            <span class="param-name">version_name</span>
+                            <span class="param-meta"> — string <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                    </div>
+
+                </div>
+
+                <div class="tool-card write">
+                    <div class="tool-name">
+                        copy_resume_version
+                        <span class="tool-badge badge-write">Write</span>
+                    </div>
+                    <div class="tool-description">
+                        Copies an existing resume version to a new version.<br><br>Args:<br>    source_version: The name of the source resume version to copy from (without .yaml extension)<br>    target_version: The name of the target resume version to copy to (without .yaml extension)<br><br>Note:<br>    - The source version must exist<br>    - The target version must not already exist
+                    </div>
+
+                    <div class="params-section">
+                        <div class="params-title">Parameters</div>
+
+                        <li class="param-item">
+                            <span class="param-name">source_version</span>
+                            <span class="param-meta"> — string <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                        <li class="param-item">
+                            <span class="param-name">target_version</span>
+                            <span class="param-meta"> — string <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                    </div>
+
+                </div>
+
+                <div class="tool-card write">
+                    <div class="tool-name">
+                        summarize_resumes_to_index
+                        <span class="tool-badge badge-write">Write</span>
+                    </div>
+                    <div class="tool-description">
+                        Aggregates resume metadata into resume_summary.yaml for quick scanning.<br><br>Returns:<br>    Dictionary with yaml_path and message about the indexing process
+                    </div>
+
+                    <div class="params-section">
+                        <span class="no-params">No parameters</span>
+                    </div>
+
+                </div>
+
+                <div class="tool-card write">
+                    <div class="tool-name">
+                        render_resume_pdf
+                        <span class="tool-badge badge-write">Write</span>
+                    </div>
+                    <div class="tool-description">
+                        Render a resume version directly to PDF file. **This is a WRITE tool** because it<br>generates a new PDF under data/output.<br><br>This function combines LaTeX generation and PDF compilation in one step,<br>persists the PDF to the configured output filesystem, uploads the file to<br>the configured S3-compatible storage, and returns a public download link<br>for downstream clients.<br><br>Args:<br>    version_name: Resume version name without extension (e.g., 'resume')<br><br>Returns:<br>    Dictionary with keys:<br>    - `public_url`: Direct URL to download the uploaded PDF.<br>    - `filename`: Suggested filename (including `.pdf` extension) for the rendered resume.<br>    - `pdf_path`: Filesystem URI for the saved PDF.<br>    - `latex_assets_dir`: Optional directory containing LaTeX sources for debugging.
+                    </div>
+
+                    <div class="params-section">
+                        <div class="params-title">Parameters</div>
+
+                        <li class="param-item">
+                            <span class="param-name">version_name</span>
+                            <span class="param-meta"> — string <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                    </div>
+
+                </div>
+
+                <div class="tool-card write">
+                    <div class="tool-name">
+                        submit_resume_pdf_job
+                        <span class="tool-badge badge-write">Write</span>
+                    </div>
+                    <div class="tool-description">
+                        Submit an async resume render+compile job.<br><br>This tool renders LaTeX, uploads the LaTeX and assets bundle to S3, and<br>enqueues a Celery job for PDF compilation. It returns job/task identifiers.
+                    </div>
+
+                    <div class="params-section">
+                        <div class="params-title">Parameters</div>
+
+                        <li class="param-item">
+                            <span class="param-name">version_name</span>
+                            <span class="param-meta"> — string <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                    </div>
+
+                </div>
+
+                <div class="tool-card write">
+                    <div class="tool-name">
+                        render_resume_to_overleaf
+                        <span class="tool-badge badge-write">Write</span>
+                    </div>
+                    <div class="tool-description">
+                        Render a resume version to a LaTeX project suitable for Overleaf import.<br><br>This tool generates the LaTeX sources without compiling them, bundles the<br>assets into a ZIP archive, uploads the archive to S3-compatible storage, and<br>returns an Overleaf import URL.<br><br>Args:<br>    version_name: Resume version name without extension (e.g., 'resume')<br><br>Returns:<br>    Dictionary with keys:<br>    - `overleaf_url`: Direct link that opens the project in Overleaf via snip URI.<br>    - `public_url`: Public URL of the uploaded ZIP archive.<br>    - `filename`: Name of the ZIP archive stored in output storage.<br>    - `zip_path`: Filesystem URI for the saved ZIP archive.<br>    - `latex_assets_dir`: Directory containing the LaTeX sources for debugging.
+                    </div>
+
+                    <div class="params-section">
+                        <div class="params-title">Parameters</div>
+
+                        <li class="param-item">
+                            <span class="param-name">version_name</span>
+                            <span class="param-meta"> — string <span style="color: #e53e3e; font-weight: bold;">(required)</span></span>
+                        </li>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Prompts</h2>
+                    <span class="section-count">1 prompts</span>
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-name">resume_agent_prompt</div>
+                    <div class="tool-description">
+                        System prompt for the Resume Agent MCP Server.<br><br>This prompt guides AI assistants on how to use this server effectively<br>for resume management and job application optimization.
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="section">
+                <div class="section-header">
+                    <h2 class="section-title">Templates</h2>
+                    <span class="section-count">1 templates</span>
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-name">read_data_file</div>
+                    <div class="tool-description">
+                        <strong>URI Template:</strong> <code>data://{path}</code><br><br>
+                        Read files from the data directory.<br><br>Args:<br>    path: Relative path within the data directory<br><br>Returns:<br>    File content as string for text files, bytes for binary files
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+        
+        <div class="footer">
+            <p>Generated by fastmcp inspect • Last updated: 2026-02-02 04:04:50</p>
+        </div>
+    </div>
+</body>
+</html>

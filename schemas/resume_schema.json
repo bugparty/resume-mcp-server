@@ -53,6 +53,7 @@
             "enum": [
               "summary",
               "skills",
+              "entries",
               "experience",
               "projects",
               "education",
@@ -232,6 +233,52 @@
                   {"required": ["groups"]},
                   {"required": ["entries"]}
                 ]
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {"type": {"const": "entries"}}
+            },
+            "then": {
+              "required": ["title", "entries"],
+              "properties": {
+                "entries": {
+                  "minItems": 1
+                }
+              },
+              "not": {
+                "anyOf": [
+                  {"required": ["bullets"]},
+                  {"required": ["groups"]},
+                  {"required": ["content"]}
+                ]
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {"id": {"const": "experience"}}
+            },
+            "then": {
+              "properties": {
+                "title": {
+                  "pattern": "^.*Experience.*$",
+                  "description": "When id is 'experience', title must contain 'Experience'"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {"id": {"const": "projects"}}
+            },
+            "then": {
+              "properties": {
+                "title": {
+                  "pattern": "^.*Projects?.*$",
+                  "description": "When id is 'projects', title must contain 'Project' or 'Projects'"
+                }
               }
             }
           }
