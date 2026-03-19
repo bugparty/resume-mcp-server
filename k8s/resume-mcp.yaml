@@ -21,10 +21,13 @@ spec:
       containers:
       - name: resume-mcp-server
         image: ghcr.io/bugparty/resume-mcp-server:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         ports:
         - containerPort: 8000
           name: http
+        env:
+        - name: FASTMCP_HOST
+          value: "0.0.0.0"
         envFrom:
         - secretRef:
             name: resume-mcp-secrets
@@ -58,3 +61,25 @@ spec:
     port: 8000
     targetPort: 8000
   type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: resume-mcp-server
+  namespace: resume-mcp
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: resume-mcp.k.0x1f0c.dev
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: resume-mcp-server
+            port:
+              number: 8000
