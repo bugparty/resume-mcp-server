@@ -470,6 +470,48 @@ class TestResumeTextEditing(unittest.TestCase):
         rendered = mcp_server.read_resume_text(self.version)
         self.assertIn("## Header", rendered)
 
+    def test_mcp_server_update_resume_section_wrapper(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        updated_markdown = "## Summary\n- Updated via MCP wrapper"
+        result = mcp_server.update_resume_section(self.version, "summary", updated_markdown)
+
+        self.assertIn(f"Updated {self.version}/summary", result)
+        rendered = load_resume_section(f"{self.version}/summary")
+        self.assertIn("Updated via MCP wrapper", rendered)
+
+    def test_mcp_server_get_resume_section_wrapper(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        rendered = mcp_server.get_resume_section(self.version, "summary")
+        self.assertIn("## Summary", rendered)
+
+    def test_mcp_server_replace_resume_text_wrapper(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        result = mcp_server.replace_resume_text(
+            f"{self.version}/summary",
+            "Brief professional summary highlighting key experience and skills",
+            "Replaced via MCP wrapper",
+        )
+        self.assertIn(f"Updated {self.version}/summary", result)
+
+        rendered = load_resume_section(f"{self.version}/summary")
+        self.assertIn("Replaced via MCP wrapper", rendered)
+
+    def test_mcp_server_insert_resume_text_wrapper(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        result = mcp_server.insert_resume_text(
+            f"{self.version}/summary",
+            "\n- Inserted via MCP wrapper",
+            "end",
+        )
+        self.assertIn(f"Updated {self.version}/summary", result)
+
+        rendered = load_resume_section(f"{self.version}/summary")
+        self.assertIn("Inserted via MCP wrapper", rendered)
+
     def test_mcp_server_http_app_exposes_streamable_and_sse_routes(self):
         from resume_platform.interfaces.mcp import server as mcp_server
 

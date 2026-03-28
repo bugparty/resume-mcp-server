@@ -909,7 +909,8 @@ def update_resume_section(
 
     See get_resume_yaml_format() for content format examples.
     """
-    return update_resume_section_tool(version_name, section_id, new_content)
+    module_path = f"{version_name}/{section_id}"
+    return update_resume_section_tool(module_path, new_content)
 
 
 @mcp.tool(annotations=dict(readOnlyHint=False,
