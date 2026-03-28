@@ -871,6 +871,87 @@ def delete_resume_text(target_path: str, old_text: str) -> str:
     return delete_resume_text_tool(target_path, old_text)
 
 
+@mcp.tool(annotations=dict(readOnlyHint=True,
+        idempotentHint=True,
+        openWorldHint=False))
+@log_mcp_tool_call
+def read_resume_section_text(version_name: str, section_id: str) -> str:
+    """
+    Read editable markdown text for a single section using explicit section coordinates.
+
+    Args:
+        version_name: Resume version name WITHOUT .yaml extension (e.g., 'resume')
+        section_id: Section identifier (e.g., 'summary', 'experience')
+    """
+    target_path = f"{version_name}/{section_id}"
+    return read_resume_text_tool(target_path)
+
+
+@mcp.tool(annotations=dict(readOnlyHint=False,
+        idempotentHint=False,
+        openWorldHint=False))
+@log_mcp_tool_call
+def replace_resume_section_text(
+    version_name: str,
+    section_id: str,
+    old_text: str,
+    new_text: str,
+) -> str:
+    """
+    Replace one exact snippet in a single resume section using explicit section coordinates.
+
+    Args:
+        version_name: Resume version name WITHOUT .yaml extension (e.g., 'resume')
+        section_id: Section identifier (e.g., 'summary', 'experience')
+        old_text: Exact snippet to replace; must match once
+        new_text: Replacement text
+    """
+    target_path = f"{version_name}/{section_id}"
+    return replace_resume_text_tool(target_path, old_text, new_text)
+
+
+@mcp.tool(annotations=dict(readOnlyHint=False,
+        idempotentHint=False,
+        openWorldHint=False))
+@log_mcp_tool_call
+def insert_resume_section_text(
+    version_name: str,
+    section_id: str,
+    new_text: str,
+    position: str,
+    anchor_text: str | None = None,
+) -> str:
+    """
+    Insert text into a single resume section using explicit section coordinates.
+
+    Args:
+        version_name: Resume version name WITHOUT .yaml extension (e.g., 'resume')
+        section_id: Section identifier (e.g., 'summary', 'experience')
+        new_text: Text to insert
+        position: One of 'start', 'end', 'before', 'after'
+        anchor_text: Required for before/after and must match once
+    """
+    target_path = f"{version_name}/{section_id}"
+    return insert_resume_text_tool(target_path, new_text, position, anchor_text)
+
+
+@mcp.tool(annotations=dict(readOnlyHint=False,
+        idempotentHint=False,
+        openWorldHint=False))
+@log_mcp_tool_call
+def delete_resume_section_text(version_name: str, section_id: str, old_text: str) -> str:
+    """
+    Delete one exact snippet from a single resume section using explicit section coordinates.
+
+    Args:
+        version_name: Resume version name WITHOUT .yaml extension (e.g., 'resume')
+        section_id: Section identifier (e.g., 'summary', 'experience')
+        old_text: Exact snippet to delete; must match once
+    """
+    target_path = f"{version_name}/{section_id}"
+    return delete_resume_text_tool(target_path, old_text)
+
+
 @mcp.tool(annotations=dict(readOnlyHint=False,
         idempotentHint=False,
         openWorldHint=False))

@@ -486,6 +486,29 @@ class TestResumeTextEditing(unittest.TestCase):
         rendered = mcp_server.get_resume_section(self.version, "summary")
         self.assertIn("## Summary", rendered)
 
+    def test_mcp_server_load_complete_resume_wrapper(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        rendered = mcp_server.load_complete_resume(self.version)
+        self.assertIn("## Summary", rendered)
+        self.assertIn("## Experience", rendered)
+
+    def test_mcp_server_list_resume_versions_wrapper(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        payload = mcp_server.list_resume_versions()
+        data = json.loads(payload)
+        self.assertIn("versions", data)
+        self.assertIn("resume", data["versions"])
+
+    def test_mcp_server_list_resume_sections_wrapper(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        payload = mcp_server.list_resume_sections(self.version)
+        self.assertIn("Available modules:", payload)
+        self.assertIn("summary", payload)
+        self.assertIn("experience", payload)
+
     def test_mcp_server_replace_resume_text_wrapper(self):
         from resume_platform.interfaces.mcp import server as mcp_server
 
@@ -511,6 +534,99 @@ class TestResumeTextEditing(unittest.TestCase):
 
         rendered = load_resume_section(f"{self.version}/summary")
         self.assertIn("Inserted via MCP wrapper", rendered)
+
+    def test_mcp_server_read_resume_section_text_wrapper(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        rendered = mcp_server.read_resume_section_text(self.version, "summary")
+        self.assertIn("## Summary", rendered)
+
+    def test_mcp_server_replace_resume_section_text_wrapper(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        result = mcp_server.replace_resume_section_text(
+            self.version,
+            "summary",
+            "Brief professional summary highlighting key experience and skills",
+            "Replaced via explicit section wrapper",
+        )
+        self.assertIn(f"Updated {self.version}/summary", result)
+
+        rendered = load_resume_section(f"{self.version}/summary")
+        self.assertIn("Replaced via explicit section wrapper", rendered)
+
+    def test_mcp_server_insert_resume_section_text_wrapper(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        result = mcp_server.insert_resume_section_text(
+            self.version,
+            "summary",
+            "\n- Inserted via explicit section wrapper",
+            "end",
+        )
+        self.assertIn(f"Updated {self.version}/summary", result)
+
+        rendered = load_resume_section(f"{self.version}/summary")
+        self.assertIn("Inserted via explicit section wrapper", rendered)
+
+    def test_mcp_server_delete_resume_section_text_wrapper(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        result = mcp_server.delete_resume_section_text(
+            self.version,
+            "skills",
+            "- Technologies: Technology 1, Technology 2, Technology 3",
+        )
+        self.assertIn(f"Updated {self.version}/skills", result)
+
+        rendered = load_resume_section(f"{self.version}/skills")
+        self.assertNotIn("- Technologies: Technology 1, Technology 2, Technology 3", rendered)
+
+    def test_mcp_server_delete_resume_text_wrapper(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        result = mcp_server.delete_resume_text(
+            f"{self.version}/skills",
+            "- Technologies: Technology 1, Technology 2, Technology 3",
+        )
+        self.assertIn(f"Updated {self.version}/skills", result)
+
+        rendered = load_resume_section(f"{self.version}/skills")
+        self.assertNotIn("- Technologies: Technology 1, Technology 2, Technology 3", rendered)
+
+    def test_mcp_server_set_section_visibility_wrapper(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        payload = mcp_server.set_section_visibility(self.version, "summary", False)
+        data = json.loads(payload)
+        self.assertEqual(data["version_name"], self.version)
+        self.assertEqual(data["section_id"], "summary")
+        self.assertFalse(data["enabled"])
+
+        rendered = load_complete_resume(f"{self.version}.yaml")
+        self.assertNotIn("## Summary", rendered)
+
+    def test_mcp_server_set_section_order_wrapper(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        payload = mcp_server.set_section_order(self.version, ["skills", "summary", "experience"])
+        data = json.loads(payload)
+        self.assertEqual(data["version_name"], self.version)
+
+        rendered = load_complete_resume(f"{self.version}.yaml")
+        self.assertLess(rendered.find("## Technical Skills"), rendered.find("## Summary"))
+
+    def test_mcp_server_get_section_style_wrapper(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        mcp_server.set_section_visibility(self.version, "summary", False)
+        payload = mcp_server.get_section_style(self.version)
+        data = json.loads(payload)
+        self.assertEqual(data["version_name"], self.version)
+        self.assertIn("style", data)
+        self.assertIn("section_disabled", data["style"])
+        self.assertIn("summary", data["style"]["section_disabled"])
+        self.assertTrue(data["style"]["section_disabled"]["summary"])
 
     def test_mcp_server_http_app_exposes_streamable_and_sse_routes(self):
         from resume_platform.interfaces.mcp import server as mcp_server
