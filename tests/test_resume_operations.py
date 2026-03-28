@@ -1,8 +1,10 @@
 import os
 import sys
 import json
+import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 from starlette.testclient import TestClient
 
 # Add src directory to Python path for module imports
@@ -24,7 +26,11 @@ settings = load_settings(
 # Initialize filesystems for tests
 init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
 
-from resume_platform.resume.views import load_complete_resume, load_resume_section, read_resume_text
+from resume_platform.resume.views import (
+    load_complete_resume,
+    load_resume_section,
+    read_resume_text,
+)
 from resume_platform.resume.editing import (
     update_resume_section,
     replace_resume_text,
@@ -54,6 +60,7 @@ class TestResumeOperations(unittest.TestCase):
 
         # restore original content to keep fixture clean
         update_resume_section("resume/summary", original_markdown)
+
 
 class TestResumeOperationsE2E(unittest.TestCase):
     def setUp(self):
@@ -143,7 +150,9 @@ class TestResumeAddSkills(unittest.TestCase):
 
         rendered = load_resume_section(module_path)
         self.assertIn("- Programming: Python, C++, Rust", rendered)
-        self.assertIn("- Systems & Software: Linux, Docker, networking diagnostics", rendered)
+        self.assertIn(
+            "- Systems & Software: Linux, Docker, networking diagnostics", rendered
+        )
         self.assertIn("- Tools: Multimeter, Oscilloscope", rendered)
 
     def test_add_experience_project(self):
@@ -194,6 +203,7 @@ class TestResumeAddSkills(unittest.TestCase):
         result = update_resume_section(module_path, new_content)
         self.assertIn("Projects", result)
         self.assertIn("Intelligent Recommendation Engine Optimization", result)
+
     def test_add_education_pipe_format(self):
         module_path = f"{self.version}/education"
         new_content = """## Education
@@ -303,7 +313,9 @@ class TestResumeSectionValidation(unittest.TestCase):
                 module_path,
                 "## Skills\nThis paragraph ignores categories entirely and should be rejected.",
             )
-        self.assertIn("could not be parsed into valid categories/items", str(ctx.exception))
+        self.assertIn(
+            "could not be parsed into valid categories/items", str(ctx.exception)
+        )
         after = load_resume_section(module_path)
         self.assertEqual(before, after)
 
@@ -380,7 +392,28 @@ class TestResumeTextEditing(unittest.TestCase):
             "Updated professional summary highlighting platform engineering depth",
         )
         rendered = load_resume_section(f"{self.version}/summary")
-        self.assertIn("Updated professional summary highlighting platform engineering depth", rendered)
+        self.assertIn(
+            "Updated professional summary highlighting platform engineering depth",
+            rendered,
+        )
+
+    def test_update_resume_section_preserves_plain_single_and_double_quotes(self):
+        update_resume_section(
+            f"{self.version}/summary",
+            '## Summary\n- He said "ship it" and it\'s done\n- Quote marker: \'single\' + "double"',
+        )
+        rendered = load_resume_section(f"{self.version}/summary")
+        self.assertIn('- He said "ship it" and it\'s done', rendered)
+        self.assertIn('- Quote marker: \'single\' + "double"', rendered)
+
+    def test_replace_resume_text_handles_plain_quotes(self):
+        replace_resume_text(
+            f"{self.version}/summary",
+            "Brief professional summary highlighting key experience and skills",
+            'Quote-safe replacement: "platform" and it\'s reliable',
+        )
+        rendered = load_resume_section(f"{self.version}/summary")
+        self.assertIn('Quote-safe replacement: "platform" and it\'s reliable', rendered)
 
     def test_insert_resume_text_after_anchor_updates_experience(self):
         insert_resume_text(
@@ -393,8 +426,12 @@ class TestResumeTextEditing(unittest.TestCase):
         self.assertIn("Improved p99 latency by 35%", rendered)
 
     def test_insert_resume_text_start_and_end_on_raw_section(self):
-        insert_resume_text(f"{self.version}/summary", "- Top-of-section addition\n", "start")
-        insert_resume_text(f"{self.version}/summary", "\n- End-of-section addition", "end")
+        insert_resume_text(
+            f"{self.version}/summary", "- Top-of-section addition\n", "start"
+        )
+        insert_resume_text(
+            f"{self.version}/summary", "\n- End-of-section addition", "end"
+        )
 
         rendered = load_resume_section(f"{self.version}/summary")
         self.assertIn("- Top-of-section addition", rendered)
@@ -406,7 +443,9 @@ class TestResumeTextEditing(unittest.TestCase):
             "- Technologies: Technology 1, Technology 2, Technology 3",
         )
         rendered = load_resume_section(f"{self.version}/skills")
-        self.assertNotIn("- Technologies: Technology 1, Technology 2, Technology 3", rendered)
+        self.assertNotIn(
+            "- Technologies: Technology 1, Technology 2, Technology 3", rendered
+        )
 
     def test_replace_resume_text_requires_match(self):
         before = load_resume_section(f"{self.version}/summary")
@@ -474,7 +513,9 @@ class TestResumeTextEditing(unittest.TestCase):
         from resume_platform.interfaces.mcp import server as mcp_server
 
         updated_markdown = "## Summary\n- Updated via MCP wrapper"
-        result = mcp_server.update_resume_section(self.version, "summary", updated_markdown)
+        result = mcp_server.update_resume_section(
+            self.version, "summary", updated_markdown
+        )
 
         self.assertIn(f"Updated {self.version}/summary", result)
         rendered = load_resume_section(f"{self.version}/summary")
@@ -580,7 +621,9 @@ class TestResumeTextEditing(unittest.TestCase):
         self.assertIn(f"Updated {self.version}/skills", result)
 
         rendered = load_resume_section(f"{self.version}/skills")
-        self.assertNotIn("- Technologies: Technology 1, Technology 2, Technology 3", rendered)
+        self.assertNotIn(
+            "- Technologies: Technology 1, Technology 2, Technology 3", rendered
+        )
 
     def test_mcp_server_delete_resume_text_wrapper(self):
         from resume_platform.interfaces.mcp import server as mcp_server
@@ -592,7 +635,9 @@ class TestResumeTextEditing(unittest.TestCase):
         self.assertIn(f"Updated {self.version}/skills", result)
 
         rendered = load_resume_section(f"{self.version}/skills")
-        self.assertNotIn("- Technologies: Technology 1, Technology 2, Technology 3", rendered)
+        self.assertNotIn(
+            "- Technologies: Technology 1, Technology 2, Technology 3", rendered
+        )
 
     def test_mcp_server_set_section_visibility_wrapper(self):
         from resume_platform.interfaces.mcp import server as mcp_server
@@ -609,12 +654,16 @@ class TestResumeTextEditing(unittest.TestCase):
     def test_mcp_server_set_section_order_wrapper(self):
         from resume_platform.interfaces.mcp import server as mcp_server
 
-        payload = mcp_server.set_section_order(self.version, ["skills", "summary", "experience"])
+        payload = mcp_server.set_section_order(
+            self.version, ["skills", "summary", "experience"]
+        )
         data = json.loads(payload)
         self.assertEqual(data["version_name"], self.version)
 
         rendered = load_complete_resume(f"{self.version}.yaml")
-        self.assertLess(rendered.find("## Technical Skills"), rendered.find("## Summary"))
+        self.assertLess(
+            rendered.find("## Technical Skills"), rendered.find("## Summary")
+        )
 
     def test_mcp_server_get_section_style_wrapper(self):
         from resume_platform.interfaces.mcp import server as mcp_server
@@ -663,6 +712,153 @@ class TestResumeTextEditing(unittest.TestCase):
         self.assertEqual(data["path"], "")
         self.assertIn("items", data)
         self.assertIn("total_items", data)
+
+    def test_mcp_server_records_exception_failure_event(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            error_log_path = Path(tmpdir) / "mcp_error_events.jsonl"
+            with patch.object(mcp_server, "mcp_error_events_file", error_log_path):
+
+                @mcp_server.log_mcp_tool_call
+                def _failing_tool(name: str, payload: dict[str, str]) -> str:
+                    raise ValueError("boom")
+
+                with self.assertRaises(ValueError):
+                    _failing_tool("bad", {"a": "b"})
+
+            self.assertTrue(error_log_path.exists())
+            lines = error_log_path.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(len(lines), 1)
+
+            event = json.loads(lines[0])
+            self.assertEqual(event["failure_kind"], "exception")
+            self.assertEqual(event["tool_name"], "_failing_tool")
+            self.assertEqual(event["error_type"], "ValueError")
+            self.assertEqual(event["error_message"], "boom")
+            self.assertIn("event_id", event)
+            self.assertIn("timestamp", event)
+            self.assertIn("traceback", event)
+            self.assertIsInstance(event["args"], list)
+            self.assertIsInstance(event["kwargs"], dict)
+
+    def test_mcp_server_records_error_response_failure_event(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            error_log_path = Path(tmpdir) / "mcp_error_events.jsonl"
+            with patch.object(mcp_server, "mcp_error_events_file", error_log_path):
+
+                @mcp_server.log_mcp_tool_call
+                def _error_response_tool() -> str:
+                    return json.dumps({"error": "bad request", "code": 400})
+
+                _error_response_tool()
+
+            lines = error_log_path.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(len(lines), 1)
+
+            event = json.loads(lines[0])
+            self.assertEqual(event["failure_kind"], "error_response")
+            self.assertEqual(event["tool_name"], "_error_response_tool")
+            self.assertEqual(event["error_message"], "bad request")
+            self.assertEqual(event["result_payload"]["code"], 400)
+            self.assertIsNone(event["error_type"])
+            self.assertIsNone(event["traceback"])
+
+    def test_mcp_server_error_logs_route_empty_and_bad_params(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            error_log_path = Path(tmpdir) / "mcp_error_events.jsonl"
+            with patch.object(mcp_server, "mcp_error_events_file", error_log_path):
+                app = mcp_server._build_dual_http_app()
+                client = TestClient(app)
+
+                response = client.get("/error-logs")
+                self.assertEqual(response.status_code, 200)
+                body = response.json()
+                self.assertEqual(body["total"], 0)
+                self.assertEqual(body["items"], [])
+
+                bad_limit = client.get("/error-logs?limit=0")
+                self.assertEqual(bad_limit.status_code, 400)
+
+                bad_offset = client.get("/error-logs?offset=-1")
+                self.assertEqual(bad_offset.status_code, 400)
+
+                bad_kind = client.get("/error-logs?failure_kind=bad")
+                self.assertEqual(bad_kind.status_code, 400)
+
+    def test_mcp_server_error_logs_route_filter_and_pagination(self):
+        from resume_platform.interfaces.mcp import server as mcp_server
+
+        events = [
+            {
+                "event_id": "1",
+                "timestamp": "2026-03-28T10:00:00+00:00",
+                "tool_name": "tool_a",
+                "failure_kind": "exception",
+                "args": [],
+                "kwargs": {},
+                "execution_time_ms": 10,
+                "error_type": "ValueError",
+                "error_message": "err-a",
+                "traceback": "tb",
+            },
+            {
+                "event_id": "2",
+                "timestamp": "2026-03-28T11:00:00+00:00",
+                "tool_name": "tool_b",
+                "failure_kind": "error_response",
+                "args": [],
+                "kwargs": {},
+                "execution_time_ms": 20,
+                "error_type": None,
+                "error_message": "err-b",
+                "traceback": None,
+            },
+            {
+                "event_id": "3",
+                "timestamp": "2026-03-28T12:00:00+00:00",
+                "tool_name": "tool_a",
+                "failure_kind": "exception",
+                "args": [],
+                "kwargs": {},
+                "execution_time_ms": 30,
+                "error_type": "RuntimeError",
+                "error_message": "err-c",
+                "traceback": "tb",
+            },
+        ]
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            error_log_path = Path(tmpdir) / "mcp_error_events.jsonl"
+            lines = [json.dumps(event, ensure_ascii=False) for event in events]
+            lines.append("{bad json")
+            error_log_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+            with patch.object(mcp_server, "mcp_error_events_file", error_log_path):
+                app = mcp_server._build_dual_http_app()
+                client = TestClient(app)
+
+                response = client.get("/error-logs")
+                self.assertEqual(response.status_code, 200)
+                body = response.json()
+                self.assertEqual(body["total"], 3)
+                self.assertEqual(body["items"][0]["event_id"], "3")
+                self.assertEqual(body["parse_errors"], 1)
+
+                filtered = client.get(
+                    "/error-logs?tool_name=tool_a&failure_kind=exception&limit=1&offset=1"
+                )
+                self.assertEqual(filtered.status_code, 200)
+                filtered_body = filtered.json()
+                self.assertEqual(filtered_body["total"], 2)
+                self.assertEqual(filtered_body["limit"], 1)
+                self.assertEqual(filtered_body["offset"], 1)
+                self.assertEqual(len(filtered_body["items"]), 1)
+                self.assertEqual(filtered_body["items"][0]["event_id"], "1")
 
 
 if __name__ == "__main__":

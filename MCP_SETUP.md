@@ -72,9 +72,21 @@ When running in HTTP mode, you can test with:
 # Check server health
 curl http://localhost:8000/health
 
+# Query failed tool calls (JSON)
+curl "http://localhost:8000/error-logs"
+
+# Query with filters/pagination
+curl "http://localhost:8000/error-logs?tool_name=render_resume_pdf&failure_kind=exception&limit=10&offset=0"
+
 # List available tools
 curl http://localhost:8000/tools
 ```
+
+`/error-logs` query params:
+- `limit`: `1-500` (default `50`)
+- `offset`: `>=0` (default `0`)
+- `tool_name`: exact tool name filter
+- `failure_kind`: `exception` or `error_response`
 
 ### 3. Test via Cloudflare tunnel
 

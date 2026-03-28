@@ -128,6 +128,24 @@ uv run python scripts/render_resume_cli.py resume
 uv run python scripts/render_resume_cli.py resume --tex build/resume.tex --pdf build/resume.pdf --compile
 ```
 
+### Error Log Query API (HTTP mode)
+When running the MCP server in HTTP transport, failed tool calls are also written to
+`logs/mcp_error_events.jsonl` (or `/tmp/resume_mcp/logs/mcp_error_events.jsonl` fallback).
+
+```bash
+# Query recent failed tool calls
+curl "http://localhost:8000/error-logs"
+
+# Query with filters and pagination
+curl "http://localhost:8000/error-logs?tool_name=update_resume_section&failure_kind=exception&limit=20&offset=0"
+```
+
+Supported query params:
+- `limit`: `1-500`, default `50`
+- `offset`: `>=0`, default `0`
+- `tool_name`: exact tool name filter
+- `failure_kind`: `exception` or `error_response`
+
 ## 📋 Requirements
 
 - Python 3.12+

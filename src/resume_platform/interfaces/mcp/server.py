@@ -14,7 +14,11 @@ import time
 import io
 import shutil
 import tempfile
+import threading
+import traceback
+import uuid
 import zipfile
+from datetime import datetime, timezone
 from pathlib import Path
 import mimetypes
 from urllib.parse import quote
@@ -22,12 +26,13 @@ from enum import Enum
 from typing import Union, Callable, Any
 from functools import wraps
 from contextlib import asynccontextmanager
+
 try:
     import boto3  # Backward-compatible test patch target.
 except Exception:
     boto3 = None
 from starlette.requests import Request
-from starlette.responses import PlainTextResponse
+from starlette.responses import PlainTextResponse, JSONResponse
 from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
 from starlette.routing import BaseRoute
@@ -54,10 +59,13 @@ from fastmcp.server.context import reset_transport, set_transport
 # Configure logging for MCP server
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+_ERROR_EVENTS_FAILURE_KINDS = {"exception", "error_response"}
+_error_events_lock = threading.Lock()
+
 
 class ResumeSectionId(str, Enum):
     """Enumeration of valid resume section identifiers.
-    
+
     Available sections:
         HEADER: Personal information (name, contact, links)
         SUMMARY: Professional summary/bio
@@ -67,7 +75,7 @@ class ResumeSectionId(str, Enum):
         EDUCATION: Academic background
         CUSTOM: Custom/free-form content (e.g., languages, interests)
     """
-    
+
     HEADER = "header"
     SUMMARY = "summary"
     SKILLS = "skills"
@@ -86,6 +94,8 @@ def log_mcp_tool_call(func: Callable) -> Callable:
     def wrapper(*args, **kwargs):
         tool_name = func.__name__
         start_time = time.time()
+        args_payload = _to_jsonable(args)
+        kwargs_payload = _to_jsonable(kwargs)
 
         # Log the call with arguments
         logger.info(f"=== MCP TOOL CALL: {tool_name} ===")
@@ -117,18 +127,40 @@ def log_mcp_tool_call(func: Callable) -> Callable:
             logger.info(f"Execution time: {execution_time:.3f}s")
             logger.info(f"=== END: {tool_name} ===\n")
 
+            has_error, error_message, error_payload = _extract_error_payload(result)
+            if has_error:
+                _append_failure_event(
+                    tool_name=tool_name,
+                    failure_kind="error_response",
+                    args=args_payload,
+                    kwargs=kwargs_payload,
+                    error_type=None,
+                    error_message=error_message,
+                    traceback_text=None,
+                    execution_time_ms=int(execution_time * 1000),
+                    result_payload=error_payload,
+                )
+
             return result
 
         except Exception as e:
             execution_time = time.time() - start_time
+            _append_failure_event(
+                tool_name=tool_name,
+                failure_kind="exception",
+                args=args_payload,
+                kwargs=kwargs_payload,
+                error_type=type(e).__name__,
+                error_message=str(e),
+                traceback_text=traceback.format_exc(),
+                execution_time_ms=int(execution_time * 1000),
+            )
             logger.error(f"Error in {tool_name}: {str(e)}", exc_info=True)
             logger.info(f"Execution time (failed): {execution_time:.3f}s")
             logger.info(f"=== END (ERROR): {tool_name} ===\n")
             raise
 
     return wrapper
-
-
 
 
 # Try relative import first, fall back to absolute import
@@ -199,6 +231,7 @@ except ImportError:
         get_vector_index_status_tool,
     )
 
+
 def _initialize_logging() -> Path:
     default_logs_dir = PROJECT_ROOT / "logs"
     settings = None
@@ -248,6 +281,109 @@ def _initialize_logging() -> Path:
 
 
 mcp_log_file = _initialize_logging()
+mcp_error_events_file = mcp_log_file.parent / "mcp_error_events.jsonl"
+
+
+def _to_jsonable(value: Any) -> Any:
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, dict):
+        return {str(k): _to_jsonable(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_to_jsonable(item) for item in value]
+    return repr(value)
+
+
+def _extract_error_payload(
+    result: Any,
+) -> tuple[bool, str | None, dict[str, Any] | None]:
+    payload: Any = None
+    if isinstance(result, dict):
+        payload = result
+    elif isinstance(result, str):
+        try:
+            payload = json.loads(result)
+        except Exception:
+            payload = None
+
+    if isinstance(payload, dict) and "error" in payload:
+        return True, str(payload.get("error")), _to_jsonable(payload)
+
+    return False, None, None
+
+
+def _append_failure_event(
+    *,
+    tool_name: str,
+    failure_kind: str,
+    args: Any,
+    kwargs: Any,
+    error_type: str | None,
+    error_message: str | None,
+    traceback_text: str | None,
+    execution_time_ms: int,
+    result_payload: dict[str, Any] | None = None,
+) -> None:
+    if failure_kind not in _ERROR_EVENTS_FAILURE_KINDS:
+        logger.warning("Unsupported failure_kind '%s' - skip recording.", failure_kind)
+        return
+
+    event: dict[str, Any] = {
+        "event_id": str(uuid.uuid4()),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "tool_name": tool_name,
+        "failure_kind": failure_kind,
+        "args": args,
+        "kwargs": kwargs,
+        "execution_time_ms": execution_time_ms,
+        "error_type": error_type,
+        "error_message": error_message,
+        "traceback": traceback_text,
+    }
+    if result_payload is not None:
+        event["result_payload"] = result_payload
+
+    try:
+        mcp_error_events_file.parent.mkdir(parents=True, exist_ok=True)
+        with _error_events_lock:
+            with mcp_error_events_file.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(event, ensure_ascii=False) + "\n")
+    except Exception:
+        logger.exception("Failed to write MCP error event to %s", mcp_error_events_file)
+
+
+def _read_failure_events() -> tuple[list[dict[str, Any]], int]:
+    if not mcp_error_events_file.exists():
+        return [], 0
+
+    events: list[dict[str, Any]] = []
+    parse_errors = 0
+    try:
+        with _error_events_lock:
+            lines = mcp_error_events_file.read_text(encoding="utf-8").splitlines()
+    except Exception:
+        logger.exception(
+            "Failed to read MCP error events from %s", mcp_error_events_file
+        )
+        return [], 0
+
+    for line in lines:
+        text = line.strip()
+        if not text:
+            continue
+        try:
+            payload = json.loads(text)
+            if isinstance(payload, dict):
+                events.append(payload)
+            else:
+                parse_errors += 1
+        except Exception:
+            parse_errors += 1
+
+    return events, parse_errors
+
 
 def _ensure_server_filesystems_initialized() -> None:
     if is_initialized():
@@ -270,10 +406,9 @@ def _ensure_server_filesystems_initialized() -> None:
     try:
         init_filesystems(resume_fs_url, jd_fs_url)
     except Exception as exc:
-        allow_fallback = (
-            os.getenv("RESUME_ALLOW_MEM_FS_FALLBACK", "").strip().lower()
-            in {"1", "true", "yes", "on"}
-        )
+        allow_fallback = os.getenv(
+            "RESUME_ALLOW_MEM_FS_FALLBACK", ""
+        ).strip().lower() in {"1", "true", "yes", "on"}
         logger.exception(
             "Failed to initialize filesystems. resume_fs_url=%s jd_fs_url=%s",
             resume_fs_url,
@@ -386,7 +521,7 @@ def _run_http_server(port: int) -> None:
 def resume_agent_prompt() -> str:
     """
     System prompt for the Resume Agent MCP Server.
-    
+
     This prompt guides AI assistants on how to use this server effectively
     for resume management and job application optimization.
     """
@@ -497,6 +632,7 @@ Education Section:
 
 Always be helpful, professional, and focused on creating compelling resume content that highlights the user's strengths."""
 
+
 @mcp.tool(annotations=dict(readOnlyHint=True))
 def call_me_at_the_first_time_when_you_are_chatgpt():
     """
@@ -510,9 +646,67 @@ def call_me_at_the_first_time_when_you_are_chatgpt():
     logger.info("chatgpt has made the first call to read the prompts.")
     return resume_agent_prompt()
 
+
 @mcp.custom_route("/health", methods=["GET"])
 async def health_check(request: Request) -> PlainTextResponse:
     return PlainTextResponse("OK")
+
+
+@mcp.custom_route("/error-logs", methods=["GET"])
+async def list_error_logs(request: Request) -> JSONResponse:
+    query = request.query_params
+
+    limit_raw = query.get("limit", "50")
+    offset_raw = query.get("offset", "0")
+    tool_name = query.get("tool_name")
+    failure_kind = query.get("failure_kind")
+
+    try:
+        limit = int(limit_raw)
+    except ValueError:
+        return JSONResponse({"error": "limit must be an integer"}, status_code=400)
+    if limit < 1 or limit > 500:
+        return JSONResponse(
+            {"error": "limit must be in range [1, 500]"}, status_code=400
+        )
+
+    try:
+        offset = int(offset_raw)
+    except ValueError:
+        return JSONResponse({"error": "offset must be an integer"}, status_code=400)
+    if offset < 0:
+        return JSONResponse({"error": "offset must be >= 0"}, status_code=400)
+
+    if failure_kind and failure_kind not in _ERROR_EVENTS_FAILURE_KINDS:
+        return JSONResponse(
+            {"error": "failure_kind must be one of: exception, error_response"},
+            status_code=400,
+        )
+
+    events, parse_errors = _read_failure_events()
+    filtered: list[dict[str, Any]] = []
+    for event in events:
+        if tool_name and event.get("tool_name") != tool_name:
+            continue
+        if failure_kind and event.get("failure_kind") != failure_kind:
+            continue
+        filtered.append(event)
+
+    ordered = sorted(
+        filtered, key=lambda item: str(item.get("timestamp", "")), reverse=True
+    )
+    paged = ordered[offset : offset + limit]
+
+    return JSONResponse(
+        {
+            "total": len(ordered),
+            "limit": limit,
+            "offset": offset,
+            "items": paged,
+            "parse_errors": parse_errors,
+            "log_file": str(mcp_error_events_file),
+        }
+    )
 
 
 # Global variable to store the data directory path
@@ -574,10 +768,7 @@ async def read_data_file(path: str) -> Union[str, bytes]:
         return file_path.read_bytes()
 
 
-@mcp.tool(
-annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
-        openWorldHint=False))
+@mcp.tool(annotations=dict(readOnlyHint=True, idempotentHint=True, openWorldHint=False))
 @log_mcp_tool_call
 def list_data_directory(path: str = "") -> str:
     """
@@ -617,10 +808,14 @@ def list_data_directory(path: str = "") -> str:
             item_info["mime_type"] = mime_type
         items.append(item_info)
 
-    return json.dumps({"path": path, "items": items, "total_items": len(items)}, indent=2)
+    return json.dumps(
+        {"path": path, "items": items, "total_items": len(items)}, indent=2
+    )
 
 
-def _safe_listdir_summary(fs_obj: Any, path: str = ".", sample_size: int = 20) -> dict[str, Any]:
+def _safe_listdir_summary(
+    fs_obj: Any, path: str = ".", sample_size: int = 20
+) -> dict[str, Any]:
     try:
         entries = fs_obj.listdir(path)
         sorted_entries = sorted(entries)
@@ -672,10 +867,7 @@ def _fs_backend_summary(fs_obj: Any) -> dict[str, str]:
     }
 
 
-@mcp.tool(
-annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
-        openWorldHint=False))
+@mcp.tool(annotations=dict(readOnlyHint=True, idempotentHint=True, openWorldHint=False))
 @log_mcp_tool_call
 def diagnose_filesystems() -> str:
     """Diagnose MCP filesystem state and resume version discovery behavior.
@@ -692,12 +884,14 @@ def diagnose_filesystems() -> str:
 
     payload: dict[str, Any] = {
         "initialized": is_initialized(),
-        "settings": {
-            "resume_fs_url": getattr(settings, "resume_fs_url", None),
-            "jd_fs_url": getattr(settings, "jd_fs_url", None),
-        }
-        if not isinstance(settings, dict)
-        else settings,
+        "settings": (
+            {
+                "resume_fs_url": getattr(settings, "resume_fs_url", None),
+                "jd_fs_url": getattr(settings, "jd_fs_url", None),
+            }
+            if not isinstance(settings, dict)
+            else settings
+        ),
         "env_hints": {
             "RESUME_FS_URL": os.getenv("RESUME_FS_URL"),
             "RESUME_FS_UR": os.getenv("RESUME_FS_UR"),
@@ -755,9 +949,7 @@ def diagnose_filesystems() -> str:
 
 
 # Resume Version Management Tools
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
-        openWorldHint=False))
+@mcp.tool(annotations=dict(readOnlyHint=True, idempotentHint=True, openWorldHint=False))
 @log_mcp_tool_call
 def list_resume_versions() -> str:
     """Lists all available resume versions stored as YAML files.
@@ -768,9 +960,7 @@ def list_resume_versions() -> str:
     return list_resume_versions_tool()
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
-        openWorldHint=False))
+@mcp.tool(annotations=dict(readOnlyHint=True, idempotentHint=True, openWorldHint=False))
 @log_mcp_tool_call
 def load_complete_resume(version_name: str) -> str:
     """
@@ -782,31 +972,27 @@ def load_complete_resume(version_name: str) -> str:
     return load_complete_resume_tool(version_name)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
-        openWorldHint=False))
+@mcp.tool(annotations=dict(readOnlyHint=True, idempotentHint=True, openWorldHint=False))
 @log_mcp_tool_call
 def get_resume_section(version_name: str, section_id: str) -> str:
     """
     Load a specific section from a resume file.
-    
+
     Args:
         version_name: Resume file name WITHOUT .yaml extension (e.g., 'resume')
-        section_id: Section identifier to load (must be one of: header, summary, 
+        section_id: Section identifier to load (must be one of: header, summary,
                    skills, experience, projects, education, custom)
-    
+
     Returns:
         Markdown content of the requested section
-        
+
     Example:
         get_resume_section(version_name="resume", section_id="summary")
     """
     return get_resume_section_tool(version_name, section_id)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
-        openWorldHint=False))
+@mcp.tool(annotations=dict(readOnlyHint=True, idempotentHint=True, openWorldHint=False))
 @log_mcp_tool_call
 def read_resume_text(target_path: str) -> str:
     """
@@ -818,9 +1004,9 @@ def read_resume_text(target_path: str) -> str:
     return read_resume_text_tool(target_path)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=False,
-        idempotentHint=False,
-        openWorldHint=False))
+@mcp.tool(
+    annotations=dict(readOnlyHint=False, idempotentHint=False, openWorldHint=False)
+)
 @log_mcp_tool_call
 def replace_resume_text(target_path: str, old_text: str, new_text: str) -> str:
     """
@@ -834,9 +1020,9 @@ def replace_resume_text(target_path: str, old_text: str, new_text: str) -> str:
     return replace_resume_text_tool(target_path, old_text, new_text)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=False,
-        idempotentHint=False,
-        openWorldHint=False))
+@mcp.tool(
+    annotations=dict(readOnlyHint=False, idempotentHint=False, openWorldHint=False)
+)
 @log_mcp_tool_call
 def insert_resume_text(
     target_path: str,
@@ -856,9 +1042,9 @@ def insert_resume_text(
     return insert_resume_text_tool(target_path, new_text, position, anchor_text)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=False,
-        idempotentHint=False,
-        openWorldHint=False))
+@mcp.tool(
+    annotations=dict(readOnlyHint=False, idempotentHint=False, openWorldHint=False)
+)
 @log_mcp_tool_call
 def delete_resume_text(target_path: str, old_text: str) -> str:
     """
@@ -871,9 +1057,7 @@ def delete_resume_text(target_path: str, old_text: str) -> str:
     return delete_resume_text_tool(target_path, old_text)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
-        openWorldHint=False))
+@mcp.tool(annotations=dict(readOnlyHint=True, idempotentHint=True, openWorldHint=False))
 @log_mcp_tool_call
 def read_resume_section_text(version_name: str, section_id: str) -> str:
     """
@@ -887,9 +1071,9 @@ def read_resume_section_text(version_name: str, section_id: str) -> str:
     return read_resume_text_tool(target_path)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=False,
-        idempotentHint=False,
-        openWorldHint=False))
+@mcp.tool(
+    annotations=dict(readOnlyHint=False, idempotentHint=False, openWorldHint=False)
+)
 @log_mcp_tool_call
 def replace_resume_section_text(
     version_name: str,
@@ -910,9 +1094,9 @@ def replace_resume_section_text(
     return replace_resume_text_tool(target_path, old_text, new_text)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=False,
-        idempotentHint=False,
-        openWorldHint=False))
+@mcp.tool(
+    annotations=dict(readOnlyHint=False, idempotentHint=False, openWorldHint=False)
+)
 @log_mcp_tool_call
 def insert_resume_section_text(
     version_name: str,
@@ -935,11 +1119,13 @@ def insert_resume_section_text(
     return insert_resume_text_tool(target_path, new_text, position, anchor_text)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=False,
-        idempotentHint=False,
-        openWorldHint=False))
+@mcp.tool(
+    annotations=dict(readOnlyHint=False, idempotentHint=False, openWorldHint=False)
+)
 @log_mcp_tool_call
-def delete_resume_section_text(version_name: str, section_id: str, old_text: str) -> str:
+def delete_resume_section_text(
+    version_name: str, section_id: str, old_text: str
+) -> str:
     """
     Delete one exact snippet from a single resume section using explicit section coordinates.
 
@@ -952,32 +1138,28 @@ def delete_resume_section_text(version_name: str, section_id: str, old_text: str
     return delete_resume_text_tool(target_path, old_text)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=False,
-        idempotentHint=False,
-        openWorldHint=False))
+@mcp.tool(
+    annotations=dict(readOnlyHint=False, idempotentHint=False, openWorldHint=False)
+)
 @log_mcp_tool_call
-def update_resume_section(
-    version_name: str,
-    section_id: str,
-    new_content: str
-) -> str:
+def update_resume_section(version_name: str, section_id: str, new_content: str) -> str:
     """
     Update a specific section in a resume file with new Markdown content.
-    
+
     Args:
         version_name: Resume file name WITHOUT .yaml extension (e.g., 'resume')
         section_id: Section identifier to update (must be one of: header, summary,
                    skills, experience, projects, education, custom)
         new_content: New Markdown content for the section
-    
+
     Returns:
         Success or error message
-        
+
     Important:
         - Input must be in Markdown format
         - Cannot update entire resume at once
         - Must update ONE section at a time
-        
+
         ### Machine Learning Pipeline — University Research | 2022
         - Developed data processing pipeline for NLP tasks
         - Achieved 95% accuracy on sentiment analysis
@@ -994,9 +1176,9 @@ def update_resume_section(
     return update_resume_section_tool(module_path, new_content)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=False,
-        idempotentHint=False,
-        openWorldHint=False))
+@mcp.tool(
+    annotations=dict(readOnlyHint=False, idempotentHint=False, openWorldHint=False)
+)
 @log_mcp_tool_call
 def set_section_visibility(
     version_name: str, section_id: str, enabled: bool = True
@@ -1012,9 +1194,9 @@ def set_section_visibility(
     return set_section_visibility_tool(version_name, section_id, enabled)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=False,
-        idempotentHint=False,
-        openWorldHint=False))
+@mcp.tool(
+    annotations=dict(readOnlyHint=False, idempotentHint=False, openWorldHint=False)
+)
 @log_mcp_tool_call
 def set_section_order(version_name: str, order: list[str]) -> str:
     """
@@ -1027,9 +1209,7 @@ def set_section_order(version_name: str, order: list[str]) -> str:
     return set_section_order_tool(version_name, order)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
-        openWorldHint=False))
+@mcp.tool(annotations=dict(readOnlyHint=True, idempotentHint=True, openWorldHint=False))
 @log_mcp_tool_call
 def get_section_style(version: str) -> str:
     """
@@ -1041,9 +1221,9 @@ def get_section_style(version: str) -> str:
     return get_resume_layout_tool(version)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=False,
-        idempotentHint=False,
-        openWorldHint=False))
+@mcp.tool(
+    annotations=dict(readOnlyHint=False, idempotentHint=False, openWorldHint=False)
+)
 @log_mcp_tool_call
 def create_new_version(new_version_name: str) -> str:
     """
@@ -1055,9 +1235,9 @@ def create_new_version(new_version_name: str) -> str:
     return create_new_version_tool(new_version_name)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=False,
-        idempotentHint=False,
-        openWorldHint=False))
+@mcp.tool(
+    annotations=dict(readOnlyHint=False, idempotentHint=False, openWorldHint=False)
+)
 @log_mcp_tool_call
 def delete_resume_version(version_name: str) -> str:
     """
@@ -1073,9 +1253,9 @@ def delete_resume_version(version_name: str) -> str:
     return delete_resume_version_tool(version_name)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=False,
-        idempotentHint=False,
-        openWorldHint=False))
+@mcp.tool(
+    annotations=dict(readOnlyHint=False, idempotentHint=False, openWorldHint=False)
+)
 @log_mcp_tool_call
 def copy_resume_version(source_version: str, target_version: str) -> str:
     """
@@ -1092,9 +1272,7 @@ def copy_resume_version(source_version: str, target_version: str) -> str:
     return copy_resume_version_tool(source_version, target_version)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
-        openWorldHint=False))
+@mcp.tool(annotations=dict(readOnlyHint=True, idempotentHint=True, openWorldHint=False))
 @log_mcp_tool_call
 def list_resume_sections(version_name: str) -> str:
     """
@@ -1102,10 +1280,10 @@ def list_resume_sections(version_name: str) -> str:
 
     Args:
         version_name: Resume version name WITHOUT .yaml extension (e.g., 'resume')
-    
+
     Returns:
         JSON string containing section identifiers and their types
-        
+
     Example output:
         {
             "sections": [
@@ -1123,10 +1301,9 @@ def list_resume_sections(version_name: str) -> str:
     return list_modules_in_version_tool(version_name)
 
 
-
-@mcp.tool(annotations=dict(readOnlyHint=False,
-        idempotentHint=False,
-        openWorldHint=False))
+@mcp.tool(
+    annotations=dict(readOnlyHint=False, idempotentHint=False, openWorldHint=False)
+)
 @log_mcp_tool_call
 def build_vector_index(force_rebuild: bool = False) -> str:
     """
@@ -1138,9 +1315,7 @@ def build_vector_index(force_rebuild: bool = False) -> str:
     return build_vector_index_tool(force_rebuild)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
-        openWorldHint=False))
+@mcp.tool(annotations=dict(readOnlyHint=True, idempotentHint=True, openWorldHint=False))
 @log_mcp_tool_call
 def search_resume_entries(
     query: str,
@@ -1160,9 +1335,7 @@ def search_resume_entries(
     return search_resume_entries_tool(query, entry_type, chunk_level, top_k)
 
 
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        idempotentHint=True,
-        openWorldHint=False))
+@mcp.tool(annotations=dict(readOnlyHint=True, idempotentHint=True, openWorldHint=False))
 @log_mcp_tool_call
 def get_vector_index_status() -> str:
     """
@@ -1172,9 +1345,7 @@ def get_vector_index_status() -> str:
 
 
 # Resume Format Documentation Tools
-@mcp.tool(annotations=dict(readOnlyHint=True,
-        openWorldHint=False,
-        idempotentHint=True))
+@mcp.tool(annotations=dict(readOnlyHint=True, openWorldHint=False, idempotentHint=True))
 @log_mcp_tool_call
 def get_resume_yaml_format() -> str:
     """
@@ -1341,9 +1512,9 @@ The following JSON schema defines the validation rules:
 
 
 # Resume Rendering Tools
-@mcp.tool(annotations=dict(readOnlyHint=False,
-        idempotentHint=False,
-        openWorldHint=True))
+@mcp.tool(
+    annotations=dict(readOnlyHint=False, idempotentHint=False, openWorldHint=True)
+)
 @log_mcp_tool_call
 def render_resume_pdf(version_name: str) -> dict[str, str]:
     """
@@ -1381,7 +1552,9 @@ def render_resume_pdf(version_name: str) -> dict[str, str]:
         with output_fs.open(filename, "rb") as pdf_file:
             pdf_bytes = pdf_file.read()
     except Exception as exc:
-        logger.error("Failed to read generated PDF '%s': %s", filename, exc, exc_info=True)
+        logger.error(
+            "Failed to read generated PDF '%s': %s", filename, exc, exc_info=True
+        )
         raise RuntimeError(f"Failed to read generated PDF '{filename}'") from exc
 
     public_url, _ = upload_bytes_to_s3(
@@ -1401,9 +1574,9 @@ def render_resume_pdf(version_name: str) -> dict[str, str]:
     return response
 
 
-@mcp.tool(annotations=dict(readOnlyHint=False,
-        idempotentHint=False,
-        openWorldHint=True))
+@mcp.tool(
+    annotations=dict(readOnlyHint=False, idempotentHint=False, openWorldHint=True)
+)
 @log_mcp_tool_call
 def render_resume_to_overleaf(version_name: str) -> dict[str, str]:
     """
@@ -1480,7 +1653,9 @@ def render_resume_to_overleaf(version_name: str) -> dict[str, str]:
         "resume Overleaf package",
     )
 
-    overleaf_url = f"https://www.overleaf.com/docs?snip_uri={quote(public_url, safe='')}"
+    overleaf_url = (
+        f"https://www.overleaf.com/docs?snip_uri={quote(public_url, safe='')}"
+    )
 
     response: dict[str, str] = {
         "overleaf_url": overleaf_url,
@@ -1512,11 +1687,7 @@ def _resolve_transport(default_transport: str, default_port: int) -> tuple[str, 
         )
         transport = default_transport
 
-    env_port = (
-        os.getenv("FASTMCP_PORT")
-        or os.getenv("MCP_PORT")
-        or os.getenv("PORT")
-    )
+    env_port = os.getenv("FASTMCP_PORT") or os.getenv("MCP_PORT") or os.getenv("PORT")
     port = default_port
     if env_port:
         try:
@@ -1546,7 +1717,6 @@ def main(transport="stdio", port=8000):
     logger.info(f"Log file: {mcp_log_file}")
     logger.info("=" * 80)
 
-    
     logger.info("Filesystems initialized")
     logger.info("MCP Server ready to accept connections")
     logger.info("=" * 80 + "\n")
