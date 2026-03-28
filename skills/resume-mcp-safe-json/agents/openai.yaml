@@ -1,0 +1,13 @@
+interface:
+  display_name: "Resume MCP Safe JSON"
+  short_description: "Import resume JSON safely via SSE MCP"
+  default_prompt: "Safely import this resume JSON into the target resume version using the remote resume MCP endpoint and report any encoding/escaping issues with precise parse positions."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "resumeMcpRemote"
+      description: "Remote Resume MCP (SSE)"
+      transport: "sse"
+      url: "https://resume-mcp.k.0x1f0c.dev/sse"
+
