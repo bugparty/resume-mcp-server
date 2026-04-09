@@ -11,6 +11,7 @@ if str(SRC_PATH) not in sys.path:
 
 from resume_platform.infrastructure.settings import load_settings
 from resume_platform.infrastructure.filesystem import init_filesystems, reset_filesystems
+from resume_platform.resume_input_parser import parse_experience_markdown
 from resume_platform.resume_renderer import (
     markdown_inline_to_latex,
     escape_tex,
@@ -36,6 +37,73 @@ def test_markdown_unicode_dash_and_times_conversion():
     assert "$\\times$" in latex
     assert "\\textperiodcentered" in markdown_inline_to_latex("Mountain View · Remote")
     assert "\\textperiodcentered" in escape_tex("Mountain View · Remote")
+
+
+def test_render_resume_experience_bullet_preserves_bold_skill_list():
+    resume_dict = {
+        "metadata": {"first_name": "Test", "last_name": "User"},
+        "sections": [
+            {
+                "type": "experience",
+                "title": "Experience",
+                "id": "experience",
+                "entries": [
+                    {
+                        "title": "Software Engineer",
+                        "organization": "Example Co",
+                        "location": "",
+                        "period": "2024 - Present",
+                        "bullets": [
+                            "Built internal tools with **Python, C++, TypeScript** across ML and infra workflows."
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    latex = render_resume_from_dict(resume_dict, version="bold-skills")
+
+    assert (
+        "\\item {Built internal tools with \\textbf{Python, C++, TypeScript} "
+        "across ML and infra workflows.}"
+    ) in latex
+
+
+def test_parse_and_render_experience_bullet_preserves_bold_skill_list():
+    section = {"type": "experience", "title": "Experience", "id": "experience"}
+    markdown = """## Experience
+### Software Engineer | Example Co (Remote) | 2024 - Present
+- Built internal tools with **Python, C++, TypeScript** across ML and infra workflows.
+"""
+
+    parse_experience_markdown(markdown, section, version="resume", section_id="experience")
+
+    latex = render_resume_from_dict(
+        {"metadata": {"first_name": "Test", "last_name": "User"}, "sections": [section]},
+        version="parsed-bold-skills",
+    )
+
+    assert section["entries"][0]["bullets"] == [
+        "Built internal tools with **Python, C++, TypeScript** across ML and infra workflows."
+    ]
+    assert (
+        "\\item {Built internal tools with \\textbf{Python, C++, TypeScript} "
+        "across ML and infra workflows.}"
+    ) in latex
+
+
+def test_parse_experience_markdown_raises_for_three_part_pipe_heading():
+    section = {"type": "experience", "title": "Experience", "id": "experience"}
+    markdown = """## Experience
+### Software Engineer | Example Co | 2024 - Present
+- Built internal tools with **Python, C++, TypeScript** across ML and infra workflows.
+"""
+
+    with pytest.raises(ValueError, match="Unsupported experience heading format"):
+        parse_experience_markdown(
+            markdown, section, version="resume", section_id="experience"
+        )
 
 
 def test_compile_exports_latex_assets(monkeypatch, tmp_path):

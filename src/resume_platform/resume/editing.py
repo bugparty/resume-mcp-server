@@ -202,6 +202,14 @@ def _replace_once(text: str, old_text: str, new_text: str) -> str:
     return text.replace(old_text, new_text, 1)
 
 
+def _raise_if_no_effective_text_change(result: str, target_path: str) -> str:
+    if "No effective content change detected." in result:
+        raise ValueError(
+            f"Text edit for '{target_path}' parsed successfully but produced no effective content change."
+        )
+    return result
+
+
 def _split_top_level_blocks(markdown: str) -> List[str]:
     blocks: List[str] = []
     current: List[str] = []
@@ -368,7 +376,8 @@ def replace_resume_text(target_path: str, old_text: str, new_text: str) -> str:
     match_count = _count_matches(current_text, old_text)
     if match_count != 1:
         raise ValueError(_build_match_error("replace text", target_path, "old_text", old_text, match_count))
-    return _write_resume_text_body(version, section_id, _replace_once(current_text, old_text, new_text))
+    result = _write_resume_text_body(version, section_id, _replace_once(current_text, old_text, new_text))
+    return _raise_if_no_effective_text_change(result, target_path)
 
 
 def insert_resume_text(
@@ -397,7 +406,8 @@ def insert_resume_text(
         updated_text = new_text + current_text
     else:
         updated_text = current_text + new_text
-    return _write_resume_text_body(version, section_id, updated_text)
+    result = _write_resume_text_body(version, section_id, updated_text)
+    return _raise_if_no_effective_text_change(result, target_path)
 
 
 def delete_resume_text(target_path: str, old_text: str) -> str:
@@ -406,7 +416,8 @@ def delete_resume_text(target_path: str, old_text: str) -> str:
     match_count = _count_matches(current_text, old_text)
     if match_count != 1:
         raise ValueError(_build_match_error("delete text", target_path, "old_text", old_text, match_count))
-    return _write_resume_text_body(version, section_id, _replace_once(current_text, old_text, ""))
+    result = _write_resume_text_body(version, section_id, _replace_once(current_text, old_text, ""))
+    return _raise_if_no_effective_text_change(result, target_path)
 
 
 def update_main_resume(file_name: str, file_content: str) -> str:

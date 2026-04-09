@@ -382,6 +382,15 @@ class TestResumeTextEditing(unittest.TestCase):
         rendered = load_resume_section(f"{self.version}/summary")
         self.assertIn("Updated professional summary highlighting platform engineering depth", rendered)
 
+    def test_replace_resume_text_updates_experience_bullet_with_bold_skills(self):
+        replace_resume_text(
+            f"{self.version}/experience",
+            "Technologies used or skills demonstrated",
+            "**Python, C++, TypeScript**",
+        )
+        rendered = read_resume_text(f"{self.version}/experience")
+        self.assertIn("- **Python, C++, TypeScript**", rendered)
+
     def test_insert_resume_text_after_anchor_updates_experience(self):
         insert_resume_text(
             f"{self.version}/experience",
@@ -418,6 +427,18 @@ class TestResumeTextEditing(unittest.TestCase):
             )
         self.assertIn("was not found", str(ctx.exception))
         after = load_resume_section(f"{self.version}/summary")
+        self.assertEqual(before, after)
+
+    def test_replace_resume_text_rejects_no_effective_change(self):
+        before = read_resume_text(f"{self.version}/experience")
+        with self.assertRaises(ValueError) as ctx:
+            replace_resume_text(
+                f"{self.version}/experience",
+                "### Job Title — Company Name (City, State) | Start Date - End Date",
+                "### Job Title | Company Name (City, State) | Start Date - End Date",
+            )
+        self.assertIn("produced no effective content change", str(ctx.exception))
+        after = read_resume_text(f"{self.version}/experience")
         self.assertEqual(before, after)
 
     def test_delete_resume_text_rejects_ambiguous_match(self):

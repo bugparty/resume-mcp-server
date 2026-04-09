@@ -122,6 +122,9 @@ ENTRY_HEADING_PIPE_RE = re.compile(
 ENTRY_HEADING_PIPE_INLINE_LOCATION_RE = re.compile(
     r"^###\s+(?P<title>[^|]+?)\s*\|\s*(?P<organization>[^|()]+?)(?:\s+\((?P<location>[^)]+)\))\s*\|\s*(?P<period>.+)$"
 )
+ENTRY_HEADING_PIPE_THREE_PART_RE = re.compile(
+    r"^###\s+(?P<title>[^|]+?)\s*\|\s*(?P<organization>[^|]+?)\s*\|\s*(?P<period>.+)$"
+)
 # New regex for quoted format: '**Job Title | Company Name | Time Period**'
 ENTRY_QUOTED_RE = re.compile(
     r"^['\"]?\*\*(?P<title>[^|]+?)\s*\|\s*(?P<organization>[^|]+?)(?:\s*\|\s*(?P<period>[^*]+?))?\*\*['\"]?$"
@@ -491,15 +494,23 @@ def parse_experience_markdown(
             if not match:
                 match = ENTRY_HEADING_PIPE_RE.match(stripped)
             if not match:
+                if ENTRY_HEADING_PIPE_THREE_PART_RE.match(stripped):
+                    raise ValueError(
+                        "Unsupported experience heading format: expected "
+                        "'### Title | Organization | Period | Location' or "
+                        "'### Title | Organization (Location) | Period', "
+                        f"got '{stripped}'."
+                    )
                 logger.error(f"Failed to match entry heading: {stripped}")
                 continue
             if current:
                 entries.append(current)
+            match_groups = match.groupdict()
             current = {
-                "title": match.group("title").strip(),
-                "organization": match.group("organization").strip(),
-                "location": (match.group("location") or "").strip(),
-                "period": (match.group("period") or "").strip(),
+                "title": match_groups.get("title", "").strip(),
+                "organization": match_groups.get("organization", "").strip(),
+                "location": (match_groups.get("location") or "").strip(),
+                "period": (match_groups.get("period") or "").strip(),
                 "bullets": [],
             }
 
