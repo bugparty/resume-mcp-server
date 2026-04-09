@@ -18,6 +18,7 @@ resumes:
     - DeepSeek
     - LangChain
     entries:
+    - M.S. in Computer Engineering - UCR
     - AI Resume Agent - Open Source Project
 - version: resume_tesla_ml_performance_intern
   metadata:
@@ -38,4 +39,5 @@ resumes:
     - Profilers
     - Distributed Systems
     entries:
+    - M.S. in Computer Engineering - UCR
     - Performance Intern - Tesla

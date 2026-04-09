@@ -1,4 +1,5 @@
-"""Run schema validation, targeted pytest suites, and integration tests."""
+#!/usr/bin/env python3
+"""Run schema validation plus the repository's supported pytest suites."""
 
 from __future__ import annotations
 
@@ -16,7 +17,7 @@ ENV_OVERRIDES = {
     "TEST_RESUME_JD_DIR": str(FIXTURE_ROOT / "jd"),
 }
 
-COMMANDS = [
+PRECHECK_COMMANDS = [
     [
         "uv",
         "run",
@@ -30,17 +31,42 @@ COMMANDS = [
         str(ROOT / "scripts" / "validate_resume_yaml.py"),
         str(ROOT / "data" / "resumes"),
     ],
-    [
-        "uv",
-        "run",
-        "pytest",
-        "tests/test_quick_toolkit.py",
-        "tests/test_quick_version_workflow.py",
-        "tests/test_resume_operations.py",
-        "tests/test_basic_functions.py",
-        "tests/test_resume_rendering.py",
-    ],
 ]
+
+SKIPPED_PYTEST_FILES = {
+    "tests/test_remote_renderer.py",
+    "tests/test_tool_compile.py",
+}
+
+
+def _python_command() -> list[str]:
+    return [sys.executable]
+
+
+def _pytest_files() -> list[str]:
+    test_dir = ROOT / "tests"
+    files = []
+    for path in sorted(test_dir.rglob("test_*.py")):
+        rel_path = path.relative_to(ROOT).as_posix()
+        if rel_path in SKIPPED_PYTEST_FILES:
+            continue
+        files.append(rel_path)
+    return files
+
+
+def _run_pytest_file(test_file: str, env: dict[str, str]) -> int:
+    pytest_cmd = _python_command() + ["-m", "pytest", test_file]
+    print(f"\n>>> Running: {' '.join(pytest_cmd)}")
+    proc = subprocess.run(pytest_cmd, cwd=ROOT, env=env)
+    if proc.returncode == 5:
+        print(f"Skipping {test_file} (no tests collected)")
+        return 0
+    if proc.returncode != 0:
+        print(
+            f"Command failed with exit code {proc.returncode}: {' '.join(pytest_cmd)}"
+        )
+        return proc.returncode
+    return 0
 
 
 def run_commands() -> int:
@@ -52,12 +78,17 @@ def run_commands() -> int:
         f"{src_path}{os.pathsep}{pythonpath}" if pythonpath else str(src_path)
     )
 
-    for cmd in COMMANDS:
+    for cmd in PRECHECK_COMMANDS:
         print(f"\n>>> Running: {' '.join(cmd)}")
         proc = subprocess.run(cmd, cwd=ROOT, env=env)
         if proc.returncode != 0:
             print(f"Command failed with exit code {proc.returncode}: {' '.join(cmd)}")
             return proc.returncode
+
+    for test_file in _pytest_files():
+        status = _run_pytest_file(test_file, env)
+        if status != 0:
+            return status
     return 0
 
 
