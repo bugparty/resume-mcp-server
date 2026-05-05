@@ -87,7 +87,7 @@ Agent Call Flow:
 
 This project uses `uv` for package management. Please use `uv pip install` to install dependencies.
 
-## 环境变量（PDF 输出与上传）
+## Environment Variables (PDF Output and Upload)
 
 ### New Environment Variables (Async PDF Compilation)
 
@@ -97,7 +97,7 @@ This project uses `uv` for package management. Please use `uv pip install` to in
 - `CELERY_TASK_SOFT_TIME_LIMIT`: Compilation task soft timeout (seconds, default 90)
 - `RESUME_PDF_JOB_PREFIX`: S3 job directory prefix (default `resume-jobs/`)
 
-S3 相关配置使用以下变量：
+Use the following variables for S3-related configuration:
 - `RESUME_S3_BUCKET_NAME` / `RESUME_S3_BUCKET`
 - `RESUME_S3_ENDPOINT_URL`
 - `RESUME_S3_REGION`
@@ -105,5 +105,5 @@ S3 相关配置使用以下变量：
 - `RESUME_S3_PUBLIC_BASE_URL`
 - `RESUME_S3_KEY_PREFIX`
 
-LaTeX 编译服务使用：
-- `LATEX_COMPILE_API_URL`（默认 `https://latex-compile.k.0x1f0c.dev`）
+Use the following for the LaTeX compile service:
+- `LATEX_COMPILE_API_URL` (default `https://latex-compile.k.0x1f0c.dev`)

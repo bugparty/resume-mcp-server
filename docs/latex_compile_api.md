@@ -1,33 +1,33 @@
-# LaTeX Compile Service API 文档
+# LaTeX Compile Service API Documentation
 
-## 概述
+## Overview
 
-LaTeX Compile Service 提供同步和异步两种方式来编译 LaTeX 文档为 PDF。支持多文件上传、自动引擎检测和多模板编译。
+LaTeX Compile Service provides synchronous and asynchronous ways to compile LaTeX documents into PDFs. It supports multi-file uploads, automatic engine detection, and multi-template compilation.
 
 **Base URL**: `https://latex-compile.k.0x1f0c.dev`
 
 ---
 
-## 端点总览
+## Endpoint Overview
 
-| 端点 | 方法 | 描述 |
+| Endpoint | Method | Description |
 |------|------|------|
-| `/healthz` | GET | 健康检查 |
-| `/v1/compile` | POST | 同步编译 (返回 PDF) |
-| `/v1/jobs` | POST | 异步提交任务 |
-| `/v1/jobs/{job_id}` | GET | 查询异步任务状态 |
+| `/healthz` | GET | Health check |
+| `/v1/compile` | POST | Synchronous compile (returns PDF) |
+| `/v1/jobs` | POST | Submit an asynchronous job |
+| `/v1/jobs/{job_id}` | GET | Query asynchronous job status |
 
 ---
 
-## 核心端点
+## Core Endpoints
 
-### 1. 健康检查
+### 1. Health Check
 
 ```http
 GET /healthz
 ```
 
-**响应**:
+**Response**:
 ```json
 {
   "status": "ok"
@@ -36,37 +36,37 @@ GET /healthz
 
 ---
 
-### 2. 同步编译 - 返回 PDF
+### 2. Synchronous Compile - Return PDF
 
 ```http
 POST /v1/compile
 ```
 
-同步编译 LaTeX 文件，直接返回 PDF 文件。
+Compile LaTeX files synchronously and return the PDF directly.
 
-**请求参数** (multipart/form-data):
+**Request parameters** (multipart/form-data):
 
-| 字段 | 类型 | 必填 | 描述 |
+| Field | Type | Required | Description |
 |------|------|------|------|
-| `files` | File[] | 是 | LaTeX 源文件和资源文件列表 |
-| `main` | string | 否 | 主 .tex 文件路径 (如 `main.tex` 或 `src/main.tex`) |
-| `engine` | string | 否 | 编译引擎: `xelatex`, `pdflatex`, `lualatex` |
-| `job_id` | string | 否 | 自定义任务 ID |
-| `format` | string | 否 | 返回格式: `pdf` (默认) 或 `json` |
+| `files` | File[] | Yes | List of LaTeX source files and asset files |
+| `main` | string | No | Path to the main `.tex` file (for example `main.tex` or `src/main.tex`) |
+| `engine` | string | No | Compile engine: `xelatex`, `pdflatex`, `lualatex` |
+| `job_id` | string | No | Custom job ID |
+| `format` | string | No | Return format: `pdf` (default) or `json` |
 
-**Engine 自动检测**:
-- 从文件内容前 10 行的 magic comment 自动检测
+**Engine auto-detection**:
+- Detect automatically from the magic comment in the first 10 lines of file content
 - `% !TEX program = xelatex` → xelatex
 - `% !TEX program = pdflatex` → pdflatex
 - `% !TEX program = lualatex` → lualatex
-- 默认: `xelatex`
+- Default: `xelatex`
 
-**响应** (format=pdf):
+**Response** (format=pdf):
 - Content-Type: `application/pdf`
 - Content-Disposition: `attachment; filename="output_{job_id}.pdf"`
 - Header: `X-Job-Id: {job_id}`
 
-**响应** (format=json):
+**Response** (format=json):
 ```json
 {
   "job_id": "abc123",
@@ -75,14 +75,14 @@ POST /v1/compile
 }
 ```
 
-**示例**:
+**Examples**:
 ```bash
-# 单文件编译
+# Single-file compile
 curl -X POST https://latex-compile.k.0x1f0c.dev/v1/compile \
   -F "files=@main.tex" \
   -o output.pdf
 
-# 多文件编译，指定主文件
+# Multi-file compile, specify the main file
 curl -X POST https://latex-compile.k.0x1f0c.dev/v1/compile \
   -F "files=@main.tex" \
   -F "files=@chapters/intro.tex;filename=chapters/intro.tex" \
@@ -91,7 +91,7 @@ curl -X POST https://latex-compile.k.0x1f0c.dev/v1/compile \
   -F "engine=xelatex" \
   -o output.pdf
 
-# 返回 JSON 格式
+# Return JSON format
 curl -X POST "https://latex-compile.k.0x1f0c.dev/v1/compile?format=json" \
   -F "files=@main.tex" \
   | jq '.pdf_base64' | tr -d '"' | base64 -d > output.pdf
@@ -99,24 +99,24 @@ curl -X POST "https://latex-compile.k.0x1f0c.dev/v1/compile?format=json" \
 
 ---
 
-### 3. 异步提交任务
+### 3. Submit an Asynchronous Job
 
 ```http
 POST /v1/jobs
 ```
 
-提交异步编译任务，文件上传到 S3 后由 Celery Worker 处理。
+Submit an asynchronous compile job. Files are uploaded to S3 and then processed by a Celery worker.
 
-**请求参数** (multipart/form-data):
+**Request parameters** (multipart/form-data):
 
-| 字段 | 类型 | 必填 | 描述 |
+| Field | Type | Required | Description |
 |------|------|------|------|
-| `files` | File[] | 是 | LaTeX 源文件和资源文件列表 |
-| `main` | string | 否 | 主 .tex 文件路径 |
-| `engine` | string | 否 | 编译引擎 |
-| `job_id` | string | 否 | 自定义任务 ID |
+| `files` | File[] | Yes | List of LaTeX source files and asset files |
+| `main` | string | No | Path to the main `.tex` file |
+| `engine` | string | No | Compile engine |
+| `job_id` | string | No | Custom job ID |
 
-**响应**:
+**Response**:
 ```json
 {
   "job_id": "abc123",
@@ -125,7 +125,7 @@ POST /v1/jobs
 }
 ```
 
-**示例**:
+**Example**:
 ```bash
 curl -X POST https://latex-compile.k.0x1f0c.dev/v1/jobs \
   -F "files=@resume.tex" \
@@ -135,15 +135,15 @@ curl -X POST https://latex-compile.k.0x1f0c.dev/v1/jobs \
 
 ---
 
-### 4. 查询异步任务状态
+### 4. Query Asynchronous Job Status
 
 ```http
 GET /v1/jobs/{job_id}
 ```
 
-查询异步任务的执行状态。
+Query the execution status of an asynchronous job.
 
-**响应**:
+**Response**:
 ```json
 {
   "job_id": "abc123",
@@ -157,28 +157,28 @@ GET /v1/jobs/{job_id}
 }
 ```
 
-**状态值**:
-- `queued` - 任务已提交，等待处理
-- `processing` - 正在编译
-- `success` - 编译成功
-- `failed` - 编译失败
-- `unknown` - 未知状态
+**Status values**:
+- `queued` - Job has been submitted and is waiting to be processed
+- `processing` - Currently compiling
+- `success` - Compilation succeeded
+- `failed` - Compilation failed
+- `unknown` - Unknown status
 
 ---
 
-## 文件上传规则
+## File Upload Rules
 
-### 主文件检测
+### Main File Detection
 
-当未指定 `main` 参数时，按以下顺序检测:
-1. 如果只有一个 `.tex` 文件，使用该文件
-2. 查找 `main.tex`
-3. 查找 `resume.tex`
-4. 失败，返回错误
+When the `main` parameter is not specified, detection happens in the following order:
+1. If there is only one `.tex` file, use that file
+2. Look for `main.tex`
+3. Look for `resume.tex`
+4. If none are found, return an error
 
-### 子目录支持
+### Subdirectory Support
 
-支持上传带子目录结构的文件:
+Files with subdirectory structure are supported:
 ```bash
 curl -X POST /v1/compile \
   -F "files=@main.tex;filename=main.tex" \
@@ -186,27 +186,27 @@ curl -X POST /v1/compile \
   -F "main=main.tex"
 ```
 
-### 路径遍历保护
+### Path Traversal Protection
 
-文件名包含 `..` 的请求会被拒绝:
+Requests whose filenames contain `..` are rejected:
 ```
 400 Bad Request: Invalid filename: ../../etc/passwd
 ```
 
 ---
 
-## 错误处理
+## Error Handling
 
-### HTTP 状态码
+### HTTP Status Codes
 
-| 状态码 | 含义 |
+| Status Code | Meaning |
 |--------|------|
-| 200 | 成功 |
-| 400 | 请求参数错误 (文件缺失、主文件未找到等) |
-| 500 | 编译错误 (LaTeX 语法错误等) |
-| 503 | Celery Worker 不可用 |
+| 200 | Success |
+| 400 | Bad request (missing files, main file not found, etc.) |
+| 500 | Compile error (LaTeX syntax errors, etc.) |
+| 503 | Celery worker unavailable |
 
-### 错误响应示例
+### Error Response Example
 
 ```json
 {
@@ -216,16 +216,16 @@ curl -X POST /v1/compile \
 
 ---
 
-## 使用场景
+## Use Cases
 
-### 场景 1: 简单简历编译
+### Scenario 1: Simple Resume Compile
 ```bash
 curl -X POST https://latex-compile.k.0x1f0c.dev/v1/compile \
   -F "files=@resume.tex" \
   -o resume.pdf
 ```
 
-### 场景 2: 复杂项目编译
+### Scenario 2: Complex Project Compile
 ```bash
 curl -X POST https://latex-compile.k.0x1f0c.dev/v1/compile \
   -F "files=@thesis.tex;filename=thesis.tex" \
@@ -237,14 +237,14 @@ curl -X POST https://latex-compile.k.0x1f0c.dev/v1/compile \
   -o thesis.pdf
 ```
 
-### 场景 3: 异步批量处理
+### Scenario 3: Asynchronous Batch Processing
 ```bash
-# 提交任务
+# Submit job
 JOB=$(curl -s -X POST https://latex-compile.k.0x1f0c.dev/v1/jobs \
   -F "files=@batch_resume.tex" \
   | jq -r '.job_id')
 
-# 轮询状态
+# Poll status
 while true; do
   STATUS=$(curl -s https://latex-compile.k.0x1f0c.dev/v1/jobs/$JOB | jq -r '.status')
   echo "Status: $STATUS"
@@ -255,8 +255,8 @@ done
 
 ---
 
-## 版本信息
+## Version Information
 
 - **API Version**: 3.0.0
 - **LaTeX Engines**: xelatex (default), pdflatex, lualatex
-- **CJK Support**: 是 (支持中文、日文、韩文)
+- **CJK Support**: Yes (supports Chinese, Japanese, and Korean)
