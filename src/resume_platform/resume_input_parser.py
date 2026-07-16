@@ -419,12 +419,7 @@ def split_top_level_items(text: str) -> List[str]:
 
 def _clean_skill_item(raw_item: str) -> str:
     """Strip surrounding whitespace and bold markers from one skill item."""
-    item = raw_item.strip()
-    if item.startswith("**"):
-        item = item[2:].strip()
-    if item.endswith("**"):
-        item = item[:-2].strip()
-    return item
+    return raw_item.strip().removeprefix("**").removesuffix("**").strip()
 
 
 def parse_skill_items(line: str) -> List[str]:
