@@ -369,6 +369,72 @@ def parse_summary_markdown(
     section["bullets"] = bullets
 
 
+_SKILL_ITEM_DELIMITERS = ",;"
+_SKILL_BRACKET_PAIRS = {"(": ")", "[": "]", "{": "}"}
+_SKILL_CLOSING_BRACKETS = frozenset(_SKILL_BRACKET_PAIRS.values())
+
+
+def _brackets_balanced(text: str) -> bool:
+    """Report whether every bracket in ``text`` opens and closes in order."""
+    expected_closers: List[str] = []
+    for char in text:
+        if char in _SKILL_BRACKET_PAIRS:
+            expected_closers.append(_SKILL_BRACKET_PAIRS[char])
+        elif char in _SKILL_CLOSING_BRACKETS:
+            if not expected_closers or expected_closers.pop() != char:
+                return False
+    return not expected_closers
+
+
+def split_top_level_items(text: str) -> List[str]:
+    """Split ``text`` on delimiters that sit outside any bracketed group.
+
+    A skill may legitimately contain a delimiter inside brackets, as in
+    "C/C++ (primary, exceptional depth)", so a flat split would break the
+    item in two. Delimiters are only honoured at bracket depth zero.
+
+    When brackets are unbalanced the nesting cannot be trusted, so this falls
+    back to a flat split rather than letting a stray "(" swallow the rest of
+    the line into a single item.
+    """
+    if not _brackets_balanced(text):
+        return re.split(r"[,;]", text)
+
+    parts: List[str] = []
+    current: List[str] = []
+    depth = 0
+    for char in text:
+        if char in _SKILL_BRACKET_PAIRS:
+            depth += 1
+        elif char in _SKILL_CLOSING_BRACKETS:
+            depth -= 1
+        if char in _SKILL_ITEM_DELIMITERS and depth == 0:
+            parts.append("".join(current))
+            current = []
+        else:
+            current.append(char)
+    parts.append("".join(current))
+    return parts
+
+
+def _clean_skill_item(raw_item: str) -> str:
+    """Strip surrounding whitespace and bold markers from one skill item."""
+    return raw_item.strip().removeprefix("**").removesuffix("**").strip()
+
+
+def parse_skill_items(line: str) -> List[str]:
+    """Parse the individual skills out of a single skills line.
+
+    Accepts an optional list marker and an optional "Category:" prefix, so
+    both "- Languages: C++, Python" and "C++, Python" yield ["C++", "Python"].
+    """
+    content = re.sub(r"^[-*]\s+", "", line.strip(), count=1)
+    if ":" in content:
+        _, content = content.split(":", 1)
+    items = (_clean_skill_item(part) for part in split_top_level_items(content))
+    return [item for item in items if item]
+
+
 @log_markdown_parsing
 def parse_skills_markdown(
     markdown: str, section: Dict[str, Any], version: str, section_id: str
@@ -419,13 +485,8 @@ def parse_skills_markdown(
 
             # Clean up items and remove any bold formatting
             item_list = []
-            for item in re.split(r",|;", items):
-                cleaned_item = item.strip()
-                # Remove ** from items if present
-                if cleaned_item.startswith("**"):
-                    cleaned_item = cleaned_item[2:].strip()
-                if cleaned_item.endswith("**"):
-                    cleaned_item = cleaned_item[:-2].strip()
+            for item in split_top_level_items(items):
+                cleaned_item = _clean_skill_item(item)
                 if cleaned_item:
                     item_list.append(cleaned_item)
         else:
