@@ -11,6 +11,7 @@ import re
 import logging
 import json
 import copy
+import threading
 from typing import Dict, List, Any
 from functools import wraps
 
@@ -20,30 +21,50 @@ from resume_platform.infrastructure.settings import get_settings
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# Create logs directory if it doesn't exist
-SETTINGS = get_settings()
-LOGS_DIR = SETTINGS.logs_dir
-LOGS_DIR.mkdir(parents=True, exist_ok=True)
+_logging_configured = False
+# Import previously made handler setup run exactly once; guard the lazy path.
+_logging_lock = threading.Lock()
 
-# File handler for markdown parse logs
-markdown_log_file = LOGS_DIR / "markdown_parsing.log"
-file_handler = logging.FileHandler(markdown_log_file, encoding="utf-8")
-file_handler.setLevel(logging.INFO)
 
-# Console handler for debugging
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.WARNING)
+def _configure_logging() -> None:
+    """Attach the file and console handlers, resolving settings on first use.
 
-# Formatter
-formatter = logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-file_handler.setFormatter(formatter)
-console_handler.setFormatter(formatter)
+    Deferred rather than done at import time so that importing this module has
+    no side effects: reading settings here would freeze whatever logs_dir
+    happened to be configured at import, and creating the directory plus
+    opening the log file would happen even for callers that never parse
+    anything.
+    """
+    global _logging_configured
+    if _logging_configured:
+        return
 
-logger.addHandler(file_handler)
-logger.addHandler(console_handler)
+    with _logging_lock:
+        if _logging_configured:
+            return
+
+        logs_dir = get_settings().logs_dir
+        logs_dir.mkdir(parents=True, exist_ok=True)
+
+        file_handler = logging.FileHandler(
+            logs_dir / "markdown_parsing.log", encoding="utf-8"
+        )
+        file_handler.setLevel(logging.INFO)
+
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.WARNING)
+
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+        file_handler.setFormatter(formatter)
+        console_handler.setFormatter(formatter)
+
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+
+        _logging_configured = True
 
 
 def log_markdown_parsing(func):
@@ -56,6 +77,7 @@ def log_markdown_parsing(func):
     def wrapper(
         markdown: str, section: Dict[str, Any], version: str, section_id: str
     ) -> None:
+        _configure_logging()
         func_name = func.__name__
 
         # Create a deep copy of the section before parsing
