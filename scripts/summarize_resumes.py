@@ -15,8 +15,7 @@ SRC_PATH = ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
-from resume_platform.infrastructure.settings import load_settings
-from resume_platform.infrastructure.filesystem import init_filesystems
+from resume_platform.infrastructure.bootstrap import bootstrap
 
 
 def _extract_summary_bullets(resume_data: dict[str, Any], limit: int = 3) -> list[str]:
@@ -112,9 +111,8 @@ def main() -> int:
         data_dir = Path(test_resume_data_dir)
         summary_path = Path(test_resume_summary_path)
     else:
-        # Ensure filesystems are initialized for scripts (CI/local runtime parity)
-        settings = load_settings()
-        init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
+        # Assemble the runtime for scripts (CI/local runtime parity)
+        settings = bootstrap()
         data_dir = settings.data_dir
         summary_path = settings.data_dir.parent / "resume_summary.yaml"
 
