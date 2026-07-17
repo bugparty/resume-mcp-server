@@ -163,73 +163,38 @@ def log_mcp_tool_call(func: Callable) -> Callable:
     return wrapper
 
 
-# Try relative import first, fall back to absolute import
-try:
-    from resume_platform.infrastructure.settings import load_settings, get_settings
-    from resume_platform.infrastructure.filesystem import (
-        init_filesystems,
-        get_resume_fs,
-        get_jd_fs,
-        get_output_fs,
-        is_initialized,
-    )
-    from resume_platform.infrastructure.s3_utils import upload_bytes_to_s3
-    from resume_platform.tools import (
-        list_resume_versions_tool,
-        load_complete_resume_tool,
-        get_resume_section_tool,
-        read_resume_text_tool,
-        update_resume_section_tool,
-        replace_resume_text_tool,
-        insert_resume_text_tool,
-        delete_resume_text_tool,
-        create_new_version_tool,
-        delete_resume_version_tool,
-        copy_resume_version_tool,
-        update_main_resume_tool,
-        list_modules_in_version_tool,
-        render_resume_to_latex_tool,
-        compile_resume_pdf_tool,
-        set_section_visibility_tool,
-        set_section_order_tool,
-        get_resume_layout_tool,
-        build_vector_index_tool,
-        search_resume_entries_tool,
-        get_vector_index_status_tool,
-    )
-except ImportError:
-    from resume_platform.infrastructure.settings import load_settings, get_settings
-    from resume_platform.infrastructure.filesystem import (
-        init_filesystems,
-        get_resume_fs,
-        get_jd_fs,
-        get_output_fs,
-        is_initialized,
-    )
-    from resume_platform.infrastructure.s3_utils import upload_bytes_to_s3
-    from resume_platform.tools import (
-        list_resume_versions_tool,
-        load_complete_resume_tool,
-        get_resume_section_tool,
-        read_resume_text_tool,
-        update_resume_section_tool,
-        replace_resume_text_tool,
-        insert_resume_text_tool,
-        delete_resume_text_tool,
-        create_new_version_tool,
-        delete_resume_version_tool,
-        copy_resume_version_tool,
-        update_main_resume_tool,
-        list_modules_in_version_tool,
-        render_resume_to_latex_tool,
-        compile_resume_pdf_tool,
-        set_section_visibility_tool,
-        set_section_order_tool,
-        get_resume_layout_tool,
-        build_vector_index_tool,
-        search_resume_entries_tool,
-        get_vector_index_status_tool,
-    )
+from resume_platform.infrastructure.bootstrap import bootstrap
+from resume_platform.infrastructure.settings import get_settings
+from resume_platform.infrastructure.filesystem import (
+    get_resume_fs,
+    get_jd_fs,
+    get_output_fs,
+    is_initialized,
+)
+from resume_platform.infrastructure.s3_utils import upload_bytes_to_s3
+from resume_platform.tools import (
+    list_resume_versions_tool,
+    load_complete_resume_tool,
+    get_resume_section_tool,
+    read_resume_text_tool,
+    update_resume_section_tool,
+    replace_resume_text_tool,
+    insert_resume_text_tool,
+    delete_resume_text_tool,
+    create_new_version_tool,
+    delete_resume_version_tool,
+    copy_resume_version_tool,
+    update_main_resume_tool,
+    list_modules_in_version_tool,
+    render_resume_to_latex_tool,
+    compile_resume_pdf_tool,
+    set_section_visibility_tool,
+    set_section_order_tool,
+    get_resume_layout_tool,
+    build_vector_index_tool,
+    search_resume_entries_tool,
+    get_vector_index_status_tool,
+)
 
 
 def _initialize_logging() -> Path:
@@ -280,8 +245,33 @@ def _initialize_logging() -> Path:
     return log_path
 
 
-mcp_log_file = _initialize_logging()
-mcp_error_events_file = mcp_log_file.parent / "mcp_error_events.jsonl"
+# Resolved by _ensure_logging() rather than at import: picking the log paths
+# needs settings, and creating the directory plus opening the log file are side
+# effects that importing this module must not have. See ADR-0001.
+mcp_log_file: Path | None = None
+mcp_error_events_file: Path | None = None
+_logging_configured = False
+_logging_lock = threading.Lock()
+
+
+def _ensure_logging() -> None:
+    """Resolve the log paths and attach handlers, once, on first use.
+
+    Called from the server entry points, and defensively from the failure-event
+    helpers so that direct tool calls (tests, library use) still have somewhere
+    to write. Callers that have already set ``mcp_error_events_file`` — the
+    tests patch it — are left alone.
+    """
+    global mcp_log_file, mcp_error_events_file, _logging_configured
+    if _logging_configured:
+        return
+
+    with _logging_lock:
+        if _logging_configured:
+            return
+        mcp_log_file = _initialize_logging()
+        mcp_error_events_file = mcp_log_file.parent / "mcp_error_events.jsonl"
+        _logging_configured = True
 
 
 def _to_jsonable(value: Any) -> Any:
@@ -345,6 +335,9 @@ def _append_failure_event(
     if result_payload is not None:
         event["result_payload"] = result_payload
 
+    if mcp_error_events_file is None:
+        _ensure_logging()
+
     try:
         mcp_error_events_file.parent.mkdir(parents=True, exist_ok=True)
         with _error_events_lock:
@@ -355,6 +348,9 @@ def _append_failure_event(
 
 
 def _read_failure_events() -> tuple[list[dict[str, Any]], int]:
+    if mcp_error_events_file is None:
+        _ensure_logging()
+
     if not mcp_error_events_file.exists():
         return [], 0
 
@@ -385,48 +381,19 @@ def _read_failure_events() -> tuple[list[dict[str, Any]], int]:
     return events, parse_errors
 
 
-def _ensure_server_filesystems_initialized() -> None:
-    if is_initialized():
-        return
+def _start_server_runtime() -> None:
+    """Assemble runtime state for a server process.
 
-    settings = None
-    try:
-        settings = load_settings()
-    except Exception:
-        settings = None
+    Both entry points (stdio via main(), HTTP via the app factory) call this;
+    bootstrap() is idempotent so the duplicate call is free. Importing this
+    module deliberately does not initialize anything — see ADR-0001.
 
-    resume_fs_url = getattr(settings, "resume_fs_url", None)
-    jd_fs_url = getattr(settings, "jd_fs_url", None)
-
-    if not (isinstance(resume_fs_url, str) and resume_fs_url.strip()):
-        resume_fs_url = str(PROJECT_ROOT / "data" / "resumes")
-    if not (isinstance(jd_fs_url, str) and jd_fs_url.strip()):
-        jd_fs_url = str(PROJECT_ROOT / "data" / "jd")
-
-    try:
-        init_filesystems(resume_fs_url, jd_fs_url)
-    except Exception as exc:
-        allow_fallback = os.getenv(
-            "RESUME_ALLOW_MEM_FS_FALLBACK", ""
-        ).strip().lower() in {"1", "true", "yes", "on"}
-        logger.exception(
-            "Failed to initialize filesystems. resume_fs_url=%s jd_fs_url=%s",
-            resume_fs_url,
-            jd_fs_url,
-        )
-        if allow_fallback:
-            logger.warning(
-                "RESUME_ALLOW_MEM_FS_FALLBACK is enabled; falling back to mem:// filesystems."
-            )
-            init_filesystems("mem://", "mem://")
-            return
-        raise RuntimeError(
-            "Filesystem initialization failed. Check RESUME_FS_URL/JD_FS_URL and S3 credentials. "
-            "Set RESUME_ALLOW_MEM_FS_FALLBACK=true only for temporary debugging."
-        ) from exc
-
-
-_ensure_server_filesystems_initialized()
+    Filesystem-init failure propagates: a server backed by throwaway in-memory
+    storage after an S3 misconfiguration is worse than one that refuses to
+    start, because the failure resurfaces later as silent data loss.
+    """
+    _ensure_logging()
+    bootstrap()
 
 # Create FastMCP instance
 mcp = FastMCP("Resume Agent Tools")
@@ -480,6 +447,10 @@ class _DualTransportMiddleware:
 
 
 def _build_dual_http_app() -> Starlette:
+    # ASGI servers can load this factory directly without going through main(),
+    # so the runtime is assembled here too. bootstrap() is idempotent.
+    _start_server_runtime()
+
     sse_app = mcp.http_app(transport="sse")
     streamable_app = mcp.http_app(transport="http")
     routes = _dedupe_routes([*sse_app.routes, *streamable_app.routes])
@@ -896,7 +867,6 @@ def diagnose_filesystems() -> str:
             "RESUME_FS_URL": os.getenv("RESUME_FS_URL"),
             "RESUME_FS_UR": os.getenv("RESUME_FS_UR"),
             "JD_FS_URL": os.getenv("JD_FS_URL"),
-            "RESUME_ALLOW_MEM_FS_FALLBACK": os.getenv("RESUME_ALLOW_MEM_FS_FALLBACK"),
         },
     }
 
@@ -1707,7 +1677,11 @@ def main(transport="stdio", port=8000):
     """Main entry point for the MCP server."""
     transport, port = _resolve_transport(transport, port)
 
-    # Initialize filesystem before starting server
+    # Assemble runtime state before serving. This used to run as an import side
+    # effect, which meant the "Filesystems initialized" line below was logged
+    # without main() having initialized anything.
+    _start_server_runtime()
+
     logger.info("=" * 80)
     logger.info("Starting MCP Server for Resume Agent Tools")
     logger.info(f"Transport: {transport}")

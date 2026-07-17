@@ -1,4 +1,3 @@
-import os
 import sys
 import json
 import tempfile
@@ -13,19 +12,8 @@ SRC_PATH = ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
-from resume_platform.infrastructure.settings import load_settings
-from resume_platform.infrastructure.filesystem import init_filesystems
-
-FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "test_data"
-
-settings = load_settings(
-    data_dir=os.getenv("TEST_RESUME_DATA_DIR") or (FIXTURE_ROOT / "resumes"),
-    jd_dir=os.getenv("TEST_RESUME_JD_DIR") or (FIXTURE_ROOT / "jd"),
-)
-
-# Initialize filesystems for tests
-init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
-
+# Runtime (settings + filesystems) is bootstrapped once by the session-scoped
+# autouse fixture in conftest.py; no per-module initialization needed.
 from resume_platform.resume.views import (
     load_complete_resume,
     load_resume_section,
@@ -503,9 +491,10 @@ class TestResumeTextEditing(unittest.TestCase):
         self.assertEqual(before, after)
 
     def test_mcp_server_exposes_new_text_read_tool(self):
+        # Filesystems are already bootstrapped at the fixture tree by the
+        # session fixture; the server wrapper reads through the same globals.
         from resume_platform.interfaces.mcp import server as mcp_server
 
-        mcp_server.init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
         rendered = mcp_server.read_resume_text(self.version)
         self.assertIn("## Header", rendered)
 

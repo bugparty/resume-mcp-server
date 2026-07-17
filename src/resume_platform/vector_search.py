@@ -11,8 +11,8 @@ try:
 except Exception:  # pragma: no cover - dependency guard
     PersistentClient = None
 
+from resume_platform.infrastructure.bootstrap import bootstrap
 from resume_platform.infrastructure.llm_config import get_embedding_model
-from resume_platform.infrastructure.filesystem import init_filesystems, is_initialized
 from resume_platform.resume.repository import load_complete_resume_as_dict
 from resume_platform.resume.repository import find_resume_versions
 from resume_platform.infrastructure.settings import get_settings
@@ -211,11 +211,13 @@ def _get_client_and_collection():
 
 
 def _ensure_filesystems_initialized() -> None:
-    if is_initialized():
-        return
+    """Assemble the runtime if a caller reached us without booting one.
 
-    settings = get_settings()
-    init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
+    Delegates to the composition root rather than repeating the
+    is_initialized()/init_filesystems() guard; bootstrap() is idempotent, so
+    this is a no-op once a server or test session has started. See ADR-0001.
+    """
+    bootstrap()
 
 
 def _read_status() -> Dict[str, Any]:

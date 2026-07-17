@@ -1,4 +1,3 @@
-import os
 import sys
 from pathlib import Path
 
@@ -9,7 +8,6 @@ SRC_PATH = ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
-from resume_platform.infrastructure.settings import load_settings
 from resume_platform.infrastructure.filesystem import init_filesystems, reset_filesystems
 from resume_platform.resume_renderer import (
     markdown_inline_to_latex,
@@ -19,15 +17,8 @@ from resume_platform.resume_renderer import (
 )
 from resume_platform.tools import compile_resume_pdf_tool
 
-FIXTURE_ROOT = ROOT / "tests" / "fixtures" / "test_data"
-
-settings = load_settings(
-    data_dir=os.getenv("TEST_RESUME_DATA_DIR") or (FIXTURE_ROOT / "resumes"),
-    jd_dir=os.getenv("TEST_RESUME_JD_DIR") or (FIXTURE_ROOT / "jd"),
-)
-
-# Initialize filesystems for tests
-init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
+# Runtime (settings + filesystems) is bootstrapped once by the session-scoped
+# autouse fixture in conftest.py; no per-module initialization needed.
 
 
 def test_markdown_unicode_dash_and_times_conversion():
@@ -38,8 +29,9 @@ def test_markdown_unicode_dash_and_times_conversion():
     assert "\\textperiodcentered" in escape_tex("Mountain View · Remote")
 
 
-def test_compile_exports_latex_assets(monkeypatch, tmp_path):
-    original_settings = settings
+def test_compile_exports_latex_assets(monkeypatch, tmp_path, reset_runtime_after):
+    # reset_runtime_after (conftest) restores the session filesystems on
+    # teardown, so this test can freely repoint the globals at tmp dirs.
     reset_filesystems()
 
     resume_dir = tmp_path / "resumes"
@@ -66,9 +58,6 @@ def test_compile_exports_latex_assets(monkeypatch, tmp_path):
     debug_dir_path = output_dir / debug_dir_name
     assert debug_dir_path.exists()
     assert (debug_dir_path / "resume.tex").exists()
-
-    reset_filesystems()
-    init_filesystems(original_settings.resume_fs_url, original_settings.jd_fs_url)
 
 
 @pytest.mark.parametrize(
