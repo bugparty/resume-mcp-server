@@ -77,11 +77,10 @@ def test_init_filesystems_uses_s3_output_subpath(
 
 
 def test_load_settings_accepts_resume_fs_ur_alias(
-    monkeypatch: pytest.MonkeyPatch, reset_runtime_after: None
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # load_settings() reassigns the process-global _SETTINGS; reset_runtime_after
-    # (conftest) restores the fixture-backed baseline afterward so later tests
-    # that read get_settings() don't inherit this S3 URL.
+    # No cleanup fixture needed: load_settings() is a pure builder, so asserting
+    # on env parsing here cannot repoint the process settings.
     monkeypatch.delenv("RESUME_FS_URL", raising=False)
     monkeypatch.setenv("RESUME_FS_UR", "s3://resume-bucket/resumes")
 

@@ -5,8 +5,7 @@ import logging
 import re
 from pathlib import Path
 from typing import Any, Dict, List
-from resume_platform.infrastructure.settings import load_settings
-from resume_platform.infrastructure.filesystem import init_filesystems
+from resume_platform.infrastructure.bootstrap import bootstrap
 from urllib.parse import urlparse
 
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
@@ -810,8 +809,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    settings = load_settings()
-    init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
+    bootstrap()
 
     tex = render_resume(args.version)
     args.output.parent.mkdir(parents=True, exist_ok=True)

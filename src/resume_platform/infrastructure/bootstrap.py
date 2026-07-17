@@ -18,11 +18,7 @@ import threading
 from typing import Any
 
 from resume_platform.infrastructure import filesystem as fs
-from resume_platform.infrastructure.settings import (
-    AppSettings,
-    get_settings,
-    load_settings,
-)
+from resume_platform.infrastructure.settings import AppSettings, get_settings, settings
 
 _lock = threading.Lock()
 _ready = False
@@ -34,8 +30,10 @@ def bootstrap(*, force: bool = False, **settings_overrides: Any) -> AppSettings:
 
     Idempotent: a second call is a no-op that returns the current settings,
     unless ``force=True`` tears state down and rebuilds it (tests that need a
-    clean slate). ``settings_overrides`` are forwarded to ``load_settings`` so
-    tests can point at fixture directories without touching the environment.
+    clean slate). ``settings_overrides`` are staged on the settings proxy so
+    tests can point at fixture directories without touching the environment;
+    passing them once settings are already resolved raises, so use
+    ``force=True`` to rebuild.
 
     Reentrant calls raise rather than deadlocking. Filesystem-init failure
     propagates — there is no silent ``mem://`` fallback.
@@ -49,13 +47,16 @@ def bootstrap(*, force: bool = False, **settings_overrides: Any) -> AppSettings:
         _running = True
         try:
             if force:
+                settings.reset()
                 fs.reset_filesystems()
             # phase 1 — settings
-            settings = load_settings(**settings_overrides)
+            if settings_overrides:
+                settings.configure(**settings_overrides)
+            resolved = get_settings()
             # phase 2 — filesystems
             if not fs.is_initialized():
-                fs.init_filesystems(settings.resume_fs_url, settings.jd_fs_url)
+                fs.init_filesystems(resolved.resume_fs_url, resolved.jd_fs_url)
             _ready = True
-            return settings
+            return resolved
         finally:
             _running = False

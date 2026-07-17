@@ -361,15 +361,23 @@ loss.
        starts and the log file is actually created.
 
 **PR-3 — lazy settings proxy (🟠 medium risk, structural)**
-10. [ ] Introduce `LazySettings` as the `settings` global in `settings.py`; keep
+10. [x] Introduce `LazySettings` as the `settings` global in `settings.py`; keep
         `get_settings()`/`load_settings()` working so call sites are untouched.
-11. [ ] Switch `bootstrap()` phase 1 from `load_settings(**o)` to
+11. [x] Switch `bootstrap()` phase 1 from `load_settings(**o)` to
         `settings.configure(**o)` + `get_settings()`.
-12. [ ] Grep for any remaining import-time `get_settings()`/`SETTINGS = ...`
-        snapshots and route them through the proxy (on-access, not on-import).
-13. [ ] Verify: assert (in a test) that importing `resume_platform` modules with
-        `DJANGO`-style env unset resolves no settings until first access; full
-        suite green under shuffled order.
+12. [x] **Make `load_settings()` a pure builder.** This turned out to be the
+        substantive half of PR-3, and it is what actually kills the settings
+        pollution: the function no longer reassigns a process global, so a
+        caller that merely wants to inspect env parsing cannot repoint the
+        process. The `reset_runtime_after` band-aid PR-1 added to
+        `test_load_settings_accepts_resume_fs_ur_alias` is removed — the bug it
+        contained is gone at the root.
+13. [x] Route the remaining duplicated `load_settings()` + `init_filesystems()`
+        bootstraps (`resume_renderer` CLI, `scripts/summarize_resumes.py`)
+        through `bootstrap()`.
+14. [x] Verify: `tests/test_settings_proxy.py` asserts import resolves nothing,
+        `load_settings()` does not install, and configure-after-resolve raises;
+        old-vs-new pollution comparison run directly.
 
     *Sequencing note:* PR-3 is independent of PR-1's stop-the-bleed and can move
     earlier, but it is the change that makes import-purity structural, so it is
@@ -391,8 +399,10 @@ by this work:
 - **`load_settings()` leaks through the settings global.**
   `test_load_settings_accepts_resume_fs_ur_alias` reassigns `_SETTINGS` to an
   S3 URL; anything reading `get_settings()` afterwards inherits it and tries to
-  reach S3 (`NoCredentialsError`). Contained with `reset_runtime_after` for now
-  — **this is the case PR-3's lazy proxy exists to fix structurally.**
+  reach S3 (`NoCredentialsError`). Contained with `reset_runtime_after` in PR-1;
+  **fixed at the root in PR-3** by making `load_settings()` a pure builder, and
+  the band-aid removed. Verified old-vs-new: on `main` the same call sequence
+  leaves `get_settings()` pointed at the S3 URL; now it is unaffected.
 
 Also collapsed in PR-2: the `try/except ImportError` block in `server.py` whose
 two branches imported an identical symbol list, making the `except` provably

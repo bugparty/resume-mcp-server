@@ -1,9 +1,16 @@
+"""Application settings.
+
+Importing this module has no side effects: ``settings`` is a lazy proxy that
+resolves on first attribute access, mirroring ``django.conf.settings``. See
+``docs/adr/0001-composition-root-and-runtime-lifecycle.md``.
+"""
+
 from __future__ import annotations
 
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 
 @dataclass
@@ -17,9 +24,6 @@ class AppSettings:
     # Filesystem URLs for PyFilesystem2
     resume_fs_url: str
     jd_fs_url: str
-
-
-_SETTINGS: Optional[AppSettings] = None
 
 
 def _resolve_path(value: str | Path | None, *, base_dir: Path) -> Path:
@@ -58,7 +62,17 @@ def load_settings(
     resume_fs_url: str | None = None,
     jd_fs_url: str | None = None,
 ) -> AppSettings:
-    """Load application settings with optional overrides."""
+    """Build an ``AppSettings`` from the environment plus optional overrides.
+
+    Pure with respect to process state: it returns a new object and does *not*
+    install it as the process settings — use :func:`bootstrap` or
+    ``settings.configure()`` for that.
+
+    This used to reassign a module-level ``_SETTINGS`` global, which meant any
+    caller silently repointed the whole process. A test that merely asserted on
+    env parsing left every later ``get_settings()`` reader pointed at its S3
+    URL. See ADR-0001.
+    """
 
     root_dir = Path(__file__).resolve().parents[3]
     fallback_base = Path(os.getenv("TMPDIR", "/tmp")) / "resume_mcp"
@@ -127,11 +141,10 @@ def load_settings(
         or os.getenv("JD_FS_URL", str(resolved_jd_dir))
     )
 
-    global _SETTINGS
     resolved_logs_dir.mkdir(parents=True, exist_ok=True)
     resolved_vector_db_dir.mkdir(parents=True, exist_ok=True)
     resolved_index_status_path.parent.mkdir(parents=True, exist_ok=True)
-    _SETTINGS = AppSettings(
+    return AppSettings(
         data_dir=resolved_data_dir,
         jd_dir=resolved_jd_dir,
         logs_dir=resolved_logs_dir,
@@ -141,12 +154,57 @@ def load_settings(
         resume_fs_url=resolved_resume_fs,
         jd_fs_url=resolved_jd_fs,
     )
-    return _SETTINGS
+
+
+class LazySettings:
+    """Hold the process settings, resolving them on first attribute access.
+
+    Mirrors ``django.conf.settings``. Importing a module that does
+    ``from ...settings import settings`` reads nothing and touches no
+    filesystem; the first attribute access resolves and caches. That makes
+    "import does not resolve settings" a structural property rather than a
+    discipline every module has to remember — the thing #16 got wrong by
+    snapshotting ``get_settings()`` at import.
+    """
+
+    def __init__(self) -> None:
+        # Assigned here so __getattr__ (below) never sees them missing.
+        self._wrapped: AppSettings | None = None
+        self._overrides: dict[str, Any] = {}
+
+    @property
+    def is_resolved(self) -> bool:
+        return self._wrapped is not None
+
+    def configure(self, **overrides: Any) -> None:
+        """Stage overrides for the first resolve. Must precede any access."""
+        if self._wrapped is not None:
+            raise RuntimeError(
+                "settings are already resolved; configure() must precede first "
+                "access. Use bootstrap(force=True) to rebuild from scratch."
+            )
+        self._overrides = overrides
+
+    def reset(self) -> None:
+        """Drop the resolved settings and any staged overrides."""
+        self._wrapped = None
+        self._overrides = {}
+
+    def _resolve(self) -> AppSettings:
+        if self._wrapped is None:
+            self._wrapped = load_settings(**self._overrides)
+        return self._wrapped
+
+    def __getattr__(self, name: str) -> Any:
+        # Only reached for names not found normally, i.e. not _wrapped or the
+        # methods above — so this cannot recurse.
+        return getattr(self._resolve(), name)
+
+
+settings = LazySettings()  # import-time: zero side effects
 
 
 def get_settings() -> AppSettings:
-    """Return the cached settings, loading defaults if necessary."""
+    """Return the process settings, resolving them on first use."""
 
-    if _SETTINGS is None:
-        return load_settings()
-    return _SETTINGS
+    return settings._resolve()
