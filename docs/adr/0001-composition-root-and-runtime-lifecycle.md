@@ -340,15 +340,24 @@ loss.
        order and per-file isolation to prove order-independence.
 
 **PR-2 — production boot cleanup (🟠 medium risk)**
-5. [ ] Move the `server.py:429` import-time init into `main()` and
+5. [x] Move the `server.py:429` import-time init into `main()` and
        `_build_dual_http_app()`; make the `"Filesystems initialized"` log true.
-6. [ ] Fold `_initialize_logging` into `bootstrap`; assign `mcp_log_file` there.
-7. [ ] Route `vector_search._ensure_filesystems_initialized` through `bootstrap()`;
+6. [x] Defer `_initialize_logging`; assign `mcp_log_file` lazily.
+       **Deviation:** not folded into `bootstrap()` as originally proposed.
+       `mcp_server.log` / `mcp_error_events.jsonl` are MCP-interface concerns,
+       and teaching `infrastructure/bootstrap.py` about them would invert the
+       layering this ADR is trying to protect. Instead the server keeps a lazy,
+       lock-guarded `_ensure_logging()` (same shape as the parser fix in #16),
+       called from the entry points and defensively from the failure-event
+       helpers. `bootstrap()` stays generic.
+7. [x] Route `vector_search._ensure_filesystems_initialized` through `bootstrap()`;
        delete its duplicated guard.
-8. [ ] **Delete the `mem://` fallback**: remove `RESUME_ALLOW_MEM_FS_FALLBACK`
+8. [x] **Delete the `mem://` fallback**: remove `RESUME_ALLOW_MEM_FS_FALLBACK`
        handling and the silent-degrade branch; `bootstrap()` raises on failure.
-       Update `.env.sample`/README to document explicit `mem://` config instead.
-9. [ ] Verify: smoke-boot both transports (stdio + HTTP) and confirm the server
+       (No doc update needed — the env var was never documented. `.env.sample`
+       already shows `mem://` as an explicit config, which is the sanctioned
+       replacement.)
+9. [x] Verify: smoke-boot both transports (stdio + HTTP) and confirm the server
        starts and the log file is actually created.
 
 **PR-3 — lazy settings proxy (🟠 medium risk, structural)**
@@ -365,6 +374,34 @@ loss.
     *Sequencing note:* PR-3 is independent of PR-1's stop-the-bleed and can move
     earlier, but it is the change that makes import-purity structural, so it is
     cheapest to land after the entry points already funnel through `bootstrap()`.
+
+## Implementation notes
+
+Two latent bugs surfaced while implementing PR-1 that the old import-time
+initialization had been masking. Both are pre-existing, neither was introduced
+by this work:
+
+- **Collection pointed the filesystems at real data.** Importing the MCP server
+  (which test collection does) ran its import-time initializer against *default*
+  settings, so the globals pointed at the real `data/resumes` — the suite was
+  one `is_initialized()` guard away from reading production data. The old
+  per-module `init_filesystems()` calls masked it by re-initializing at import,
+  last-writer-wins. The session fixture uses `force=True` to guarantee the
+  fixture tree regardless.
+- **`load_settings()` leaks through the settings global.**
+  `test_load_settings_accepts_resume_fs_ur_alias` reassigns `_SETTINGS` to an
+  S3 URL; anything reading `get_settings()` afterwards inherits it and tries to
+  reach S3 (`NoCredentialsError`). Contained with `reset_runtime_after` for now
+  — **this is the case PR-3's lazy proxy exists to fix structurally.**
+
+Also collapsed in PR-2: the `try/except ImportError` block in `server.py` whose
+two branches imported an identical symbol list, making the `except` provably
+dead. It sat on the exact lines that had to change to import `bootstrap`, and
+duplicating the new import into a dead branch was not defensible.
+
+Observed but left alone (out of scope): `load_dotenv()` still runs at
+`server.py` import. It only populates `os.environ`, but it is the last
+import-time side effect in that module and belongs in a later cleanup.
 
 ## Notes
 

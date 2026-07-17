@@ -48,12 +48,12 @@ def _bootstrap_runtime():
     and any test that reset the globals broke every later one (see #15). Routing
     through the single composition root makes the suite order-independent.
 
-    ``force=True`` is required until PR-2 removes the import-time
-    ``_ensure_server_filesystems_initialized()`` in the MCP server module: that
-    side effect runs during collection (whenever a test file imports the server)
-    and points the filesystems at the *real* data dir. Forcing here overrides it
-    so the suite always runs against the fixture tree, regardless of what got
-    imported first.
+    ``force=True`` guarantees the session starts from a known baseline pointed
+    at the fixture tree, whatever collection happened to touch. Without it, an
+    import-time initializer that ran during collection would win: bootstrap()
+    defers to already-initialized filesystems, so the suite would silently run
+    against the *real* data dir. The MCP server used to do exactly that; the
+    force stays as a guard against such a side effect creeping back.
     """
     from resume_platform.infrastructure.bootstrap import bootstrap
 

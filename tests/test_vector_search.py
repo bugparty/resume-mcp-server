@@ -220,28 +220,16 @@ def test_build_index_reuses_cached_embeddings_and_writes_status(
     assert (tmp_path / "vector_db" / "index_status.json").exists()
 
 
-def test_ensure_filesystems_initialized_bootstraps_from_settings(monkeypatch) -> None:
-    init_calls: list[tuple[str, str]] = []
+def test_ensure_filesystems_initialized_delegates_to_bootstrap(monkeypatch) -> None:
+    # The guard no longer reimplements is_initialized()/init_filesystems(); it
+    # defers to the composition root, which is idempotent (see ADR-0001).
+    bootstrap_calls: list[int] = []
 
-    monkeypatch.setattr(vector_search, "is_initialized", lambda: False)
-    monkeypatch.setattr(
-        vector_search,
-        "get_settings",
-        lambda: type(
-            "Settings",
-            (),
-            {"resume_fs_url": "mem://", "jd_fs_url": "mem://"},
-        )(),
-    )
-    monkeypatch.setattr(
-        vector_search,
-        "init_filesystems",
-        lambda resume_fs_url, jd_fs_url: init_calls.append((resume_fs_url, jd_fs_url)),
-    )
+    monkeypatch.setattr(vector_search, "bootstrap", lambda: bootstrap_calls.append(1))
 
     vector_search._ensure_filesystems_initialized()
 
-    assert init_calls == [("mem://", "mem://")]
+    assert bootstrap_calls == [1]
 
 
 def test_search_entries_applies_filters_and_returns_similarity(monkeypatch) -> None:
