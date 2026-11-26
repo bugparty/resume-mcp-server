@@ -160,10 +160,10 @@ PROJECT_WITH_ORG_RE = re.compile(
 
 def parse_header_markdown(markdown: str) -> Dict[str, Any]:
     """Parse header section markdown into metadata dictionary.
-    
+
     Args:
         markdown: Markdown text containing key: value pairs
-        
+
     Returns:
         Dictionary of metadata key-value pairs
     """
@@ -313,7 +313,7 @@ def parse_education_markdown(
                 # Save previous entry if exists
                 if current:
                     entries.append(current)
-                    
+
                 current = {
                     "title": match.group("degree").strip(),
                     "organization": match.group("university").strip(),
@@ -341,7 +341,9 @@ def parse_education_markdown(
         # If we have a pending degree, check if this line has university info
         if pending_degree:
             # Try to match: University | Period
-            univ_match = re.match(r"^(?P<university>[^|]+?)(?:\s+\|\s+(?P<period>.*))?$", stripped)
+            univ_match = re.match(
+                r"^(?P<university>[^|]+?)(?:\s+\|\s+(?P<period>.*))?$", stripped
+            )
             if univ_match and not stripped.startswith("-"):
                 current = {
                     "title": pending_degree,
@@ -363,12 +365,13 @@ def parse_education_markdown(
 
     section["entries"] = entries
 
+
 @log_markdown_parsing
 def parse_summary_markdown(
     markdown: str, section: Dict[str, Any], version: str, section_id: str
 ) -> None:
     """Parse summary section markdown into structured data.
-    
+
     Args:
         markdown: Markdown text with title and bullet points
         section: Section dictionary to update in-place
@@ -466,7 +469,7 @@ def parse_skills_markdown(
     Supports two formats:
     1. New format: - **Programming:** Python, JavaScript, Go
     2. Old format: - Programming: Python, JavaScript, Go
-    
+
     Args:
         markdown: Markdown text with categorized skill lists
         section: Section dictionary to update in-place
@@ -551,21 +554,15 @@ def parse_experience_markdown(
         version: Resume version identifier
         section_id: Section identifier
     """
-    # Import here to avoid circular dependency
-    from resume_platform.resume.repository import _load_temploate_resume
-    
     lines = [line.rstrip() for line in markdown.strip().splitlines()]
     entries: List[Dict[str, Any]] = []
     current: Dict[str, Any] | None = None
-    template_data = _load_temploate_resume()
-    section_ids = [section["id"] for section in template_data.get("sections", [])]
     for line in lines:
         stripped = line.strip()
         if not stripped:
             continue
         if stripped.startswith("##") and not stripped.startswith("###"):
             section["title"] = stripped.lstrip("#").strip()
-            # entry["id"] = rapidfuzz.process.extract(entry["title"], section_ids, limit=1)[0][0]
             continue
         if stripped.startswith("###"):
             match = ENTRY_HEADING_RE.match(stripped)
@@ -699,7 +696,7 @@ def parse_raw_markdown(
     markdown: str, section: Dict[str, Any], version: str, section_id: str
 ) -> None:
     """Parse raw/custom section markdown into structured data.
-    
+
     Args:
         markdown: Markdown text with optional title and content
         section: Section dictionary to update in-place

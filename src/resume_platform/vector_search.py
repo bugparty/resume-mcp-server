@@ -13,8 +13,7 @@ except Exception:  # pragma: no cover - dependency guard
 
 from resume_platform.infrastructure.bootstrap import bootstrap
 from resume_platform.infrastructure.llm_config import get_embedding_model
-from resume_platform.resume.repository import load_complete_resume_as_dict
-from resume_platform.resume.repository import find_resume_versions
+from resume_platform.resume.repository import list_versions, load_resume
 from resume_platform.infrastructure.settings import get_settings
 
 
@@ -388,9 +387,9 @@ def build_index(force_rebuild: bool = False) -> Dict[str, Any]:
     _, collection = _get_client_and_collection()
 
     all_chunks: List[ChunkRecord] = []
-    versions = find_resume_versions()
+    versions = list_versions()
     for version in versions:
-        resume_data = load_complete_resume_as_dict(version)
+        resume_data = load_resume(version)
         all_chunks.extend(_build_chunks_from_resume(version, resume_data))
 
     merged_chunks = _merge_chunks(all_chunks)
@@ -524,17 +523,17 @@ def search_entries(
 ) -> Dict[str, Any]:
     query_text = _normalize_text(query)
     if not query_text:
-        return {"error": "Query must not be empty."}
+        raise ValueError("Query must not be empty.")
 
     normalized_level = _normalize_text(chunk_level).lower() or "entry"
     if normalized_level not in {"entry", "bullet"}:
-        return {"error": "chunk_level must be one of: entry, bullet."}
+        raise ValueError("chunk_level must be one of: entry, bullet.")
 
     normalized_type = _normalize_text(entry_type).lower()
     if normalized_type in {"all", "both", ""}:
         normalized_type = ""
     if normalized_type and normalized_type not in {"experience", "projects"}:
-        return {"error": "entry_type must be one of: experience, projects, all."}
+        raise ValueError("entry_type must be one of: experience, projects, all.")
 
     ensure_state = ensure_index_ready()
 

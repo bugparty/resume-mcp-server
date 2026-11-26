@@ -1,22 +1,21 @@
 from __future__ import annotations
 
-import argparse
 import logging
+import os
 import re
 from pathlib import Path
 from typing import Any, Dict, List
-from resume_platform.infrastructure.bootstrap import bootstrap
 from urllib.parse import urlparse
 
+import requests
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
 from resume_platform.models.agent_resume import SectionType
-from resume_platform.resume.repository import load_complete_resume_as_dict
+from resume_platform.paths import LATEX_TEMPLATE_DIR
+from resume_platform.resume.layout import apply_layout
+from resume_platform.resume.repository import load_resume
 
-PACKAGE_ROOT = Path(__file__).resolve().parent
-PROJECT_ROOT = PACKAGE_ROOT.parent.parent
-LEGACY_TEMPLATE = PROJECT_ROOT / "templates" / "resume_template.tex"
-LATEX_TEMPLATE_DIR = PROJECT_ROOT / "templates" / "latex"
+DEFAULT_LATEX_COMPILE_API_URL = "https://latex-compile.k.0x1f0c.dev"
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -132,75 +131,6 @@ def _normalize_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
     return normalized
 
 
-def _apply_section_style(
-    sections: List[Dict[str, Any]], style: Dict[str, Any]
-) -> List[Dict[str, Any]]:
-    """Reorder and filter sections based on optional style config.
-
-    - section_order: preferred list of section ids; missing ones are appended
-      in their original order
-    - section_disabled: map of id -> bool; listed True entries are omitted
-    """
-
-    if not sections:
-        return []
-
-    if not isinstance(style, dict):
-        return sections
-
-    order = (
-        style.get("section_order")
-        if isinstance(style.get("section_order"), list)
-        else []
-    )
-    disabled_map = (
-        style.get("section_disabled")
-        if isinstance(style.get("section_disabled"), dict)
-        else {}
-    )
-
-    def is_enabled(section: Dict[str, Any]) -> bool:
-        section_id = section.get("id")
-        disabled = disabled_map.get(section_id)
-        return False if disabled is True else True
-
-    section_by_id = {
-        section.get("id"): section
-        for section in sections
-        if isinstance(section, dict) and isinstance(section.get("id"), str)
-    }
-
-    ordered: List[Dict[str, Any]] = []
-    seen: set[str] = set()
-
-    for section_id in order:
-        if not isinstance(section_id, str):
-            continue
-        section = section_by_id.get(section_id)
-        if section is None:
-            continue
-        if not is_enabled(section):
-            seen.add(section_id)
-            continue
-        ordered.append(section)
-        seen.add(section_id)
-
-    for section in sections:
-        if not isinstance(section, dict):
-            continue
-        section_id = section.get("id")
-        if section_id in seen:
-            continue
-        if not is_enabled(section):
-            seen.add(section_id)
-            continue
-        ordered.append(section)
-        if isinstance(section_id, str):
-            seen.add(section_id)
-
-    return ordered
-
-
 def escape_tex(text: str) -> str:
     text = _preprocess_unicode(str(text))
     substitutions = {
@@ -314,7 +244,7 @@ def create_latex_jinja_env() -> Environment:
 jinja_env = create_latex_jinja_env()
 
 
-def render_section_with_template(section: Dict[str, any]) -> str:
+def render_section_with_template(section: Dict[str, Any]) -> str:
     """
     Render a section using Jinja2 templates.
 
@@ -354,7 +284,7 @@ def render_section_with_template(section: Dict[str, any]) -> str:
 # ============================================================================
 
 
-def render_summary(section: Dict[str, any]) -> str:
+def render_summary(section: Dict[str, Any]) -> str:
     title = section.get("title", "Summary")
     bullets = section.get("bullets", [])
     lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cvitems}"]
@@ -364,7 +294,7 @@ def render_summary(section: Dict[str, any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_skills(section: Dict[str, any]) -> str:
+def render_skills(section: Dict[str, Any]) -> str:
     title = section.get("title", "Skills")
     lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cvskills}"]
     for group in section.get("groups", []):
@@ -375,7 +305,7 @@ def render_skills(section: Dict[str, any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_entries(section: Dict[str, any]) -> str:
+def render_entries(section: Dict[str, Any]) -> str:
     title = section.get("title", "Experience")
     lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cventries}"]
     for entry in section.get("entries", []):
@@ -402,7 +332,7 @@ def render_entries(section: Dict[str, any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_experience(section: Dict[str, any]) -> str:
+def render_experience(section: Dict[str, Any]) -> str:
     """Render work experience section."""
     title = section.get("title", "Experience")
     lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cventries}"]
@@ -428,7 +358,7 @@ def render_experience(section: Dict[str, any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_projects(section: Dict[str, any]) -> str:
+def render_projects(section: Dict[str, Any]) -> str:
     """Render projects section."""
     title = section.get("title", "Projects")
     lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cventries}"]
@@ -454,7 +384,7 @@ def render_projects(section: Dict[str, any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_education(section: Dict[str, any]) -> str:
+def render_education(section: Dict[str, Any]) -> str:
     """Render education section."""
     title = section.get("title", "Education")
     lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cventries}"]
@@ -511,7 +441,7 @@ def section_type_normalize_str(section_type: SectionType | str) -> str:
     return type_str
 
 
-def render_section(section: Dict[str, any]) -> str:
+def render_section(section: Dict[str, Any]) -> str:
     section_type = section.get("type")
     section_type = section_type_normalize_str(section_type)
 
@@ -523,192 +453,28 @@ def render_section(section: Dict[str, any]) -> str:
     return f"\\cvsection{{{title}}}\n{body}\n"
 
 
-def resolve_template() -> str:
-    """
-    Legacy function: Load the old resume_template.tex.
+def render_resume_from_dict(resume_dict: dict, version: str = "resume") -> str:
+    """Render a resume document (``metadata`` + ``sections``) to LaTeX."""
+    if not isinstance(resume_dict, dict):
+        raise ValueError(f"Expected dictionary, got {type(resume_dict).__name__}")
+    for field in ("metadata", "sections"):
+        if field not in resume_dict:
+            raise ValueError(f"Resume dictionary must contain '{field}' field")
 
-    This is kept for backward compatibility.
-    """
-    # Fallback to legacy header if available, otherwise minimal template
-    if LEGACY_TEMPLATE.exists():
-        header = LEGACY_TEMPLATE.read_text(encoding="utf-8")
-        # Strip input lines to avoid double-includes
-        sanitized = []
-        for line in header.splitlines():
-            if line.strip().startswith("\\input"):
-                continue
-            sanitized.append(line)
-        return "\n".join(sanitized)
-    return r"""\documentclass[11pt, a4paper]{awesome-cv}
-\begin{document}
-"""
-
-
-def render_resume_legacy(version: str, metadata: Dict, sections: List) -> str:
-    """
-    Legacy resume rendering using string replacement.
-
-    This is the old implementation kept for backward compatibility.
-    Uses templates/resume_template.tex with string replacement.
-
-    Args:
-        version: Resume version name
-        metadata: Metadata dictionary
-        sections: List of section dictionaries
-
-    Returns:
-        Complete LaTeX document as string
-    """
-    header = resolve_template()
-    header_lines = [line for line in header.splitlines() if line.strip()]
-    header_lines = [line for line in header_lines if line.strip() != "\\end{document}"]
-
-    # Replace metadata placeholders
-    def replace_or_append(command: str, value: str) -> None:
-        nonlocal header_lines
-        pattern = f"\\{command}"
-        found = False
-        for idx, line in enumerate(header_lines):
-            if line.strip().startswith(pattern):
-                header_lines[idx] = f"\\{command}{{{value}}}"
-                found = True
-                break
-        if not found:
-            header_lines.insert(0, f"\\{command}{{{value}}}")
-
-    first = escape_tex(metadata.get("first_name", ""))
-    last = escape_tex(metadata.get("last_name", ""))
-    if first or last:
-        name_value = first
-        if last:
-            name_value += "}{" + last
-        replace_or_append("name", name_value)
-    position = escape_tex(metadata.get("position", ""))
-    if position:
-        replace_or_append("position", position)
-    address = escape_tex(metadata.get("address", ""))
-    if address:
-        replace_or_append("address", address)
-    mobile = escape_tex(metadata.get("mobile", ""))
-    if mobile:
-        replace_or_append("mobile", mobile)
-    email = escape_tex(metadata.get("email", ""))
-    if email:
-        replace_or_append("email", email)
-    github = escape_tex(metadata.get("github", ""))
-    if github:
-        replace_or_append("github", github)
-    linkedin = escape_tex(metadata.get("linkedin", ""))
-    if linkedin:
-        replace_or_append("linkedin", linkedin)
-
-    body = []
-    in_document = False
-    for line in header_lines:
-        body.append(line)
-        if line.strip() == "\\begin{document}":
-            in_document = True
-    if not in_document:
-        body.append("\\begin{document}")
-    body.extend(render_section(section) for section in sections)
-    body.append("\\end{document}")
-    return "\n".join(body) + "\n"
+    metadata = _normalize_metadata(resume_dict.get("metadata") or {})
+    sections = apply_layout(resume_dict.get("sections") or [], resume_dict.get("style"))
+    sections_content = "\n".join(render_section(section) for section in sections)
+    return jinja_env.get_template("resume_main.tex.j2").render(
+        metadata=metadata, sections_content=sections_content, version=version
+    )
 
 
 def render_resume(version: str) -> str:
-    """
-    Render a complete resume using Jinja2 templates.
-
-    This function loads resume data from YAML and renders it to LaTeX
-    using the main template (resume_main.tex.j2) and section templates.
-
-    Args:
-        version: Resume version name (YAML filename without extension)
-
-    Returns:
-        Complete LaTeX document as string
-
-    Raises:
-        ValueError: If data is not a dictionary
-        TemplateNotFound: If main template is missing
-    """
-    data = load_complete_resume_as_dict(version)
-
-    # Additional safety check in case the type annotation isn't enforced
-    if not isinstance(data, dict):
-        raise ValueError(
-            f"Expected dictionary from load_complete_resume_as_dict, got {type(data).__name__}"
-        )
-
-    # Get metadata and sections
-    metadata = _normalize_metadata(data.get("metadata", {}))
-    style = data.get("style") or {}
-    sections = _apply_section_style(data.get("sections", []), style)
-
-    # Render all sections
-    sections_content = "\n".join(render_section(section) for section in sections)
-
-    # Render main template with metadata and sections
-    try:
-        main_template = jinja_env.get_template("resume_main.tex.j2")
-        return main_template.render(
-            metadata=metadata, sections_content=sections_content, version=version
-        )
-    except TemplateNotFound:
-        # Fallback to legacy rendering if new template doesn't exist
-        logger.warning(
-            "Main template resume_main.tex.j2 not found, using legacy rendering"
-        )
-        return render_resume_legacy(version, metadata, sections)
-
-
-def render_resume_from_dict(resume_dict: dict, version: str = "resume") -> str:
-    """
-    Render a complete resume from a dictionary (e.g., from Resume JSON).
-
-    This function accepts a resume dictionary (such as from Resume.to_dict())
-    and renders it to LaTeX using Jinja2 templates.
-
-    Args:
-        resume_dict: Resume data as dictionary with 'metadata' and 'sections'
-        version: Resume version name for reference (default: "resume")
-
-    Returns:
-        Complete LaTeX document as string
-
-    Raises:
-        ValueError: If data is not a dictionary or missing required fields
-        TemplateNotFound: If main template is missing
-    """
-    if not isinstance(resume_dict, dict):
-        raise ValueError(f"Expected dictionary, got {type(resume_dict).__name__}")
-
-    if "metadata" not in resume_dict:
-        raise ValueError("Resume dictionary must contain 'metadata' field")
-
-    if "sections" not in resume_dict:
-        raise ValueError("Resume dictionary must contain 'sections' field")
-
-    # Get metadata and sections
-    metadata = _normalize_metadata(resume_dict.get("metadata", {}))
-    style = resume_dict.get("style") or {}
-    sections = _apply_section_style(resume_dict.get("sections", []), style)
-
-    # Render all sections
-    sections_content = "\n".join(render_section(section) for section in sections)
-
-    # Render main template with metadata and sections
-    try:
-        main_template = jinja_env.get_template("resume_main.tex.j2")
-        return main_template.render(
-            metadata=metadata, sections_content=sections_content, version=version
-        )
-    except TemplateNotFound:
-        # Fallback to legacy rendering if new template doesn't exist
-        logger.warning(
-            "Main template resume_main.tex.j2 not found, using legacy rendering"
-        )
-        return render_resume_legacy(version, metadata, sections)
+    """Render a stored resume version to a complete LaTeX document."""
+    data = load_resume(version)
+    data.setdefault("metadata", {})
+    data.setdefault("sections", [])
+    return render_resume_from_dict(data, version)
 
 
 def compile_tex_remote(
@@ -736,15 +502,8 @@ def compile_tex_remote(
         RuntimeError: If compilation fails
         requests.RequestException: If API communication fails
     """
-    import os
-
-    import requests
-
-    # Determine API base URL
     if api_base_url is None:
-        api_base_url = os.getenv(
-            "LATEX_COMPILE_API_URL", "https://latex-compile.k.0x1f0c.dev"
-        )
+        api_base_url = os.getenv("LATEX_COMPILE_API_URL", DEFAULT_LATEX_COMPILE_API_URL)
     api_base_url = api_base_url.rstrip("/")
 
     # Determine output path
@@ -754,70 +513,32 @@ def compile_tex_remote(
     # Build files list for multipart upload
     files = []
     tex_dir = tex_path.parent
-    
+
     # Iterate to find all files in the directory recursively
     for item in tex_dir.rglob("*"):
         if item.is_file():
             # Calculate relative path to preserve directory structure (e.g. fonts/foo.ttf)
             rel_path = item.relative_to(tex_dir).as_posix()
-            
+
             # Read content
             content = item.read_bytes()
-            
+
             # Add to files list: ('files', (filename, content))
-            files.append(('files', (rel_path, content)))
-            
+            files.append(("files", (rel_path, content)))
+
     # Submit compile request via multipart upload
     compile_url = f"{api_base_url}/v1/compile"
     data = {"main": tex_path.name}
-    
+
     try:
-        response = requests.post(
-            compile_url, 
-            files=files, 
-            data=data,
-            timeout=timeout
-        )
+        response = requests.post(compile_url, files=files, data=data, timeout=timeout)
         response.raise_for_status()
-        
+
         output_path.write_bytes(response.content)
         return output_path
-        
 
     except requests.RequestException as e:
         logger.error(f"Remote compilation failed: {e}")
-        if hasattr(e, 'response') and e.response is not None:
-             logger.error(f"Response: {e.response.text}")
+        if hasattr(e, "response") and e.response is not None:
+            logger.error(f"Response: {e.response.text}")
         raise RuntimeError(f"Remote compilation failed: {e}") from e
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Render resume YAML into LaTeX and optionally PDF"
-    )
-    parser.add_argument("version", help="Resume version (YAML stem), e.g., 'resume'")
-    parser.add_argument(
-        "--output",
-        type=Path,
-        default=Path("build/output.tex"),
-        help="Destination .tex file",
-    )
-    parser.add_argument(
-        "--compile",
-        action="store_true",
-        help="Compile the generated TeX using the remote compile service",
-    )
-    args = parser.parse_args()
-
-    bootstrap()
-
-    tex = render_resume(args.version)
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(tex, encoding="utf-8")
-    if args.compile:
-        pdf_path = compile_tex_remote(args.output)
-        print(f"PDF compiled remotely: {pdf_path}")
-
-
-if __name__ == "__main__":
-    main()

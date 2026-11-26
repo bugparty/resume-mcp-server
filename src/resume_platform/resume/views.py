@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
-from .repository import _get_section, _load_resume
+from .layout import apply_layout
+from .repository import get_section, load_resume
 
 
 HEADER_SECTION_ID = "header"
@@ -17,6 +18,14 @@ METADATA_DISPLAY_ORDER = [
     "github",
     "linkedin",
 ]
+PREVIEW_CONTACT_FIELDS = (
+    "position",
+    "address",
+    "email",
+    "mobile",
+    "github",
+    "linkedin",
+)
 
 HEADER_SECTION_TEMPLATE = """Header Section:
         ## Header
@@ -56,6 +65,7 @@ SECTION_HINTS_BY_TYPE: Dict[str, str] = {
         ## Section Title
         Add concise paragraphs or bullets tailored to the role.""",
 }
+SECTION_HINTS_BY_TYPE["entries"] = SECTION_HINTS_BY_TYPE["experience"]
 
 FORMAT_INSTRUCTION_COMMENT = (
     "<!-- Edit the markdown below. Preserve headings and bullet structure so we "
@@ -185,173 +195,100 @@ def _render_section(section: Dict[str, Any]) -> str:
     return renderer(section)
 
 
-def _apply_section_style(
-    sections: List[Dict[str, Any]], style: Dict[str, Any]
-) -> List[Dict[str, Any]]:
-    if not sections:
-        return []
-    if not isinstance(style, dict):
-        return sections
-
-    order = style.get("section_order") if isinstance(style.get("section_order"), list) else []
-    disabled_map = (
-        style.get("section_disabled")
-        if isinstance(style.get("section_disabled"), dict)
-        else {}
+def format_hint(section_id: str, section_type: str = "raw") -> str:
+    """Markdown example showing the structure a section update must follow."""
+    if section_id == HEADER_SECTION_ID:
+        return HEADER_SECTION_TEMPLATE
+    return (
+        SECTION_HINTS_BY_TYPE.get(section_id)
+        or SECTION_HINTS_BY_TYPE.get(section_type)
+        or SECTION_HINTS_BY_TYPE["raw"]
     )
 
-    def is_enabled(section: Dict[str, Any]) -> bool:
-        return disabled_map.get(section.get("id")) is not True
 
-    section_by_id = {
-        section.get("id"): section
-        for section in sections
-        if isinstance(section, dict) and isinstance(section.get("id"), str)
-    }
-
-    ordered: List[Dict[str, Any]] = []
-    seen: set[str] = set()
-    for section_id in order:
-        if not isinstance(section_id, str):
-            continue
-        section = section_by_id.get(section_id)
-        if section is None:
-            continue
-        if not is_enabled(section):
-            seen.add(section_id)
-            continue
-        ordered.append(section)
-        seen.add(section_id)
-
-    for section in sections:
-        if not isinstance(section, dict):
-            continue
-        section_id = section.get("id")
-        if section_id in seen:
-            continue
-        if not is_enabled(section):
-            if isinstance(section_id, str):
-                seen.add(section_id)
-            continue
-        ordered.append(section)
-        if isinstance(section_id, str):
-            seen.add(section_id)
-
-    return ordered
+def editable_text(markdown: str) -> str:
+    """Wrap markdown with the instruction comment shown to editors."""
+    return f"{FORMAT_INSTRUCTION_COMMENT}\n\n{markdown}"
 
 
-def _render_resume(version: str) -> str:
-    data = _load_resume(version)
+def strip_instruction_comment(markdown: str) -> str:
+    stripped = markdown.strip()
+    if stripped.startswith(FORMAT_INSTRUCTION_COMMENT):
+        return stripped[len(FORMAT_INSTRUCTION_COMMENT) :].strip()
+    return stripped
+
+
+def render_text_body(data: Dict[str, Any]) -> str:
+    """Whole-resume editable markdown: header block + every section, in
+    document order (layout is ignored so edits map 1:1 onto sections)."""
+    blocks = [_render_header(data.get("metadata") or {})]
+    blocks.extend(
+        _render_section(section)
+        for section in data.get("sections") or []
+        if isinstance(section, dict)
+    )
+    return "\n\n".join(block for block in blocks if block.strip())
+
+
+def render_section_body(version_name: str, section_id: str) -> str:
+    """Editable markdown for one section (or the ``header`` pseudo-section)."""
+    if section_id == HEADER_SECTION_ID:
+        return _render_header(load_resume(version_name).get("metadata") or {})
+    _, section = get_section(version_name, section_id)
+    return _render_section(section)
+
+
+def read_resume_text(version_name: str, section_id: str | None = None) -> str:
+    """Editable markdown for a whole version, or a single section."""
+    if section_id is None:
+        body = render_text_body(load_resume(version_name))
+    else:
+        body = render_section_body(version_name, section_id)
+    return editable_text(body)
+
+
+def render_resume_markdown(version_name: str) -> str:
+    """Read-only Markdown preview of a version with its layout applied."""
+    data = load_resume(version_name)
     parts = []
-    meta = data.get("metadata", {})
+    meta = data.get("metadata") or {}
     if meta:
-        contact_lines = [
-            f"# {meta.get('first_name', '')} {meta.get('last_name', '')}".strip(),
-            meta.get("position", ""),
-            meta.get("address", ""),
-            meta.get("email", ""),
-            meta.get("mobile", ""),
-            meta.get("github", ""),
-            meta.get("linkedin", ""),
+        name = f"{meta.get('first_name', '')} {meta.get('last_name', '')}".strip()
+        contact = [
+            f"# {name}" if name else "",
+            *(meta.get(key, "") for key in PREVIEW_CONTACT_FIELDS),
         ]
-        parts.append("\n".join(line for line in contact_lines if line))
-    styled_sections = _apply_section_style(data.get("sections", []), data.get("style", {}))
-    for section in styled_sections:
+        parts.append("\n".join(line for line in contact if line))
+    for section in apply_layout(data.get("sections") or [], data.get("style")):
         parts.append(_render_section(section))
     return "\n\n".join(filter(None, parts))
 
 
-def _editable_text(markdown: str) -> str:
-    return f"{FORMAT_INSTRUCTION_COMMENT}\n\n{markdown}"
-
-
-def _strip_instruction_comment(markdown: str) -> str:
-    stripped = markdown.strip()
-    if stripped.startswith(FORMAT_INSTRUCTION_COMMENT):
-        _, _, remainder = stripped.partition("\n\n")
-        return remainder.strip()
-    return stripped
-
-
-def _target_to_version_and_section(target_path: str) -> Tuple[str, str | None]:
-    normalized = target_path.strip()
-    if not normalized:
-        raise ValueError("Target path cannot be empty.")
-    if "/" not in normalized:
-        return normalized, None
-    version, section_id = normalized.split("/", 1)
-    if not version or not section_id:
-        raise ValueError("Target path must be 'version' or 'version/section'.")
-    return version, section_id
-
-
-def _render_resume_text_body(version: str) -> str:
-    data = _load_resume(version)
-    blocks = [_render_header(data.get("metadata", {}))]
-    for section in data.get("sections", []):
-        if isinstance(section, dict):
-            blocks.append(_render_section(section))
-    return "\n\n".join(block for block in blocks if block.strip())
-
-
-def _read_section_text_body(version: str, section_id: str) -> str:
-    if section_id == HEADER_SECTION_ID:
-        data = _load_resume(version)
-        return _render_header(data.get("metadata", {}))
-    _, section = _get_section(version, section_id)
-    return _render_section(section)
-
-
-def list_modules_in_version(main_resume_filename: str) -> str:
-    version = main_resume_filename.replace(".yaml", "")
-    try:
-        data = _load_resume(version)
-    except FileNotFoundError:
-        return f"[Error] Resume version not found: {version}"
-
-    sections = data.get("sections", [])
-    section_ids = [section.get("id") for section in sections]
-    modules_listing = ", ".join(filter(None, section_ids))
-    hints: List[str] = [HEADER_SECTION_TEMPLATE]
-    for section in sections:
-        section_id = section.get("id", "section")
+def list_sections(version_name: str) -> List[Dict[str, Any]]:
+    """Describe every editable section, including the ``header`` block."""
+    data = load_resume(version_name)
+    disabled = (data.get("style") or {}).get("section_disabled") or {}
+    sections: List[Dict[str, Any]] = [
+        {
+            "id": HEADER_SECTION_ID,
+            "type": HEADER_SECTION_ID,
+            "title": HEADER_TITLE,
+            "enabled": True,
+            "format_hint": HEADER_SECTION_TEMPLATE,
+        }
+    ]
+    for section in data.get("sections") or []:
+        if not isinstance(section, dict) or not isinstance(section.get("id"), str):
+            continue
+        section_id = section["id"]
         section_type = section.get("type", "raw")
-        hint = SECTION_HINTS_BY_TYPE.get(section_id) or SECTION_HINTS_BY_TYPE.get(section_type)
-        if hint:
-            hints.append(f"Module '{section_id}' Hint:\n{hint}")
-        else:
-            hints.append(
-                f"Module '{section_id}' Hint:\n        ## {section.get('title', section_id.title())}\n        Follow the existing structure and keep bullets outcome-focused."
-            )
-    hints.append("Available modules: " + ("header, " + modules_listing if modules_listing else "header"))
-    return "\n\n".join(hints)
-
-
-def load_resume_section(module_path: str) -> str:
-    module_path = module_path.strip()
-    if "/" not in module_path:
-        module_path = f"resume/{module_path}"
-    version, section_id = module_path.split("/", 1)
-    try:
-        markdown = _read_section_text_body(version, section_id)
-    except (FileNotFoundError, KeyError) as exc:
-        return f"[Error] {exc}"
-    return _editable_text(markdown)
-
-
-def read_resume_text(target_path: str) -> str:
-    try:
-        version, section_id = _target_to_version_and_section(target_path)
-        if section_id is None:
-            return _editable_text(_render_resume_text_body(version))
-        return load_resume_section(f"{version}/{section_id}")
-    except (FileNotFoundError, KeyError, ValueError) as exc:
-        return f"[Error] {exc}"
-
-
-def load_complete_resume(main_resume_filename: str) -> str:
-    version = main_resume_filename.replace(".yaml", "")
-    try:
-        return _render_resume(version)
-    except FileNotFoundError as exc:
-        return f"[Error] {exc}"
+        sections.append(
+            {
+                "id": section_id,
+                "type": section_type,
+                "title": _sanitize_title(section),
+                "enabled": disabled.get(section_id) is not True,
+                "format_hint": format_hint(section_id, section_type),
+            }
+        )
+    return sections

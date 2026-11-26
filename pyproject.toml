@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "myagent"
 version = "0.1.0"
-description = "Add your description here"
+description = "MCP server for managing, tailoring and rendering resume versions"
 readme = "README.md"
 requires-python = ">=3.12,<3.14"
 dependencies = [
@@ -131,6 +131,9 @@ dependencies = [
     "boto3-stubs~=1.35.94",
     "fs-s3fs>=1.1.1",
 ]
+
+[project.scripts]
+resume-mcp = "resume_platform.interfaces.mcp.server:cli"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
