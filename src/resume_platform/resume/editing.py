@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import copy
 import re
-from typing import Any, Dict, List, Literal
+from typing import Any, Literal
 
 from resume_platform.resume_input_parser import (
     SECTION_PARSERS,
@@ -119,8 +119,8 @@ def _validate_common_markdown(
 def _validate_parsed_section(
     target: str,
     markdown: str,
-    section_before: Dict[str, Any],
-    section_after: Dict[str, Any],
+    section_before: dict[str, Any],
+    section_after: dict[str, Any],
     section_id: str,
     section_type: str,
 ) -> str | None:
@@ -170,19 +170,22 @@ def _validate_parsed_section(
                 "The summary content became empty after parsing.",
                 details="Possible issue: the section is missing bullet lines or concise summary text.",
             )
-    elif section_type == "raw":
-        if content_is_substantial and not (section_after.get("content") or "").strip():
-            return _build_format_error(
-                target,
-                section_id,
-                section_type,
-                "The custom section content became empty after parsing.",
-            )
+    elif (
+        section_type == "raw"
+        and content_is_substantial
+        and not (section_after.get("content") or "").strip()
+    ):
+        return _build_format_error(
+            target,
+            section_id,
+            section_type,
+            "The custom section content became empty after parsing.",
+        )
     return None
 
 
 def _parse_into_section(
-    version_name: str, section_id: str, section: Dict[str, Any], markdown: str
+    version_name: str, section_id: str, section: dict[str, Any], markdown: str
 ) -> None:
     parser = SECTION_PARSERS.get(section_id) or SECTION_PARSERS.get(
         section.get("type", "raw"), parse_raw_markdown
@@ -191,8 +194,8 @@ def _parse_into_section(
 
 
 def _apply_header(
-    data: Dict[str, Any], target: str, markdown: str, *, allow_empty: bool
-) -> Dict[str, Any]:
+    data: dict[str, Any], target: str, markdown: str, *, allow_empty: bool
+) -> dict[str, Any]:
     error = _validate_common_markdown(
         target, HEADER_SECTION_ID, HEADER_SECTION_ID, markdown
     )
@@ -216,8 +219,8 @@ def _apply_header(
 
 
 def _apply_section(
-    data: Dict[str, Any], version_name: str, section_id: str, markdown: str
-) -> tuple[Dict[str, Any], Dict[str, Any]]:
+    data: dict[str, Any], version_name: str, section_id: str, markdown: str
+) -> tuple[dict[str, Any], dict[str, Any]]:
     """Parse ``markdown`` into the section in ``data`` (in place) and validate.
 
     Returns ``(section_before, section_after)``.
@@ -254,9 +257,9 @@ def update_section(version_name: str, section_id: str, new_content: str) -> str:
     return result
 
 
-def _split_top_level_blocks(markdown: str) -> List[str]:
-    blocks: List[str] = []
-    current: List[str] = []
+def _split_top_level_blocks(markdown: str) -> list[str]:
+    blocks: list[str] = []
+    current: list[str] = []
     for line in markdown.strip().splitlines():
         stripped = line.strip()
         if stripped.startswith("##") and not stripped.startswith("###") and current:
@@ -284,7 +287,7 @@ def _write_whole_resume(version_name: str, markdown: str) -> str:
         )
 
     working = copy.deepcopy(data)
-    for section_id, block in zip(expected_ids, blocks):
+    for section_id, block in zip(expected_ids, blocks, strict=True):
         if section_id == HEADER_SECTION_ID:
             _apply_header(
                 working, _target(version_name, section_id), block, allow_empty=True

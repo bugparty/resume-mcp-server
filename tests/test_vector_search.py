@@ -3,6 +3,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 from resume_platform import vector_search
 from resume_platform.infrastructure import llm_config
 
@@ -83,7 +85,7 @@ class FakeCollection:
         embeddings: list[list[float]],
     ) -> None:
         for item_id, document, metadata, embedding in zip(
-            ids, documents, metadatas, embeddings
+            ids, documents, metadatas, embeddings, strict=True
         ):
             self.store[item_id] = {
                 "document": document,
@@ -354,13 +356,11 @@ def test_search_entries_returns_clear_error_when_embedding_call_fails(
         lambda: type("Settings", (), {"embedding_provider": "openai"})(),
     )
 
-    try:
+    with pytest.raises(RuntimeError) as exc_info:
         vector_search.search_entries(query="backend payments", chunk_level="bullet")
-        assert False, "Expected RuntimeError when embedding provider fails"
-    except RuntimeError as exc:
-        message = str(exc)
-        assert "Failed to generate query embedding" in message
-        assert "provider=openai" in message
+    message = str(exc_info.value)
+    assert "Failed to generate query embedding" in message
+    assert "provider=openai" in message
 
 
 def test_build_index_returns_clear_error_when_document_embeddings_fail(
@@ -372,7 +372,6 @@ def test_build_index_returns_clear_error_when_document_embeddings_fail(
         def embed_documents(self, texts: list[str]) -> list[list[float]]:
             raise TypeError("'NoneType' object is not iterable")
 
-    settings = vector_search.get_settings()
     monkeypatch.setattr(
         vector_search,
         "get_settings",
@@ -399,13 +398,11 @@ def test_build_index_returns_clear_error_when_document_embeddings_fail(
         vector_search, "get_embedding_model", lambda provider=None: BrokenEmbeddings()
     )
 
-    try:
+    with pytest.raises(RuntimeError) as exc_info:
         vector_search.build_index(force_rebuild=True)
-        assert False, "Expected RuntimeError when document embedding generation fails"
-    except RuntimeError as exc:
-        message = str(exc)
-        assert "Failed to generate document embeddings" in message
-        assert "provider=openai" in message
+    message = str(exc_info.value)
+    assert "Failed to generate document embeddings" in message
+    assert "provider=openai" in message
 
 
 def test_get_embedding_model_uses_openrouter_sdk_when_base_url_is_openrouter(

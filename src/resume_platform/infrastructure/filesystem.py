@@ -7,10 +7,10 @@ memory, and S3 backends.
 
 from __future__ import annotations
 
-from typing import Optional, Any
 import os
 import warnings
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
 
 warnings.filterwarnings(
@@ -27,9 +27,10 @@ warnings.filterwarnings(
     module="pkg_resources",
 )
 
-from fs.base import FS
-from fs.osfs import OSFS
-from fs.memoryfs import MemoryFS
+# Imported after the filters above so fs's pkg_resources warnings are silenced.
+from fs.base import FS  # noqa: E402
+from fs.memoryfs import MemoryFS  # noqa: E402
+from fs.osfs import OSFS  # noqa: E402
 
 
 def _join_fs_url(base_url: str, child: str) -> str:
@@ -115,9 +116,9 @@ def create_filesystem(fs_url: str) -> FS:
 
 
 # Global filesystem instances
-_resume_fs: Optional[FS] = None
-_jd_fs: Optional[FS] = None
-_output_fs: Optional[FS] = None
+_resume_fs: FS | None = None
+_jd_fs: FS | None = None
+_output_fs: FS | None = None
 
 
 def get_resume_fs() -> FS:

@@ -2,6 +2,7 @@
 """
 Tool script for viewing and analyzing MCP Server logs
 """
+
 import sys
 from pathlib import Path
 
@@ -17,7 +18,7 @@ def view_all_logs():
 
     print(f"Reading log file: {LOG_FILE}")
     print("=" * 80)
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+    with open(LOG_FILE, encoding="utf-8") as f:
         print(f.read())
 
 
@@ -29,7 +30,7 @@ def view_recent_logs(lines=50):
 
     print(f"Displaying recent {lines} log lines:")
     print("=" * 80)
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+    with open(LOG_FILE, encoding="utf-8") as f:
         all_lines = f.readlines()
         recent = all_lines[-lines:]
         print("".join(recent))
@@ -44,7 +45,7 @@ def filter_logs_by_tool(tool_name):
     print(f"Filtering tool: {tool_name}")
     print("=" * 80)
 
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+    with open(LOG_FILE, encoding="utf-8") as f:
         in_section = False
         for line in f:
             if f"=== MCP TOOL CALL: {tool_name} ===" in line:
@@ -72,7 +73,7 @@ def get_statistics():
     total_calls = 0
     total_errors = 0
 
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+    with open(LOG_FILE, encoding="utf-8") as f:
         current_tool = None
         for line in f:
             if "=== MCP TOOL CALL:" in line:
@@ -111,12 +112,11 @@ def show_errors():
     print("Error Logs:")
     print("=" * 80)
 
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+    with open(LOG_FILE, encoding="utf-8") as f:
         in_error = False
         for line in f:
             if "=== MCP TOOL CALL:" in line:
                 in_error = False
-                current_section = [line]
             elif in_error or "ERROR" in line or "Error in" in line:
                 in_error = True
                 print(line, end="")
@@ -135,7 +135,7 @@ def show_slow_calls(threshold_seconds=1.0):
     print(f"Calls taking longer than {threshold_seconds}s:")
     print("=" * 80)
 
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+    with open(LOG_FILE, encoding="utf-8") as f:
         current_tool = None
         current_section = []
 

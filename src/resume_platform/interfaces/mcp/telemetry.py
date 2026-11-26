@@ -9,10 +9,11 @@ import threading
 import time
 import traceback
 import uuid
-from datetime import datetime, timezone
+from collections.abc import Callable
+from datetime import UTC, datetime
 from functools import wraps
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -140,7 +141,7 @@ def _error_payload(result: Any) -> dict[str, Any] | None:
 def _event(tool_name: str, kind: str, args: Any, kwargs: Any, elapsed: float, **extra):
     return {
         "event_id": str(uuid.uuid4()),
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": datetime.now(UTC).isoformat(),
         "tool_name": tool_name,
         "failure_kind": kind,
         "args": _to_jsonable(args),

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import yaml
 from jsonschema import Draft202012Validator

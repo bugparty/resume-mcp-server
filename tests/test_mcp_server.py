@@ -14,6 +14,7 @@ from typing import Any
 
 import pytest
 from fastmcp import Client
+from mcp.shared.exceptions import McpError
 from starlette.testclient import TestClient
 
 from resume_platform import vector_search
@@ -387,14 +388,23 @@ def test_prompt_and_resources() -> None:
     assert jd[0].text
 
 
-def test_resource_rejects_escape_and_unknown_roots() -> None:
-    async def read(uri):
+@pytest.mark.parametrize(
+    "uri,message",
+    [
+        # Clients normalise "..", so the read stays inside the resume store.
+        ("data://resumes/../resume_template.yaml", "File not found"),
+        # An encoded separator survives normalisation and hits our guard.
+        ("data://resumes/..%2Fsecret.yaml", "Parent directory references"),
+        ("data://etc/passwd", "Path must start with"),
+    ],
+)
+def test_resource_cannot_escape_storage(uri: str, message: str) -> None:
+    async def read():
         async with Client(server.mcp) as client:
             return await client.read_resource(uri)
 
-    for uri in ("data://resumes/../secret.yaml", "data://etc/passwd"):
-        with pytest.raises(Exception):
-            run(read(uri))
+    with pytest.raises(McpError, match=message):
+        run(read())
 
 
 # --- telemetry ----------------------------------------------------------------

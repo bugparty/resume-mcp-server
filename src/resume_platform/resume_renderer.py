@@ -4,7 +4,7 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 from urllib.parse import urlparse
 
 import requests
@@ -117,7 +117,7 @@ def _extract_linkedin_slug(value: str) -> str:
     return raw
 
 
-def _normalize_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
+def _normalize_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
     if not metadata:
         return metadata
 
@@ -158,7 +158,7 @@ def _apply_basic_markdown(text: str) -> str:
     text = escape_tex(text)
     text = _restore_unicode_tokens(text)
     text = text.replace("**", "__BOLD__")
-    parts: List[str] = []
+    parts: list[str] = []
     bold = False
     for chunk in text.split("__BOLD__"):
         if bold:
@@ -184,7 +184,7 @@ def markdown_inline_to_latex(text: str) -> str:
     if not text:
         return ""
 
-    parts: List[str] = []
+    parts: list[str] = []
     last_end = 0
     for match in _LINK_PATTERN.finditer(text):
         if match.start() > last_end:
@@ -244,7 +244,7 @@ def create_latex_jinja_env() -> Environment:
 jinja_env = create_latex_jinja_env()
 
 
-def render_section_with_template(section: Dict[str, Any]) -> str:
+def render_section_with_template(section: dict[str, Any]) -> str:
     """
     Render a section using Jinja2 templates.
 
@@ -284,7 +284,7 @@ def render_section_with_template(section: Dict[str, Any]) -> str:
 # ============================================================================
 
 
-def render_summary(section: Dict[str, Any]) -> str:
+def render_summary(section: dict[str, Any]) -> str:
     title = section.get("title", "Summary")
     bullets = section.get("bullets", [])
     lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cvitems}"]
@@ -294,7 +294,7 @@ def render_summary(section: Dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_skills(section: Dict[str, Any]) -> str:
+def render_skills(section: dict[str, Any]) -> str:
     title = section.get("title", "Skills")
     lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cvskills}"]
     for group in section.get("groups", []):
@@ -305,7 +305,7 @@ def render_skills(section: Dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_entries(section: Dict[str, Any]) -> str:
+def render_entries(section: dict[str, Any]) -> str:
     title = section.get("title", "Experience")
     lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cventries}"]
     for entry in section.get("entries", []):
@@ -332,7 +332,7 @@ def render_entries(section: Dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_experience(section: Dict[str, Any]) -> str:
+def render_experience(section: dict[str, Any]) -> str:
     """Render work experience section."""
     title = section.get("title", "Experience")
     lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cventries}"]
@@ -358,7 +358,7 @@ def render_experience(section: Dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_projects(section: Dict[str, Any]) -> str:
+def render_projects(section: dict[str, Any]) -> str:
     """Render projects section."""
     title = section.get("title", "Projects")
     lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cventries}"]
@@ -384,7 +384,7 @@ def render_projects(section: Dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_education(section: Dict[str, Any]) -> str:
+def render_education(section: dict[str, Any]) -> str:
     """Render education section."""
     title = section.get("title", "Education")
     lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cventries}"]
@@ -441,7 +441,7 @@ def section_type_normalize_str(section_type: SectionType | str) -> str:
     return type_str
 
 
-def render_section(section: Dict[str, Any]) -> str:
+def render_section(section: dict[str, Any]) -> str:
     section_type = section.get("type")
     section_type = section_type_normalize_str(section_type)
 

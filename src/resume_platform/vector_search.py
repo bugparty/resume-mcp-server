@@ -3,8 +3,8 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any, Dict, List
+from datetime import UTC, datetime
+from typing import Any
 
 try:
     from chromadb import PersistentClient
@@ -13,9 +13,8 @@ except Exception:  # pragma: no cover - dependency guard
 
 from resume_platform.infrastructure.bootstrap import bootstrap
 from resume_platform.infrastructure.llm_config import get_embedding_model
-from resume_platform.resume.repository import list_versions, load_resume
 from resume_platform.infrastructure.settings import get_settings
-
+from resume_platform.resume.repository import list_versions, load_resume
 
 COLLECTION_NAME = "resume_entries"
 
@@ -24,11 +23,11 @@ COLLECTION_NAME = "resume_entries"
 class ChunkRecord:
     id: str
     text: str
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
 
 
 def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _normalize_text(value: Any) -> str:
@@ -42,7 +41,7 @@ def _chunk_id(source: str) -> str:
     return f"chunk_{digest}"
 
 
-def _entry_text(entry: Dict[str, Any]) -> str:
+def _entry_text(entry: dict[str, Any]) -> str:
     title = _normalize_text(entry.get("title"))
     organization = _normalize_text(entry.get("organization"))
     period = _normalize_text(entry.get("period"))
@@ -65,7 +64,7 @@ def _entry_text(entry: Dict[str, Any]) -> str:
     return "\n".join(lines).strip()
 
 
-def _entry_signature(entry_type: str, entry: Dict[str, Any]) -> str:
+def _entry_signature(entry_type: str, entry: dict[str, Any]) -> str:
     title = _normalize_text(entry.get("title"))
     organization = _normalize_text(entry.get("organization"))
     period = _normalize_text(entry.get("period"))
@@ -89,9 +88,9 @@ def _entry_signature(entry_type: str, entry: Dict[str, Any]) -> str:
 
 
 def _build_chunks_from_resume(
-    version: str, resume_data: Dict[str, Any]
-) -> List[ChunkRecord]:
-    chunks: List[ChunkRecord] = []
+    version: str, resume_data: dict[str, Any]
+) -> list[ChunkRecord]:
+    chunks: list[ChunkRecord] = []
     sections = resume_data.get("sections") or []
 
     for section in sections:
@@ -109,7 +108,7 @@ def _build_chunks_from_resume(
             entry_sig = _entry_signature(section_type, entry)
             entry_text = _entry_text(entry)
             if entry_text:
-                entry_metadata: Dict[str, Any] = {
+                entry_metadata: dict[str, Any] = {
                     "entry_type": section_type,
                     "chunk_level": "entry",
                     "title": _normalize_text(entry.get("title")),
@@ -137,7 +136,7 @@ def _build_chunks_from_resume(
                     continue
                 bullet_sig_raw = f"bullet::{entry_sig}::{bullet_text}"
                 bullet_id = _chunk_id(bullet_sig_raw)
-                bullet_metadata: Dict[str, Any] = {
+                bullet_metadata: dict[str, Any] = {
                     "entry_type": section_type,
                     "chunk_level": "bullet",
                     "title": _normalize_text(entry.get("title")),
@@ -161,9 +160,9 @@ def _build_chunks_from_resume(
     return chunks
 
 
-def _merge_chunks(chunks: List[ChunkRecord]) -> List[ChunkRecord]:
-    merged: Dict[str, ChunkRecord] = {}
-    version_sets: Dict[str, set[str]] = {}
+def _merge_chunks(chunks: list[ChunkRecord]) -> list[ChunkRecord]:
+    merged: dict[str, ChunkRecord] = {}
+    version_sets: dict[str, set[str]] = {}
 
     for chunk in chunks:
         if chunk.id not in merged:
@@ -219,7 +218,7 @@ def _ensure_filesystems_initialized() -> None:
     bootstrap()
 
 
-def _read_status() -> Dict[str, Any]:
+def _read_status() -> dict[str, Any]:
     status_path = get_settings().index_status_path
     if not status_path.exists():
         return {
@@ -244,7 +243,7 @@ def _read_status() -> Dict[str, Any]:
     }
 
 
-def _write_status(payload: Dict[str, Any]) -> None:
+def _write_status(payload: dict[str, Any]) -> None:
     status_path = get_settings().index_status_path
     status_path.parent.mkdir(parents=True, exist_ok=True)
     status_path.write_text(
@@ -253,7 +252,7 @@ def _write_status(payload: Dict[str, Any]) -> None:
     )
 
 
-def mark_index_stale(reason: str = "resume_updated") -> Dict[str, Any]:
+def mark_index_stale(reason: str = "resume_updated") -> dict[str, Any]:
     status = _read_status()
     status.update(
         {
@@ -266,13 +265,13 @@ def mark_index_stale(reason: str = "resume_updated") -> Dict[str, Any]:
     return status
 
 
-def _batch(items: List[str], batch_size: int = 64) -> List[List[str]]:
+def _batch(items: list[str], batch_size: int = 64) -> list[list[str]]:
     return [
         items[index : index + batch_size] for index in range(0, len(items), batch_size)
     ]
 
 
-def _as_list(value: Any) -> List[Any]:
+def _as_list(value: Any) -> list[Any]:
     if value is None:
         return []
     if isinstance(value, list):
@@ -283,7 +282,7 @@ def _as_list(value: Any) -> List[Any]:
         return []
 
 
-def _split_versions(value: Any) -> List[str]:
+def _split_versions(value: Any) -> list[str]:
     text = _normalize_text(value)
     if not text:
         return []
@@ -291,8 +290,8 @@ def _split_versions(value: Any) -> List[str]:
 
 
 def _build_search_result_item(
-    *, rank: int, document: str, metadata: Dict[str, Any], distance: Any
-) -> Dict[str, Any]:
+    *, rank: int, document: str, metadata: dict[str, Any], distance: Any
+) -> dict[str, Any]:
     similarity = None
     if isinstance(distance, (float, int)):
         similarity = max(0.0, 1.0 - float(distance))
@@ -330,8 +329,8 @@ def _embedding_context(provider: str, embedding_model: Any) -> str:
 
 
 def _embed_documents_with_validation(
-    embedding_model: Any, documents: List[str], provider: str
-) -> List[List[float]]:
+    embedding_model: Any, documents: list[str], provider: str
+) -> list[list[float]]:
     try:
         vectors = embedding_model.embed_documents(documents)
     except Exception as exc:
@@ -360,7 +359,7 @@ def _embed_documents_with_validation(
 
 def _embed_query_with_validation(
     embedding_model: Any, query_text: str, provider: str
-) -> List[float]:
+) -> list[float]:
     try:
         vector = embedding_model.embed_query(query_text)
     except Exception as exc:
@@ -382,11 +381,11 @@ def _embed_query_with_validation(
     return vector
 
 
-def build_index(force_rebuild: bool = False) -> Dict[str, Any]:
+def build_index(force_rebuild: bool = False) -> dict[str, Any]:
     _ensure_filesystems_initialized()
     _, collection = _get_client_and_collection()
 
-    all_chunks: List[ChunkRecord] = []
+    all_chunks: list[ChunkRecord] = []
     versions = list_versions()
     for version in versions:
         resume_data = load_resume(version)
@@ -399,7 +398,7 @@ def build_index(force_rebuild: bool = False) -> Dict[str, Any]:
     existing_documents = _as_list(existing.get("documents"))
     existing_embeddings = _as_list(existing.get("embeddings"))
 
-    existing_by_id: Dict[str, Dict[str, Any]] = {}
+    existing_by_id: dict[str, dict[str, Any]] = {}
     for idx, item_id in enumerate(existing_ids):
         existing_by_id[item_id] = {
             "document": (
@@ -413,14 +412,14 @@ def build_index(force_rebuild: bool = False) -> Dict[str, Any]:
     target_ids = [chunk.id for chunk in merged_chunks]
     target_set = set(target_ids)
 
-    to_embed_ids: List[str] = []
-    to_embed_docs: List[str] = []
-    to_embed_meta: List[Dict[str, Any]] = []
+    to_embed_ids: list[str] = []
+    to_embed_docs: list[str] = []
+    to_embed_meta: list[dict[str, Any]] = []
 
-    cached_ids: List[str] = []
-    cached_docs: List[str] = []
-    cached_meta: List[Dict[str, Any]] = []
-    cached_embeddings: List[List[float]] = []
+    cached_ids: list[str] = []
+    cached_docs: list[str] = []
+    cached_meta: list[dict[str, Any]] = []
+    cached_embeddings: list[list[float]] = []
 
     for chunk in merged_chunks:
         existing_item = existing_by_id.get(chunk.id)
@@ -452,7 +451,7 @@ def build_index(force_rebuild: bool = False) -> Dict[str, Any]:
     if to_embed_ids:
         provider = get_settings().embedding_provider
         embedding_model = get_embedding_model(provider)
-        embedded_vectors: List[List[float]] = []
+        embedded_vectors: list[list[float]] = []
         for doc_batch in _batch(to_embed_docs, batch_size=64):
             batch_vectors = _embed_documents_with_validation(
                 embedding_model, doc_batch, provider
@@ -494,7 +493,7 @@ def build_index(force_rebuild: bool = False) -> Dict[str, Any]:
     return status_payload
 
 
-def ensure_index_ready() -> Dict[str, Any]:
+def ensure_index_ready() -> dict[str, Any]:
     status = _read_status()
     if status.get("stale", True) or not status.get("exists", False):
         rebuild_result = build_index(force_rebuild=False)
@@ -505,7 +504,7 @@ def ensure_index_ready() -> Dict[str, Any]:
     return status
 
 
-def get_index_status() -> Dict[str, Any]:
+def get_index_status() -> dict[str, Any]:
     status = _read_status()
     try:
         _, collection = _get_client_and_collection()
@@ -520,7 +519,7 @@ def search_entries(
     entry_type: str | None = None,
     chunk_level: str = "entry",
     top_k: int = 5,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     query_text = _normalize_text(query)
     if not query_text:
         raise ValueError("Query must not be empty.")
@@ -542,7 +541,7 @@ def search_entries(
     embedding_model = get_embedding_model(provider)
     query_vector = _embed_query_with_validation(embedding_model, query_text, provider)
 
-    where_filter: Dict[str, Any] = {"chunk_level": normalized_level}
+    where_filter: dict[str, Any] = {"chunk_level": normalized_level}
     if normalized_type:
         where_filter = {
             "$and": [
@@ -562,7 +561,7 @@ def search_entries(
     metadatas = (result.get("metadatas") or [[]])[0]
     distances = (result.get("distances") or [[]])[0]
 
-    results: List[Dict[str, Any]] = []
+    results: list[dict[str, Any]] = []
     for idx, document in enumerate(documents):
         metadata = metadatas[idx] if idx < len(metadatas) else {}
         distance = distances[idx] if idx < len(distances) else None

@@ -84,7 +84,7 @@ In HTTP mode, `GET /health` is a liveness probe and `GET /error-logs`
 ```bash
 ./run_tests.sh                       # full suite + coverage (what CI runs)
 ./run_tests.sh -k layout             # extra args go to pytest
-uv run black src tests scripts       # formatting (CI runs black --check)
+uv run ruff check --fix . && uv run ruff format .   # lint + format (CI checks both)
 uv run python scripts/generate_mcp_docs.py   # after changing any tool
 ```
 

@@ -5,17 +5,13 @@ from __future__ import annotations
 import argparse
 import os
 from pathlib import Path
-import sys
 from typing import Any
 
 import yaml
 
-ROOT = Path(__file__).resolve().parent.parent
-SRC_PATH = ROOT / "src"
-if str(SRC_PATH) not in sys.path:
-    sys.path.insert(0, str(SRC_PATH))
-
 from resume_platform.infrastructure.bootstrap import bootstrap
+
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def _extract_summary_bullets(resume_data: dict[str, Any], limit: int = 3) -> list[str]:

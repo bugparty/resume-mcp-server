@@ -2,6 +2,7 @@
 """
 Tool script for viewing and analyzing Markdown parsing logs
 """
+
 import sys
 from pathlib import Path
 
@@ -17,7 +18,7 @@ def view_all_logs():
 
     print(f"Reading log file: {LOG_FILE}")
     print("=" * 80)
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+    with open(LOG_FILE, encoding="utf-8") as f:
         print(f.read())
 
 
@@ -29,7 +30,7 @@ def view_recent_logs(lines=50):
 
     print(f"Displaying recent {lines} log lines:")
     print("=" * 80)
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+    with open(LOG_FILE, encoding="utf-8") as f:
         all_lines = f.readlines()
         recent = all_lines[-lines:]
         print("".join(recent))
@@ -44,7 +45,7 @@ def filter_logs_by_function(function_name):
     print(f"Filtering function: {function_name}")
     print("=" * 80)
 
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+    with open(LOG_FILE, encoding="utf-8") as f:
         in_section = False
         for line in f:
             if f"=== {function_name} START ===" in line:
@@ -73,9 +74,9 @@ def get_statistics():
         "_parse_raw_markdown": 0,
     }
 
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+    with open(LOG_FILE, encoding="utf-8") as f:
         for line in f:
-            for func_name in stats.keys():
+            for func_name in stats:
                 if f"=== {func_name} START ===" in line:
                     stats[func_name] += 1
 

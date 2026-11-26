@@ -1,9 +1,9 @@
-from dataclasses import dataclass, field
-from enum import Enum
+from dataclasses import asdict, dataclass, field
+from enum import StrEnum
 from typing import Any, Literal
 
 
-class SectionType(str, Enum):
+class SectionType(StrEnum):
     SUMMARY = "summary"
     SKILLS = "skills"
     EXPERIENCE = "experience"
@@ -166,11 +166,7 @@ class Resume:
             return False
 
         # Validate each section
-        for section in self.sections:
-            if not section.validate():
-                return False
-
-        return True
+        return all(section.validate() for section in self.sections)
 
     def add_section(self, section: Section) -> None:
         """Add a section to the resume"""
@@ -250,11 +246,6 @@ def create_section(section_data: dict) -> Section:
         raise ValueError(f"Unknown section type: {section_type}")
 
 
-# JSON serialization support
-import json
-from dataclasses import asdict
-
-
 def resume_to_dict(resume: Resume) -> dict:
     """Convert Resume to dictionary, suitable for JSON serialization"""
     data = {
@@ -331,90 +322,3 @@ def dict_to_resume(data: dict) -> Resume:
 
 
 # Usage example
-if __name__ == "__main__":
-    # Create a Resume instance
-    resume = Resume(
-        source="manual_input",
-        metadata=Metadata(
-            first_name="John",
-            last_name="Doe",
-            position="Software Engineer",
-            email="john.doe@example.com",
-            github="github.com/johndoe",
-        ),
-    )
-
-    # Add summary section
-    summary = SummarySection(
-        id="summary",
-        title="Professional Summary",
-        bullets=[
-            "5+ years of experience in full-stack development",
-            "Expert in Python and JavaScript",
-            "Strong background in cloud technologies",
-        ],
-    )
-    resume.add_section(summary)
-
-    # Add skills section
-    skills = SkillsSection(
-        id="skills",
-        title="Technical Skills",
-        groups=[
-            SkillGroup(
-                category="Programming Languages",
-                items=["Python", "JavaScript", "TypeScript", "Go"],
-            ),
-            SkillGroup(
-                category="Frameworks", items=["Django", "React", "FastAPI", "Next.js"]
-            ),
-            SkillGroup(
-                category="Tools & Platforms",
-                items=["Docker", "Kubernetes", "AWS", "Git"],
-            ),
-        ],
-    )
-    resume.add_section(skills)
-
-    # Add experience section
-    experience = EntriesSection(
-        id="experience",
-        title="Professional Experience",
-        entries=[
-            Entry(
-                title="Senior Software Engineer",
-                organization="TechCorp Inc",
-                location="San Francisco, CA",
-                period="2020 - Present",
-                bullets=[
-                    "Led development of microservices architecture serving 1M+ users",
-                    "Improved system performance by 40% through optimization",
-                    "Mentored team of 5 junior developers",
-                ],
-            ),
-            Entry(
-                title="Software Developer",
-                organization="StartupXYZ",
-                location="Remote",
-                period="2018 - 2020",
-                bullets=[
-                    "Built RESTful APIs using Python and FastAPI",
-                    "Implemented CI/CD pipelines with Jenkins and Docker",
-                ],
-            ),
-        ],
-    )
-    resume.add_section(experience)
-
-    # Validate resume
-    print(f"Resume valid: {resume.validate()}")
-
-    # Convert to JSON
-    resume_dict = resume_to_dict(resume)
-    json_str = json.dumps(resume_dict, indent=2)
-    print("\nResume JSON:")
-    print(json_str)
-
-    # Restore from JSON
-    resume_restored = dict_to_resume(json.loads(json_str))
-    print(f"\nRestored resume valid: {resume_restored.validate()}")

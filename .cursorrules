@@ -5,7 +5,7 @@ AGENTS.md is the single source of truth for this repository's conventions
 
 Essentials:
 - Install: `uv sync`. Run the server: `uv run resume-mcp [--transport http --port 8000]`.
-- Test after every change: `./run_tests.sh` (what CI runs). Format: `uv run black src tests scripts`.
+- Test after every change: `./run_tests.sh` (what CI runs). Lint + format: `uv run ruff check --fix . && uv run ruff format .`.
 - Code lives in `src/resume_platform/`; MCP tools in `interfaces/mcp/tools.py`, domain logic in `resume/`. See docs/architecture.md.
 - After changing a tool, regenerate `docs/mcp_tools.md` with `uv run python scripts/generate_mcp_docs.py`.
 - Never commit secrets or `.env`; document new configuration keys in `sample.env`.

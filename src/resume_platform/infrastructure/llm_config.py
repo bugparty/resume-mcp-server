@@ -4,7 +4,7 @@ The server itself makes no chat-LLM calls: the MCP client is the LLM.
 """
 
 import os
-from typing import Optional, Any
+from typing import Any
 
 try:
     from langchain_openai import OpenAIEmbeddings
@@ -17,9 +17,9 @@ except Exception:  # pragma: no cover - optional dependency at import time
     GoogleGenerativeAIEmbeddings = None
 
 # Lazy, cached clients (created on first use only)
-_google_embeddings: Optional[Any] = None
-_openai_embeddings: Optional[Any] = None
-_openrouter_embeddings: Optional[Any] = None
+_google_embeddings: Any | None = None
+_openai_embeddings: Any | None = None
+_openrouter_embeddings: Any | None = None
 
 
 def _openai_embeddings_class() -> Any:
@@ -90,7 +90,7 @@ class OpenRouterEmbeddings:
         for item in data:
             embedding = item.get("embedding") if isinstance(item, dict) else None
             if embedding is None and hasattr(item, "embedding"):
-                embedding = getattr(item, "embedding")
+                embedding = item.embedding
             if isinstance(embedding, list):
                 vectors.append(embedding)
         return vectors

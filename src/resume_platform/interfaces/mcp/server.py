@@ -11,9 +11,10 @@ from __future__ import annotations
 import logging
 import mimetypes
 import os
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from functools import wraps
-from typing import Any, Callable
+from typing import Any
 
 import fastmcp
 import uvicorn

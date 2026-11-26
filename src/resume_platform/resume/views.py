@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any
 
 from .layout import apply_layout
 from .repository import get_section, load_resume
-
 
 HEADER_SECTION_ID = "header"
 HEADER_TITLE = "Header"
@@ -38,7 +37,7 @@ HEADER_SECTION_TEMPLATE = """Header Section:
         github: github.com/johndoe
         linkedin: linkedin.com/in/johndoe"""
 
-SECTION_HINTS_BY_TYPE: Dict[str, str] = {
+SECTION_HINTS_BY_TYPE: dict[str, str] = {
     "summary": """Summary Section:
         ## Summary
         - 8+ years driving impact across cloud-first products
@@ -74,7 +73,7 @@ FORMAT_INSTRUCTION_COMMENT = (
 MIN_FORMATTED_CONTENT_BYTES = 10
 
 
-def _render_header(metadata: Dict[str, Any]) -> str:
+def _render_header(metadata: dict[str, Any]) -> str:
     lines = [f"## {HEADER_TITLE}"]
     added = set()
     for key in METADATA_DISPLAY_ORDER:
@@ -87,7 +86,7 @@ def _render_header(metadata: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _sanitize_title(section: Dict[str, Any]) -> str:
+def _sanitize_title(section: dict[str, Any]) -> str:
     title = section.get("title")
     if title:
         return title
@@ -95,14 +94,14 @@ def _sanitize_title(section: Dict[str, Any]) -> str:
     return section_id.replace("_", " ").title()
 
 
-def _render_summary(section: Dict[str, Any]) -> str:
+def _render_summary(section: dict[str, Any]) -> str:
     lines = [f"## {_sanitize_title(section)}"]
     for bullet in section.get("bullets", []):
         lines.append(f"- {bullet}")
     return "\n".join(lines)
 
 
-def _render_skills(section: Dict[str, Any]) -> str:
+def _render_skills(section: dict[str, Any]) -> str:
     lines = [f"## {_sanitize_title(section)}"]
     for group in section.get("groups", []):
         category = group.get("category", "Skills")
@@ -111,7 +110,7 @@ def _render_skills(section: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _render_entries_common(section: Dict[str, Any]) -> str:
+def _render_entries_common(section: dict[str, Any]) -> str:
     lines = [f"## {_sanitize_title(section)}"]
     for entry in section.get("entries", []):
         title = entry.get("title", "Role")
@@ -130,11 +129,11 @@ def _render_entries_common(section: Dict[str, Any]) -> str:
     return "\n".join(lines).strip()
 
 
-def _render_experience(section: Dict[str, Any]) -> str:
+def _render_experience(section: dict[str, Any]) -> str:
     return _render_entries_common(section)
 
 
-def _render_projects(section: Dict[str, Any]) -> str:
+def _render_projects(section: dict[str, Any]) -> str:
     lines = [f"## {_sanitize_title(section)}"]
     for entry in section.get("entries", []):
         title = entry.get("title", "Project")
@@ -155,7 +154,7 @@ def _render_projects(section: Dict[str, Any]) -> str:
     return "\n".join(lines).strip()
 
 
-def _render_education(section: Dict[str, Any]) -> str:
+def _render_education(section: dict[str, Any]) -> str:
     lines = [f"## {_sanitize_title(section)}"]
     for entry in section.get("entries", []):
         title = entry.get("title", "Degree")
@@ -174,7 +173,7 @@ def _render_education(section: Dict[str, Any]) -> str:
     return "\n".join(lines).strip()
 
 
-def _render_raw(section: Dict[str, Any]) -> str:
+def _render_raw(section: dict[str, Any]) -> str:
     title = section.get("title")
     body = section.get("content", "")
     return f"## {title}\n{body}" if title else body
@@ -190,7 +189,7 @@ SECTION_RENDERERS = {
 }
 
 
-def _render_section(section: Dict[str, Any]) -> str:
+def _render_section(section: dict[str, Any]) -> str:
     renderer = SECTION_RENDERERS.get(section.get("type", "raw"), _render_raw)
     return renderer(section)
 
@@ -218,7 +217,7 @@ def strip_instruction_comment(markdown: str) -> str:
     return stripped
 
 
-def render_text_body(data: Dict[str, Any]) -> str:
+def render_text_body(data: dict[str, Any]) -> str:
     """Whole-resume editable markdown: header block + every section, in
     document order (layout is ignored so edits map 1:1 onto sections)."""
     blocks = [_render_header(data.get("metadata") or {})]
@@ -264,11 +263,11 @@ def render_resume_markdown(version_name: str) -> str:
     return "\n\n".join(filter(None, parts))
 
 
-def list_sections(version_name: str) -> List[Dict[str, Any]]:
+def list_sections(version_name: str) -> list[dict[str, Any]]:
     """Describe every editable section, including the ``header`` block."""
     data = load_resume(version_name)
     disabled = (data.get("style") or {}).get("section_disabled") or {}
-    sections: List[Dict[str, Any]] = [
+    sections: list[dict[str, Any]] = [
         {
             "id": HEADER_SECTION_ID,
             "type": HEADER_SECTION_ID,

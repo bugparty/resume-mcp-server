@@ -10,8 +10,7 @@
 - Full test suite (exactly what CI runs): `./run_tests.sh` (pytest + coverage; schema validation and MCP contract tests are part of pytest).
 - Single test file: `uv run pytest tests/path/to/test_file.py`; single test: add `-k test_name`.
 - MCP tool contract: `tests/test_mcp_server.py` (in-memory MCP client, every tool). Tool reference: `uv run python scripts/generate_mcp_docs.py` regenerates `docs/mcp_tools.md`; a test fails if it is stale.
-- Format: `uv run black src tests scripts` (88 cols); CI runs `black --check`.
-- No dedicated linter config; follow Black + repo style and keep imports tidy.
+- Lint + format: `uv run ruff check --fix . && uv run ruff format .` (config in `pyproject.toml`, 88 cols); CI runs `ruff check` and `ruff format --check`.
 
 ## Repo Structure Notes
 - Entrypoint: `resume-mcp` console script -> `interfaces/mcp/server.py:cli`. MCP tools live in `interfaces/mcp/tools.py` (thin functions + `TOOLS` registry); domain logic in `resume/` (`repository`, `versions`, `layout`, `views`, `editing`), plus `publishing.py`, `resume_renderer.py`, `resume_input_parser.py`, `vector_search.py`; infrastructure in `infrastructure/` (`settings`, `filesystem`, `bootstrap`, `s3_utils`, `llm_config`).
@@ -23,7 +22,7 @@
 - Never commit secrets; prefer environment vars for CI. Document new keys in `sample.env`.
 
 ## Code Style (Python)
-- Formatter: Black (88 chars). Keep lines concise; break chains/args rather than exceeding width.
+- Formatter/linter: Ruff (88 chars, Black-compatible style; import order, pyupgrade, bugbear and no-`print` in `src/` are enforced). Keep lines concise; break chains/args rather than exceeding width.
 - Imports: stdlib, third-party, local; no unused imports. Prefer explicit over wildcard. Use relative imports within `resume_platform` subpackages where already used.
 - Typing: prefer `|` unions, annotate public functions, and return concrete types. Use `Optional` only when unavoidable; favour non-nullable paths with validation. Dataclasses (`settings.py`) use explicit field types.
 - Naming: modules/functions snake_case, classes PascalCase, constants UPPER_SNAKE_CASE. Filesystem URLs and env keys mirrored in code should stay uppercase.
@@ -71,5 +70,5 @@
 - Env ready (`.venv` active, .env populated).
 - Dependencies installed (`uv sync`).
 - Run all tests: `./run_tests.sh`.
-- Format code (`uv run black .`).
+- Lint and format (`uv run ruff check --fix . && uv run ruff format .`).
 - Update docs/config samples if new env vars or templates are added.

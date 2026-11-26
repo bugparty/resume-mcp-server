@@ -1,9 +1,9 @@
 import pytest
 
 from resume_platform.resume_renderer import (
-    markdown_inline_to_latex,
-    escape_tex,
     _normalize_metadata,
+    escape_tex,
+    markdown_inline_to_latex,
     render_resume,
     render_resume_from_dict,
 )

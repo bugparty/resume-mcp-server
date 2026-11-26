@@ -19,8 +19,9 @@ flagged ``writes_resume`` also mark the vector index stale after success.
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Annotated, Any, Callable, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import Field
 
