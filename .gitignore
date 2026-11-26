@@ -22,3 +22,4 @@ data/resumes/*.yaml
 data/vector_db
 .cloudflared
 .coverage
+/cloudflared

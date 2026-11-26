@@ -1,4 +1,4 @@
-# Docker Quick Start Guide
+# Deployment
 
 This project provides a ready-to-use Docker image with entry scripts. After container startup, it will:
 - Install and prepare Python dependencies
@@ -47,7 +47,7 @@ Use `http://localhost:8000/mcp` as MCP endpoint when running locally.
 
 ## Environment Variables
 
-- Copy `sample.env` to `.env` and fill in required keys (like `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `DEEPSEEK_API_KEY`, etc.)
+- Copy `sample.env` to `.env` and fill in what you need (storage, S3 upload, embedding keys); see the comments in `sample.env`.
 - Inject via `--env-file ./.env`
 
 ## Common Verification
@@ -82,3 +82,27 @@ Custom external port (container still listens on 8000):
 ```bash
 docker run --rm -p 18000:8000 resume-mcp:latest
 ```
+
+## Kubernetes
+
+`k8s/resume-mcp.yaml` runs the published image
+(`ghcr.io/bugparty/resume-mcp-server:latest`, built by
+`.github/workflows/docker-ghcr-main.yml`) with secrets from
+`k8s/resume-mcp-secret-store.yaml`. Helper scripts:
+
+- `k8s/refresh-secrets-and-restart.sh` re-syncs secrets and restarts the pod.
+- `k8s/force-pull-latest-and-restart.sh` pulls the latest image.
+
+In a cluster, point `RESUME_FS_URL` / `JD_FS_URL` at S3-compatible storage so
+data survives pod restarts.
+
+## Cloudflare tunnel
+
+To reach a local HTTP server from ChatGPT, run a quick tunnel:
+
+```bash
+cloudflared tunnel --url http://localhost:8000
+```
+
+or a named tunnel with `./run_cf_tunnel.sh` (expects `cloudflared` on `PATH`
+and a config in `.cloudflared/`).

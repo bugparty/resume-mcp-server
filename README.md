@@ -1,161 +1,98 @@
-# Resume MCP Agent
+# Resume MCP Server
 
-## 🤖 What is Resume MCP Agent?
+An [MCP](https://modelcontextprotocol.io) server that lets an AI assistant
+(Claude, ChatGPT, any MCP client) manage your resume: keep several tailored
+versions, edit them section by section, search your past experience
+semantically, and export polished PDFs (LaTeX, awesome-cv) or Overleaf
+projects.
 
-Resume MCP Agent is an intelligent resume assistant based on MCP (Model Context Protocol) that allows you to directly manage and optimize your resume within AI clients like Claude Desktop and ChatGPT.
+Resumes are stored as schema-validated YAML (one file per version). The
+assistant edits them through a Markdown text view; every edit is parsed back,
+validated, and only then saved.
 
-### 🎯 What can it do for you?
+## Quick start
 
-**📝 Smart Resume Management**
-- Automatically read and analyze your resume content
-- Support multiple resume versions for easy switching and comparison
-- Real-time preview with instant results
-
-**🎯 Precise Job Matching**
-- Upload job descriptions and automatically analyze key requirements
-- Intelligent recommendations for resume optimization
-- One-click generation of tailored resumes for specific positions
-
-**📄 Professional PDF Output**
-- Automatically generate beautiful PDF resumes
-- Support custom templates and formats
-- Ensure proper formatting suitable for direct submission
-
-**🔄 Seamless AI Integration**
-- Direct operation within Claude Desktop
-- Support for ChatGPT Developer Mode
-- Complete all operations through natural language commands
-
-### 💡 Typical Use Cases
-
-1. **Job Preparation**: Create customized resume versions for different companies
-2. **Resume Optimization**: Adjust content and keywords based on job requirements
-3. **Format Conversion**: Convert from Word/PDF to structured data for easy management
-4. **Batch Processing**: Quickly generate multiple resume versions
-
-## 🚀 Quick Start
-
-### Option 1: Docker Deployment (Recommended)
-
-For the easiest setup, use Docker to get started in minutes:
+Requires Python 3.12 and [uv](https://docs.astral.sh/uv/).
 
 ```bash
-# Build the image
-docker build -t resume-mcp:latest .
-
-# Run with automatic Cloudflare tunnel (recommended with data persistence)
-docker run --rm -p 8000:8000 \
-  -v "$(pwd)/data:/app/data" \
-  -v "$(pwd)/templates:/app/templates" \
-  --env-file ./.env \
-  resume-mcp:latest
+uv sync
+cp sample.env .env          # optional: storage, PDF upload, embedding keys
+uv run resume-mcp           # stdio transport, for Claude Desktop / Claude Code
+uv run resume-mcp --transport http --port 8000   # HTTP: /mcp and /sse
 ```
 
-The container will automatically create a public URL for ChatGPT integration. See [Docker Guide](./DOCKER.md) for detailed instructions.
+### Connect a client
 
-### Option 2: Local Setup
+Claude Desktop (`claude_desktop_config.json`):
 
-1. **Clone and setup environment**
-   ```bash
-   git clone <repository-url>
-   cd resume_mcp
-   ./setupenv.sh
-   ```
-
-2. **Configure environment variables**
-   ```bash
-   cp sample.env .env
-   # Edit .env with your API keys
-   ```
-
-3. **Configure external compile service** (for PDF generation)
-   - Set `LATEX_COMPILE_API_URL` in `.env`
-   - Default service: `https://latex-compile.k.0x1f0c.dev`
-   - See API details in [LaTeX Compile API](./docs/latex_compile_api.md)
-
-4. **Start the MCP server**
-
-   **For Claude Desktop (STDIO mode):**
-   ```bash
-   uv run python scripts/start_mcp_server.py --transport stdio
-   ```
-
-   **For HTTP mode (testing/ChatGPT):**
-   ```bash
-   uv run python scripts/start_mcp_server.py --transport http --port 8000
-   ```
-
-5. **Expose via Cloudflare Tunnel (optional, for ChatGPT)**
-   
-   If using HTTP mode and want to access from ChatGPT:
-   
-   ```bash
-   # In another terminal, start Cloudflare tunnel
-   cloudflared tunnel --url http://localhost:8000
-   ```
-   
-   Cloudflare will return a URL like `https://xxx.trycloudflare.com`
-   
-   **ChatGPT client configuration:**
-   - Server URL: use the HTTPS URL from Cloudflare
-   - Authentication: None
-   - Protocol: HTTP/HTTPS
-
-## 📚 Documentation
-
-- **[MCP Setup Guide](./MCP_SETUP.md)** - Detailed MCP server configuration and client connection
-- **[User Manual](./MCP_USER_MANUAL.md)** - Tool usage guide and typical workflows
-- **[Docker Guide](./DOCKER.md)** - Docker deployment and cloud access configuration
-- **[Resume Version Management](./docs/resume_version_management.md)** - Resume version management
-
-## 🛠️ Development
-
-### Testing
-```bash
-# Run all tests
-uv run python scripts/run_all_tests.py
-
-# Run specific test
-uv run pytest tests/test_resume_rendering.py
+```json
+{
+  "mcpServers": {
+    "resume": {
+      "command": "uv",
+      "args": ["run", "--directory", "/path/to/resume-mcp-server", "resume-mcp"]
+    }
+  }
+}
 ```
 
-### CLI Tools
-```bash
-# Generate LaTeX
-uv run python scripts/render_resume_cli.py resume
+Claude Code: `claude mcp add resume -- uv run --directory /path/to/resume-mcp-server resume-mcp`
 
-# Generate PDF
-uv run python scripts/render_resume_cli.py resume --tex build/resume.tex --pdf build/resume.pdf --compile
-```
+ChatGPT / remote clients: run the HTTP transport and expose it, e.g.
+`cloudflared tunnel --url http://localhost:8000`, then use
+`https://<tunnel>/mcp` as the server URL. See [docs/deployment.md](docs/deployment.md)
+for Docker and Kubernetes.
 
-### Error Log Query API (HTTP mode)
-When running the MCP server in HTTP transport, failed tool calls are also written to
-`logs/mcp_error_events.jsonl` (or `/tmp/resume_mcp/logs/mcp_error_events.jsonl` fallback).
+## Tools
+
+All tools address a resume by `version_name` (e.g. `resume`, without
+`.yaml`). Text tools take an optional `section_id` — omit it to work on the
+whole resume.
+
+| Area | Tools |
+|---|---|
+| Versions | `list_resume_versions`, `create_resume_version`, `copy_resume_version`, `delete_resume_version` |
+| Reading | `load_complete_resume`, `list_resume_sections`, `read_resume_text` |
+| Editing | `replace_resume_text`, `insert_resume_text`, `delete_resume_text`, `update_resume_section` |
+| Layout | `get_resume_layout`, `set_section_visibility`, `set_section_order` |
+| Search | `search_resume_entries`, `build_vector_index`, `get_vector_index_status` |
+| Rendering | `render_resume_pdf`, `render_resume_to_overleaf` |
+| Help | `get_resume_yaml_format`, `diagnose_filesystems` |
+
+Full parameter reference: [docs/mcp_tools.md](docs/mcp_tools.md) (generated
+from the code).
+
+## Configuration
+
+Everything is optional and set via environment variables (or `.env`); see
+the commented [sample.env](sample.env). The main knobs:
+
+- **Storage** — `RESUME_DATA_DIR` / `RESUME_JD_DIR` (default `data/resumes`,
+  `data/jd`), or `RESUME_FS_URL` / `JD_FS_URL` for any PyFilesystem2 URL such
+  as `s3://bucket/prefix`.
+- **PDF export** — `LATEX_COMPILE_API_URL` (the external
+  [LaTeX compile service](docs/latex_compile_api.md)) and `RESUME_S3_*` for
+  uploading the result.
+- **Semantic search** — `EMBEDDING_PROVIDER` plus `GOOGLE_API_KEY` or
+  `OPENAI_API_KEY`.
+
+In HTTP mode, `GET /health` is a liveness probe and `GET /error-logs`
+(`?tool_name=&failure_kind=&limit=&offset=`) lists recent failed tool calls.
+
+## Development
 
 ```bash
-# Query recent failed tool calls
-curl "http://localhost:8000/error-logs"
-
-# Query with filters and pagination
-curl "http://localhost:8000/error-logs?tool_name=update_resume_section&failure_kind=exception&limit=20&offset=0"
+./run_tests.sh                       # full suite + coverage (what CI runs)
+./run_tests.sh -k layout             # extra args go to pytest
+uv run black src tests scripts       # formatting (CI runs black --check)
+uv run python scripts/generate_mcp_docs.py   # after changing any tool
 ```
 
-Supported query params:
-- `limit`: `1-500`, default `50`
-- `offset`: `>=0`, default `0`
-- `tool_name`: exact tool name filter
-- `failure_kind`: `exception` or `error_response`
+Tests run every tool through a real in-memory MCP client against a private
+copy of `tests/fixtures/test_data`, so they never touch your data. See
+[docs/architecture.md](docs/architecture.md) for the code layout and how to
+add a tool.
 
-## 📋 Requirements
-
-- Python 3.12+
-- UV package manager
-- External LaTeX compile service (`LATEX_COMPILE_API_URL`)
-
-## 🚀 Ready to Start
-
-Whether you're a job seeker, HR professional, or developer, you can get started quickly:
-- **Regular users**: Use Docker for one-click deployment in 5 minutes
-- **Developers**: Set up local environment for full control and customization
-
-For detailed setup instructions and troubleshooting, see the [MCP Setup Guide](./MCP_SETUP.md).
+Other scripts in `scripts/`: `render_resume_cli.py` (render/compile from the
+command line), `validate_resume_yaml.py`, `convert_latex_resumes.py`
+(import old LaTeX resumes), `summarize_resumes.py`, and log viewers.
