@@ -45,7 +45,9 @@ def _extract_skills(resume_data: dict[str, Any], limit: int = 12) -> list[str]:
 def _extract_entries(resume_data: dict[str, Any], limit: int = 6) -> list[str]:
     entries: list[str] = []
     for section in resume_data.get("sections", []):
-        section_entries = section.get("entries", []) if isinstance(section, dict) else []
+        section_entries = (
+            section.get("entries", []) if isinstance(section, dict) else []
+        )
         for entry in section_entries:
             if not isinstance(entry, dict):
                 continue
@@ -73,7 +75,11 @@ def summarize_resumes_to_index(data_dir: Path, summary_path: Path) -> dict[str, 
         if not isinstance(loaded, dict):
             continue
 
-        metadata = loaded.get("metadata", {}) if isinstance(loaded.get("metadata"), dict) else {}
+        metadata = (
+            loaded.get("metadata", {})
+            if isinstance(loaded.get("metadata"), dict)
+            else {}
+        )
         resumes_summary.append(
             {
                 "version": resume_file.stem,

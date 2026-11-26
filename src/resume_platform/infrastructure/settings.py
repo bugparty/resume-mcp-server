@@ -121,11 +121,9 @@ def load_settings(
         base_dir=root_dir,
     )
     resolved_embedding_provider = (
-        embedding_provider
-        or os.getenv("EMBEDDING_PROVIDER")
-        or "google"
+        embedding_provider or os.getenv("EMBEDDING_PROVIDER") or "google"
     ).lower()
-    
+
     # Filesystem URLs - default to local filesystem using resolved paths
     # Keep RESUME_FS_UR as a backward-compatible alias for historical typoed envs.
     resolved_resume_fs = (

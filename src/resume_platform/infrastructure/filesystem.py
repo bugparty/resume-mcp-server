@@ -12,6 +12,7 @@ import os
 import warnings
 from pathlib import Path
 from urllib.parse import urlparse
+
 warnings.filterwarnings(
     "ignore",
     message="pkg_resources is deprecated as an API",
@@ -72,22 +73,22 @@ def _s3_open_kwargs() -> dict[str, Any]:
 def create_filesystem(fs_url: str) -> FS:
     """
     Create a filesystem instance based on the provided URL.
-    
+
     Args:
          fs_url: Filesystem URL. Supported formats:
              - Local path: "/path/to/directory"
              - Memory filesystem: "mem://" (for testing)
              - S3: "s3://bucket/path" (requires fs-s3fs)
-    
+
     Returns:
         FS: A PyFilesystem2 filesystem instance
-        
+
     Raises:
         ValueError: For invalid URLs
     """
     if not fs_url:
         raise ValueError("Filesystem URL cannot be empty")
-        
+
     if fs_url.startswith("s3://"):
         try:
             # Ensure S3 opener is registered for `open_fs("s3://...")`.
@@ -122,28 +123,36 @@ _output_fs: Optional[FS] = None
 def get_resume_fs() -> FS:
     """Get the resume filesystem instance."""
     if _resume_fs is None:
-        raise RuntimeError("Resume filesystem not initialized. Call init_filesystems() first.")
+        raise RuntimeError(
+            "Resume filesystem not initialized. Call init_filesystems() first."
+        )
     return _resume_fs
 
 
 def get_jd_fs() -> FS:
     """Get the job description filesystem instance."""
     if _jd_fs is None:
-        raise RuntimeError("JD filesystem not initialized. Call init_filesystems() first.")
+        raise RuntimeError(
+            "JD filesystem not initialized. Call init_filesystems() first."
+        )
     return _jd_fs
 
 
 def get_output_fs() -> FS:
     """Get the output filesystem instance."""
     if _output_fs is None:
-        raise RuntimeError("Output filesystem not initialized. Call init_filesystems() first.")
+        raise RuntimeError(
+            "Output filesystem not initialized. Call init_filesystems() first."
+        )
     return _output_fs
 
 
-def init_filesystems(resume_fs_url: str, jd_fs_url: str, output_fs_url: str = None) -> None:
+def init_filesystems(
+    resume_fs_url: str, jd_fs_url: str, output_fs_url: str = None
+) -> None:
     """
     Initialize the global filesystem instances.
-    
+
     Args:
         resume_fs_url: URL for resume data storage
         jd_fs_url: URL for job description file storage
@@ -152,14 +161,14 @@ def init_filesystems(resume_fs_url: str, jd_fs_url: str, output_fs_url: str = No
     global _resume_fs, _jd_fs, _output_fs
     _resume_fs = create_filesystem(resume_fs_url)
     _jd_fs = create_filesystem(jd_fs_url)
-    
+
     # If no output_fs_url provided, create output subdirectory in resume filesystem
     if output_fs_url is None:
         if resume_fs_url.startswith("mem://"):
             output_fs_url = "mem://"
         else:
             output_fs_url = _join_fs_url(resume_fs_url, "output")
-    
+
     _output_fs = create_filesystem(output_fs_url)
 
 

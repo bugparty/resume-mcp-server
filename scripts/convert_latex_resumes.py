@@ -280,7 +280,12 @@ def write_yaml(data: Dict[str, Any], destination: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, default=OUTPUT_BASE, help="Target directory for YAML resumes")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=OUTPUT_BASE,
+        help="Target directory for YAML resumes",
+    )
     args = parser.parse_args()
 
     args.output.mkdir(parents=True, exist_ok=True)

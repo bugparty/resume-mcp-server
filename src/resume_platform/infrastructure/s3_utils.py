@@ -140,4 +140,3 @@ def upload_bytes_to_s3(
 
     public_url = f"{public_base_url}{object_key}"
     return public_url, object_key
-
