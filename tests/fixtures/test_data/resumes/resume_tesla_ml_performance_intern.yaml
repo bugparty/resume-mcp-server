@@ -46,7 +46,7 @@ sections:
   - title: Performance Intern
     organization: Tesla
     location: Remote
-    period: 2024
+    period: "2024"
     bullets:
     - Tuned distributed training runs on simulated Dojo clusters.
     - Benchmarked parallel compute kernels and optimized communication patterns.

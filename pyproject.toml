@@ -139,6 +139,8 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
 filterwarnings = [
     "ignore::DeprecationWarning:pkg_resources.*",
     "ignore::UserWarning:fs.*",
@@ -147,3 +149,11 @@ filterwarnings = [
     "ignore::DeprecationWarning:google.*",
     "ignore::DeprecationWarning:.*langchain.*"
 ]
+
+[tool.coverage.run]
+source = ["resume_platform"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
