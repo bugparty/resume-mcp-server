@@ -24,7 +24,7 @@ echo "Starting MCP server (HTTP) on 0.0.0.0:8000..."
 if ! python -c 'import starlette' >/dev/null 2>&1; then
   echo "Dependencies not found in venv; syncing with uv..."
   if command -v uv >/dev/null 2>&1; then
-    uv sync --frozen || uv sync || true
+    uv sync --frozen --no-dev || uv sync --no-dev || true
   fi
 fi
 

@@ -15,12 +15,12 @@ WORKDIR /app
 
 # Copy project files
 COPY pyproject.toml uv.lock* ./
-RUN uv venv && . .venv/bin/activate && uv sync --frozen --no-install-project
+RUN uv venv && . .venv/bin/activate && uv sync --frozen --no-dev --no-install-project
 
 COPY . .
 
 # Ensure dependencies are in sync with the complete source (cache-friendly second pass)
-RUN . .venv/bin/activate && uv sync --frozen
+RUN . .venv/bin/activate && uv sync --frozen --no-dev
 
 # Ensure entrypoint is executable
 RUN chmod +x /app/entrypoint.sh || true
