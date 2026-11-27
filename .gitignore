@@ -22,4 +22,9 @@ data/resumes/*.yaml
 data/vector_db
 .cloudflared
 .coverage
+.coverage.*
 /cloudflared
+
+# Personal editor / assistant settings
+.idea/
+.claude/settings.local.json

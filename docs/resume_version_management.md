@@ -1,5 +1,10 @@
 # Resume Version Management System Design
 
+> **Status: proposal, not implemented.** Written for an earlier `.tex`-module
+> layout. Today a version is one YAML file managed by `resume/versions.py`
+> (create / copy / delete); none of the history, metadata or diff features
+> below exist.
+
 ## 1. Core Versioning Features
 
 ### 1.1 Version Creation

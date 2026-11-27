@@ -4,10 +4,11 @@ Tool script for viewing and analyzing Markdown parsing logs
 """
 
 import sys
-from pathlib import Path
+
+from resume_platform.infrastructure.settings import get_settings
 
 # Log file path
-LOG_FILE = Path(__file__).resolve().parents[1] / "logs" / "markdown_parsing.log"
+LOG_FILE = get_settings().logs_dir / "markdown_parsing.log"
 
 
 def view_all_logs():

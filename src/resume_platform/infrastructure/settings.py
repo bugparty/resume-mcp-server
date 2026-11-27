@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from resume_platform.paths import PROJECT_ROOT
+
 
 @dataclass
 class AppSettings:
@@ -74,7 +76,7 @@ def load_settings(
     URL. See ADR-0001.
     """
 
-    root_dir = Path(__file__).resolve().parents[3]
+    root_dir = PROJECT_ROOT
     fallback_base = Path(os.getenv("TMPDIR", "/tmp")) / "resume_mcp"
 
     default_data_dir = root_dir / "data" / "resumes"

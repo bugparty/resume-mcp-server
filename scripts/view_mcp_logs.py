@@ -4,10 +4,11 @@ Tool script for viewing and analyzing MCP Server logs
 """
 
 import sys
-from pathlib import Path
+
+from resume_platform.infrastructure.settings import get_settings
 
 # Log file path
-LOG_FILE = Path(__file__).resolve().parents[1] / "logs" / "mcp_server.log"
+LOG_FILE = get_settings().logs_dir / "mcp_server.log"
 
 
 def view_all_logs():

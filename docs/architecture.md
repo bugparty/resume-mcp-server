@@ -22,7 +22,9 @@ src/resume_platform/
 ```
 
 Dependencies point inward: `interfaces` → `publishing` / `vector_search` →
-`resume` → `infrastructure`. Nothing in `resume/` knows about MCP.
+`resume` → `infrastructure`. Nothing in `resume/` knows about MCP. This and
+the other house rules are listed in [golden-principles.md](golden-principles.md)
+and enforced by `tests/test_structure.py`.
 
 ## Runtime lifecycle
 

@@ -12,6 +12,9 @@
 - MCP tool contract: `tests/test_mcp_server.py` (in-memory MCP client, every tool). Tool reference: `uv run python scripts/generate_mcp_docs.py` regenerates `docs/mcp_tools.md`; a test fails if it is stale.
 - Lint + format: `uv run ruff check --fix . && uv run ruff format .` (config in `pyproject.toml`, 88 cols); CI runs `ruff check` and `ruff format --check`.
 
+## Golden Principles
+- `docs/golden-principles.md` lists the 10 rules that keep the codebase from drifting (dependency direction, repository-only persistence, raise-don't-return errors, thin MCP tools, no import side effects, no `parents[N]`, network-only fakes, no duplicate logic, docs match reality, delete unused code). Most are enforced by `tests/test_structure.py`; read it before larger changes.
+
 ## Repo Structure Notes
 - Entrypoint: `resume-mcp` console script -> `interfaces/mcp/server.py:cli`. MCP tools live in `interfaces/mcp/tools.py` (thin functions + `TOOLS` registry); domain logic in `resume/` (`repository`, `versions`, `layout`, `views`, `editing`), plus `publishing.py`, `resume_renderer.py`, `resume_input_parser.py`, `vector_search.py`; infrastructure in `infrastructure/` (`settings`, `filesystem`, `bootstrap`, `s3_utils`, `llm_config`).
 - Data roots default to `data/resumes`, JDs under `data/jd`, logs under `logs` (fallbacks under `/tmp/resume_mcp/...` if unwritable).
@@ -63,7 +66,7 @@
 ## When Adding Code
 - Keep agent prompts centralized rather than inline strings to aid reuse/testing.
 - Ensure new commands are documented in this file when relevant; `run_tests.sh` is the single test entry point.
-- Prefer functional helpers over duplicating logic; extend existing utilities in `resume_renderer.py`, `resume_loader.py`, and `filesystem.py` where possible.
+- Prefer functional helpers over duplicating logic; extend existing utilities (`resume/repository.py`, `resume/views.py`, `resume_renderer.py`, `infrastructure/filesystem.py`) where possible.
 - Keep user-facing messages concise and actionable; return JSON strings only when consumers expect them.
 
 ## Support Checklist
