@@ -258,6 +258,53 @@ def test_docs_reference_existing_files() -> None:
     assert not missing, "\n".join(missing)
 
 
+# --- Principle 10: delete what nobody uses -----------------------------------
+
+
+def _orphan_candidates(tracked: list[str]) -> list[str]:
+    """Standalone files that only matter if something mentions them by name.
+
+    Package modules, templates loaded by pattern and fixture data directories
+    are covered elsewhere (imports, ruff, tests) and are not listed here.
+    """
+    out = []
+    for path in tracked:
+        parts = Path(path).parts
+        top_level_script = len(parts) == 1 and path.endswith(".sh")
+        if (
+            parts[0] in ("scripts", "schemas")
+            or (parts[0] == "templates" and len(parts) == 2)
+            or (parts[:2] == ("tests", "fixtures") and len(parts) == 3)
+            or top_level_script
+        ):
+            out.append(path)
+    return out
+
+
+def test_no_unreferenced_files() -> None:
+    tracked = [_rel(p) for p in _tracked("*") if p.is_file()]
+    texts = {}
+    for path in tracked:
+        if path in HISTORICAL_DOCS or path == "uv.lock":
+            continue  # history and lockfiles don't count as a reason to keep
+        try:
+            texts[path] = (ROOT / path).read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+    orphans = [
+        candidate
+        for candidate in _orphan_candidates(tracked)
+        if not any(
+            Path(candidate).name in text
+            for path, text in texts.items()
+            if path != candidate
+        )
+    ]
+    assert not orphans, (
+        f"Nothing references these files; delete them or document them: {orphans}"
+    )
+
+
 @pytest.mark.parametrize("doc", sorted(HISTORICAL_DOCS))
 def test_historical_docs_are_marked(doc: str) -> None:
     head = (ROOT / doc).read_text(encoding="utf-8")[:1500].lower()

@@ -92,6 +92,9 @@ docker run --rm -p 18000:8000 resume-mcp:latest
 
 - `k8s/refresh-secrets-and-restart.sh` re-syncs secrets and restarts the pod.
 - `k8s/force-pull-latest-and-restart.sh` pulls the latest image.
+- `scripts/push_env_secret_store.sh [ENV_FILE] [NAMESPACE] [SECRET]` creates or
+  updates a Kubernetes Secret from a `.env` file (defaults: `.env`,
+  `resume-mcp`, `resume-mcp-secrets`).
 
 In a cluster, point `RESUME_FS_URL` / `JD_FS_URL` at S3-compatible storage so
 data survives pod restarts.
