@@ -1,9 +1,14 @@
 """Tests for skills-line item splitting in resume_input_parser."""
 
-from resume_platform.resume_input_parser import (
-    parse_skill_items,
-    parse_skills_markdown,
-)
+from resume_platform.resume_input_parser import parse_skills_markdown
+
+
+def parse_skill_items(line: str) -> list[str]:
+    """Items of the single skills group parsed from one markdown line."""
+    section: dict = {}
+    parse_skills_markdown(f"## Skills\n{line}", section, "v1", "skills")
+    [group] = section["groups"]
+    return group["items"]
 
 
 def test_skills_split_respects_parentheses():
@@ -65,11 +70,10 @@ def test_skills_split_strips_bullet_marker_and_bold():
     assert parse_skill_items("- **Languages**: **C++**, Python") == ["C++", "Python"]
 
 
-def test_skills_split_line_without_category():
-    assert parse_skill_items("C++ (fast, safe), Python") == [
-        "C++ (fast, safe)",
-        "Python",
-    ]
+def test_line_without_category_is_a_category_without_items():
+    section: dict = {}
+    parse_skills_markdown("## Skills\n- **Leadership**", section, "v1", "skills")
+    assert section["groups"] == [{"category": "Leadership", "items": []}]
 
 
 def test_parse_skills_markdown_preserves_parenthesized_commas():
