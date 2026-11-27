@@ -95,4 +95,4 @@ add a tool.
 
 Other scripts in `scripts/`: `render_resume_cli.py` (render/compile from the
 command line), `validate_resume_yaml.py`, `convert_latex_resumes.py`
-(import old LaTeX resumes), `summarize_resumes.py`, and log viewers.
+(import old LaTeX resumes) and `view_parsing_logs.py`.
