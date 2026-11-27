@@ -448,6 +448,12 @@ def _clean_skill_item(raw_item: str) -> str:
     return raw_item.strip().removeprefix("**").removesuffix("**").strip()
 
 
+def _split_skill_list(text: str) -> list[str]:
+    """Split a comma-separated skill list, keeping parenthesised commas."""
+    items = (_clean_skill_item(part) for part in split_top_level_items(text))
+    return [item for item in items if item]
+
+
 def parse_skill_items(line: str) -> list[str]:
     """Parse the individual skills out of a single skills line.
 
@@ -457,8 +463,7 @@ def parse_skill_items(line: str) -> list[str]:
     content = re.sub(r"^[-*]\s+", "", line.strip(), count=1)
     if ":" in content:
         _, content = content.split(":", 1)
-    items = (_clean_skill_item(part) for part in split_top_level_items(content))
-    return [item for item in items if item]
+    return _split_skill_list(content)
 
 
 @log_markdown_parsing
@@ -509,12 +514,7 @@ def parse_skills_markdown(
                     # If no closing **, just remove the opening **
                     category = category[2:].strip()
 
-            # Clean up items and remove any bold formatting
-            item_list = []
-            for item in split_top_level_items(items):
-                cleaned_item = _clean_skill_item(item)
-                if cleaned_item:
-                    item_list.append(cleaned_item)
+            item_list = _split_skill_list(items)
         else:
             category = content
             # Handle bold formatting in category (remove ** if present)

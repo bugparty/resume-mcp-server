@@ -11,8 +11,6 @@ import yaml
 
 from resume_platform.infrastructure.bootstrap import bootstrap
 
-ROOT = Path(__file__).resolve().parent.parent
-
 
 def _extract_summary_bullets(resume_data: dict[str, Any], limit: int = 3) -> list[str]:
     for section in resume_data.get("sections", []):

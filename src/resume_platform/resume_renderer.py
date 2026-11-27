@@ -10,7 +10,6 @@ from urllib.parse import urlparse
 import requests
 from jinja2 import Environment, FileSystemLoader, TemplateNotFound
 
-from resume_platform.models.agent_resume import SectionType
 from resume_platform.paths import LATEX_TEMPLATE_DIR
 from resume_platform.resume.layout import apply_layout
 from resume_platform.resume.repository import load_resume
@@ -248,9 +247,6 @@ def render_section_with_template(section: dict[str, Any]) -> str:
     """
     Render a section using Jinja2 templates.
 
-    This is the new unified rendering function that replaces the legacy
-    render_summary(), render_skills(), render_experience(), etc.
-
     Args:
         section: Section data dictionary containing:
             - type: Section type (e.g., 'summary', 'experience', 'skills')
@@ -284,133 +280,6 @@ def render_section_with_template(section: dict[str, Any]) -> str:
 # ============================================================================
 
 
-def render_summary(section: dict[str, Any]) -> str:
-    title = section.get("title", "Summary")
-    bullets = section.get("bullets", [])
-    lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cvitems}"]
-    for bullet in bullets:
-        lines.append("  \\item {" + markdown_inline_to_latex(bullet) + "}")
-    lines.append("\\end{cvitems}")
-    return "\n".join(lines) + "\n"
-
-
-def render_skills(section: dict[str, Any]) -> str:
-    title = section.get("title", "Skills")
-    lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cvskills}"]
-    for group in section.get("groups", []):
-        category = escape_tex(group.get("category", "Skills"))
-        items = ", ".join(escape_tex(item) for item in group.get("items", []))
-        lines.append("  \\cvskill\n    {" + category + "}\n    {" + items + "}")
-    lines.append("\\end{cvskills}")
-    return "\n".join(lines) + "\n"
-
-
-def render_entries(section: dict[str, Any]) -> str:
-    title = section.get("title", "Experience")
-    lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cventries}"]
-    for entry in section.get("entries", []):
-        role = escape_tex(entry.get("title", "Role"))
-        organization = markdown_inline_to_latex(
-            entry.get("organization", "Organization")
-        )
-        location = escape_tex(entry.get("location", ""))
-        period = escape_tex(entry.get("period", ""))
-        bullet_lines = []
-        for bullet in entry.get("bullets", []):
-            bullet_lines.append(
-                "        \\item {" + markdown_inline_to_latex(bullet) + "}"
-            )
-        if bullet_lines:
-            items = "\n".join(
-                ["      \\begin{cvitems}"] + bullet_lines + ["      \\end{cvitems}"]
-            )
-        else:
-            items = ""
-        block = f"  \\cventry\n    {{{role}}}\n    {{{organization}}}\n    {{{location}}}\n    {{{period}}}\n    {{\n{items}\n    }}"
-        lines.append(block)
-    lines.append("\\end{cventries}")
-    return "\n".join(lines) + "\n"
-
-
-def render_experience(section: dict[str, Any]) -> str:
-    """Render work experience section."""
-    title = section.get("title", "Experience")
-    lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cventries}"]
-    for entry in section.get("entries", []):
-        position = escape_tex(entry.get("title", "Position"))
-        company = markdown_inline_to_latex(entry.get("organization", "Company"))
-        location = escape_tex(entry.get("location", ""))
-        period = escape_tex(entry.get("period", ""))
-        bullet_lines = []
-        for bullet in entry.get("bullets", []):
-            bullet_lines.append(
-                "        \\item {" + markdown_inline_to_latex(bullet) + "}"
-            )
-        if bullet_lines:
-            items = "\n".join(
-                ["      \\begin{cvitems}"] + bullet_lines + ["      \\end{cvitems}"]
-            )
-        else:
-            items = ""
-        block = f"  \\cventry\n    {{{position}}}\n    {{{company}}}\n    {{{location}}}\n    {{{period}}}\n    {{\n{items}\n    }}"
-        lines.append(block)
-    lines.append("\\end{cventries}")
-    return "\n".join(lines) + "\n"
-
-
-def render_projects(section: dict[str, Any]) -> str:
-    """Render projects section."""
-    title = section.get("title", "Projects")
-    lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cventries}"]
-    for entry in section.get("entries", []):
-        project_name = escape_tex(entry.get("title", "Project"))
-        context = markdown_inline_to_latex(entry.get("organization", ""))
-        location = escape_tex(entry.get("location", ""))
-        period = escape_tex(entry.get("period", ""))
-        bullet_lines = []
-        for bullet in entry.get("bullets", []):
-            bullet_lines.append(
-                "        \\item {" + markdown_inline_to_latex(bullet) + "}"
-            )
-        if bullet_lines:
-            items = "\n".join(
-                ["      \\begin{cvitems}"] + bullet_lines + ["      \\end{cvitems}"]
-            )
-        else:
-            items = ""
-        block = f"  \\cventry\n    {{{project_name}}}\n    {{{context}}}\n    {{{location}}}\n    {{{period}}}\n    {{\n{items}\n    }}"
-        lines.append(block)
-    lines.append("\\end{cventries}")
-    return "\n".join(lines) + "\n"
-
-
-def render_education(section: dict[str, Any]) -> str:
-    """Render education section."""
-    title = section.get("title", "Education")
-    lines = ["\\cvsection{" + escape_tex(title) + "}", "\\begin{cventries}"]
-    for entry in section.get("entries", []):
-        degree = escape_tex(entry.get("title", "Degree"))
-        school = markdown_inline_to_latex(entry.get("organization", "Institution"))
-        location = escape_tex(entry.get("location", ""))
-        period = escape_tex(entry.get("period", ""))
-        bullet_lines = []
-        for bullet in entry.get("bullets", []):
-            bullet_lines.append(
-                "        \\item {" + markdown_inline_to_latex(bullet) + "}"
-            )
-        if bullet_lines:
-            items = "\n".join(
-                ["      \\begin{cvitems}"] + bullet_lines + ["      \\end{cvitems}"]
-            )
-        else:
-            items = ""
-        block = f"  \\cventry\n    {{{degree}}}\n    {{{school}}}\n    {{{location}}}\n    {{{period}}}\n    {{\n{items}\n    }}"
-        lines.append(block)
-    lines.append("\\end{cventries}")
-    return "\n".join(lines) + "\n"
-
-
-# New unified renderers using Jinja2 templates
 SECTION_RENDERERS = {
     "summary": render_section_with_template,
     "skills": render_section_with_template,
@@ -419,26 +288,12 @@ SECTION_RENDERERS = {
     "education": render_section_with_template,
 }
 
-# Legacy renderers mapping (for backward compatibility testing)
-LEGACY_RENDERERS = {
-    "summary": render_summary,
-    "skills": render_skills,
-    "experience": render_experience,
-    "projects": render_projects,
-    "education": render_education,
-}
 
-
-def section_type_normalize_str(section_type: SectionType | str) -> str:
-    """Normalize section type."""
-    type_str = ""
-    if isinstance(section_type, SectionType):
-        type_str = section_type.value
-    elif isinstance(section_type, str):
-        type_str = section_type
-    else:
-        raise TypeError(f"Unknown section type: {section_type}")
-    return type_str
+def section_type_normalize_str(section_type: str) -> str:
+    """Validate a section ``type`` value and return it as a template name stem."""
+    if not isinstance(section_type, str):
+        raise TypeError(f"Unknown section type: {section_type!r}")
+    return section_type
 
 
 def render_section(section: dict[str, Any]) -> str:

@@ -15,7 +15,6 @@ LATEX_TEMPLATE_DIR = TEMPLATES_DIR / "latex"
 RESUME_TEMPLATE_PATH = TEMPLATES_DIR / "resume_template.yaml"
 SCHEMAS_DIR = PROJECT_ROOT / "schemas"
 RESUME_SCHEMA_PATH = SCHEMAS_DIR / "resume_schema.json"
-DATA_DIR = PROJECT_ROOT / "data"
 
 # Files copied next to the generated .tex for compilation / Overleaf export.
 LATEX_ASSET_FILES = ("awesome-cv.cls", "profile.png")
