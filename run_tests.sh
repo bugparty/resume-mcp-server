@@ -6,4 +6,4 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 unset VIRTUAL_ENV  # avoid leaking a host venv into the devcontainer
 
-uv run pytest --cov --cov-report=term "$@"
+uv run pytest --cov --cov-config="$PWD/pyproject.toml" --cov-report=term "$@"
