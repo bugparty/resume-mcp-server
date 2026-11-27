@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 import yaml
 from jsonschema import Draft202012Validator
@@ -34,7 +34,9 @@ def validate_file(path: Path, validator: Draft202012Validator) -> list[str]:
 
 def main(argv: Iterable[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("paths", nargs="+", help="YAML files or directories to validate")
+    parser.add_argument(
+        "paths", nargs="+", help="YAML files or directories to validate"
+    )
     args = parser.parse_args(argv)
 
     schema = load_schema()

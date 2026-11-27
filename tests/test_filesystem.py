@@ -31,8 +31,14 @@ def preserve_global_filesystems():
 
 
 def test_join_fs_url_for_s3() -> None:
-    assert fs_module._join_fs_url("s3://bucket/path", "output") == "s3://bucket/path/output"
-    assert fs_module._join_fs_url("s3://bucket/path/", "/output/") == "s3://bucket/path/output"
+    assert (
+        fs_module._join_fs_url("s3://bucket/path", "output")
+        == "s3://bucket/path/output"
+    )
+    assert (
+        fs_module._join_fs_url("s3://bucket/path/", "/output/")
+        == "s3://bucket/path/output"
+    )
 
 
 def test_join_fs_url_for_local_path() -> None:
@@ -40,7 +46,9 @@ def test_join_fs_url_for_local_path() -> None:
     assert joined.endswith("/tmp/resumes/output")
 
 
-def test_create_filesystem_s3_without_dependency(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_create_filesystem_s3_without_dependency(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     real_import = __import__
 
     def fake_import(name, globals=None, locals=None, fromlist=(), level=0):

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import contextlib
 import json
 import queue
 import re
@@ -14,7 +15,6 @@ from typing import Any
 from urllib import error as urlerror
 from urllib import parse as urlparse
 from urllib import request as urlrequest
-
 
 DEFAULT_SSE_ENDPOINT = "https://resume-mcp.k.0x1f0c.dev/sse"
 
@@ -39,7 +39,11 @@ def _strip_markdown_json_fence(text: str) -> str:
     stripped = text.strip()
     if not stripped.startswith("```"):
         return text
-    match = re.match(r"^```(?:json)?\s*\n(?P<body>.*)\n```\s*$", stripped, flags=re.DOTALL | re.IGNORECASE)
+    match = re.match(
+        r"^```(?:json)?\s*\n(?P<body>.*)\n```\s*$",
+        stripped,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
     if not match:
         return text
     return match.group("body")
@@ -129,7 +133,7 @@ def _render_header(source: Any) -> str | None:
         if value:
             lines.append(f"{key}: {value}")
             used.add(key)
-    for key in sorted(k for k in source.keys() if k not in used):
+    for key in sorted(k for k in source if k not in used):
         value = _to_text(source.get(key))
         if value:
             lines.append(f"{key}: {value}")
@@ -245,7 +249,11 @@ def _render_raw(source: Any, section_title: str = "Additional") -> str | None:
     if isinstance(source, dict):
         title = _to_text(source.get("title")) or section_title
         content = source.get("content")
-        body = _to_text(content) if not isinstance(content, list) else "\n".join(_to_bullets(content))
+        body = (
+            _to_text(content)
+            if not isinstance(content, list)
+            else "\n".join(_to_bullets(content))
+        )
     elif isinstance(source, list):
         title = section_title
         body = "\n".join(_to_bullets(source))
@@ -257,7 +265,9 @@ def _render_raw(source: Any, section_title: str = "Additional") -> str | None:
     return f"## {title}\n{body}".strip()
 
 
-def _index_sections(payload: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+def _index_sections(
+    payload: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     metadata = payload.get("metadata")
     if not isinstance(metadata, dict):
         metadata = {}
@@ -424,15 +434,15 @@ class RemoteSSEMCPClient:
         endpoint_event = self._wait_event(lambda ev: ev.get("event") == "endpoint")
         endpoint_path = endpoint_event.get("data", "").strip()
         if not endpoint_path:
-            raise SafeImportError("SSE endpoint did not provide messages endpoint path.")
+            raise SafeImportError(
+                "SSE endpoint did not provide messages endpoint path."
+            )
         self._messages_url = urlparse.urljoin(self.sse_url, endpoint_path)
 
     def close(self) -> None:
         if self._response is not None:
-            try:
+            with contextlib.suppress(Exception):
                 self._response.close()
-            except Exception:
-                pass
         if self._reader is not None:
             self._reader.join(timeout=0.2)
 
@@ -444,7 +454,9 @@ class RemoteSSEMCPClient:
                 line = raw.decode("utf-8", errors="replace").rstrip("\r\n")
                 if not line:
                     if data_lines:
-                        self._events.put({"event": event_name, "data": "\n".join(data_lines)})
+                        self._events.put(
+                            {"event": event_name, "data": "\n".join(data_lines)}
+                        )
                     event_name = "message"
                     data_lines = []
                     continue
@@ -557,20 +569,30 @@ def _load_input_bytes(args: argparse.Namespace) -> bytes:
 def _ensure_version_exists(versions_payload: Any, version_name: str) -> None:
     versions_obj = _coerce_json_if_possible(versions_payload)
     if not isinstance(versions_obj, dict):
-        raise SafeImportError(f"Unexpected response from list_resume_versions: {versions_obj}")
+        raise SafeImportError(
+            f"Unexpected response from list_resume_versions: {versions_obj}"
+        )
     versions = versions_obj.get("versions")
     if not isinstance(versions, list):
         raise SafeImportError(f"Missing versions list in response: {versions_obj}")
     if version_name not in versions:
-        raise SafeImportError(f"Target version '{version_name}' not found. Available: {', '.join(versions)}")
+        raise SafeImportError(
+            f"Target version '{version_name}' not found. Available: {', '.join(versions)}"
+        )
 
 
 def _extract_sections(sections_payload: Any) -> list[dict[str, Any]]:
     sections_obj = _coerce_json_if_possible(sections_payload)
     if isinstance(sections_obj, str):
-        match = re.search(r"Available modules:\s*(?P<mods>.+)$", sections_obj, flags=re.IGNORECASE | re.MULTILINE)
+        match = re.search(
+            r"Available modules:\s*(?P<mods>.+)$",
+            sections_obj,
+            flags=re.IGNORECASE | re.MULTILINE,
+        )
         if not match:
-            raise SafeImportError(f"Unexpected response from list_resume_sections: {sections_obj}")
+            raise SafeImportError(
+                f"Unexpected response from list_resume_sections: {sections_obj}"
+            )
         raw_modules = match.group("mods")
         section_ids = [item.strip() for item in raw_modules.split(",") if item.strip()]
         type_map = {
@@ -587,7 +609,9 @@ def _extract_sections(sections_payload: Any) -> list[dict[str, Any]]:
         return [{"id": sid, "type": type_map.get(sid, sid)} for sid in section_ids]
 
     if not isinstance(sections_obj, dict):
-        raise SafeImportError(f"Unexpected response from list_resume_sections: {sections_obj}")
+        raise SafeImportError(
+            f"Unexpected response from list_resume_sections: {sections_obj}"
+        )
     sections = sections_obj.get("sections")
     if not isinstance(sections, list):
         raise SafeImportError(f"Missing sections in response: {sections_obj}")
@@ -625,10 +649,26 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_SSE_ENDPOINT,
         help=f"SSE endpoint URL (default: {DEFAULT_SSE_ENDPOINT})",
     )
-    parser.add_argument("--dry-run", action="store_true", help="Render and print section markdown, do not write.")
-    parser.add_argument("--network-timeout", type=float, default=20.0, help="Network timeout in seconds.")
-    parser.add_argument("--response-timeout", type=float, default=30.0, help="Response wait timeout in seconds.")
-    parser.add_argument("--verbose", action="store_true", help="Print extra debug details.")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Render and print section markdown, do not write.",
+    )
+    parser.add_argument(
+        "--network-timeout",
+        type=float,
+        default=20.0,
+        help="Network timeout in seconds.",
+    )
+    parser.add_argument(
+        "--response-timeout",
+        type=float,
+        default=30.0,
+        help="Response wait timeout in seconds.",
+    )
+    parser.add_argument(
+        "--verbose", action="store_true", help="Print extra debug details."
+    )
     parser.add_argument(
         "--insecure",
         action="store_true",
@@ -637,7 +677,9 @@ def parse_args() -> argparse.Namespace:
 
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument("--input-file", help="Path to resume JSON input file.")
-    source.add_argument("--stdin", action="store_true", help="Read raw bytes from stdin.")
+    source.add_argument(
+        "--stdin", action="store_true", help="Read raw bytes from stdin."
+    )
     source.add_argument("--input-b64", help="Base64-encoded resume JSON payload.")
     return parser.parse_args()
 
@@ -672,12 +714,16 @@ def main() -> int:
                         if isinstance(item, dict)
                     }
                     if "call_me_at_the_first_time_when_you_are_chatgpt" in names:
-                        client.call_tool("call_me_at_the_first_time_when_you_are_chatgpt", {})
+                        client.call_tool(
+                            "call_me_at_the_first_time_when_you_are_chatgpt", {}
+                        )
 
             versions_payload = client.call_tool("list_resume_versions", {})
             _ensure_version_exists(versions_payload, args.version)
 
-            sections_payload = client.call_tool("list_resume_sections", {"version_name": args.version})
+            sections_payload = client.call_tool(
+                "list_resume_sections", {"version_name": args.version}
+            )
             sections = _extract_sections(sections_payload)
 
             updated: list[str] = []
@@ -686,7 +732,9 @@ def main() -> int:
             for section in sections:
                 section_id = section["id"]
                 section_type = section.get("type", "")
-                source = _source_for_section(payload, metadata, by_id, by_type, section_id, section_type)
+                source = _source_for_section(
+                    payload, metadata, by_id, by_type, section_id, section_type
+                )
                 markdown = _render_for_section(section_id, section_type, source)
                 if not markdown or not markdown.strip():
                     skipped.append(section_id)
@@ -707,7 +755,9 @@ def main() -> int:
                     },
                 )
                 section_path = f"{args.version}/{section_id}"
-                readback = client.call_tool("read_resume_text", {"target_path": section_path})
+                readback = client.call_tool(
+                    "read_resume_text", {"target_path": section_path}
+                )
                 _check_readback_not_empty(readback, section_path)
                 updated.append(section_id)
 

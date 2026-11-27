@@ -2,50 +2,42 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      # Tests never call real LLM / S3 / LaTeX services; keep keys empty.
+      GOOGLE_API_KEY: ""
+      DEEPSEEK_API_KEY: ""
+      OPENAI_API_KEY: ""
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+      - uses: actions/checkout@v4
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
-
-      - name: Cache uv and virtualenv
-        uses: actions/cache@v4
         with:
-          path: |
-            .venv
-            ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml', 'uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-
+          enable-cache: true
+          cache-dependency-glob: uv.lock
 
-      - name: Create venv and install dependencies
+      - name: Install dependencies
+        run: uv sync --locked --python 3.12
+
+      - name: Lint and check formatting
         run: |
-          uv venv --allow-existing
-          source .venv/bin/activate
-          uv sync
+          uv run ruff check .
+          uv run ruff format --check .
 
-      - name: Run test suite (schema, pytest, PDF-skippable)
-        env:
-          # Provide empty/fake keys to avoid external calls; tests use fixtures
-          GOOGLE_API_KEY: ''
-          DEEPSEEK_API_KEY: ''
-          OPENAI_API_KEY: ''
+      - name: Run test suite
+        run: ./run_tests.sh
+
+      - name: Tests must not modify the repository
         run: |
-          source .venv/bin/activate
-          uv run python scripts/run_all_tests.py
-
-
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "The test run changed tracked or untracked files:"
+            git status --porcelain
+            exit 1
+          fi

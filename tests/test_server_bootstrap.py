@@ -48,7 +48,7 @@ def test_importing_server_does_not_create_the_logs_dir(tmp_path: Path) -> None:
 def test_start_server_runtime_initializes_filesystems(tmp_path: Path) -> None:
     """The entry-point helper is what actually assembles runtime state."""
     out = _run(
-        "server._start_server_runtime()\n" "print(fs.is_initialized())",
+        "server.start_runtime()\nprint(fs.is_initialized())",
         tmp_path / "logs",
     )
     assert out == "True"

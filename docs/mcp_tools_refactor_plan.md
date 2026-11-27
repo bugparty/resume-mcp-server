@@ -1,5 +1,14 @@
 # MCP Tools Parameters Unification and Renaming Refactoring Plan (2026-02)
 
+> **Status: implemented (2026-11).** The current API is documented in
+> [mcp_tools.md](mcp_tools.md) and enforced by `tests/test_mcp_server.py`.
+> Beyond this plan, the implementation also merged the duplicate
+> `*_section_text` tools into the text tools via an optional `section_id`,
+> renamed `create_new_version` to `create_resume_version(version_name)`,
+> removed `list_data_directory`, and dropped `submit_resume_pdf_job` (never
+> implemented). File paths below refer to the pre-refactor `src/myagent`
+> layout.
+
 ## Background and Goals
 Recently, `mcp_server.py` was refactored, but the MCP tools' external interfaces still have the following inconsistencies:
 - Some tools use `filename` and require the `.yaml` suffix (e.g., `load_complete_resume`, `list_resume_sections`).

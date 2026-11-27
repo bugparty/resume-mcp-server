@@ -1,216 +1,158 @@
+"""Persistence for resume versions.
+
+A *version* is one ``<version_name>.yaml`` document in the resume filesystem.
+This module is the only place that knows about that file layout; everything
+else works with version names and plain dicts.
+"""
+
 from __future__ import annotations
 
 import logging
-import os
-from pathlib import Path, PurePosixPath
-from typing import Dict, Any, List, Tuple
+import re
+from pathlib import PurePosixPath
+from typing import Any
 
 import rapidfuzz
 import yaml
 from fs.errors import FSError
 
 from resume_platform.infrastructure.filesystem import get_resume_fs
+from resume_platform.paths import RESUME_TEMPLATE_PATH
 
 logger = logging.getLogger(__name__)
 
-SUMMARY_MAX_BULLETS = 3
-SUMMARY_MAX_SKILLS = 12
-SUMMARY_MAX_ENTRIES = 6
+BASE_VERSION = "resume"
+_VERSION_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.\-]*$")
 
 
-def _resume_filename(version: str) -> str:
-    """Get the filename for a resume version."""
-    return f"{version}.yaml"
+class ResumeNotFoundError(FileNotFoundError):
+    """The requested resume version does not exist."""
 
 
-def _load_temploate_resume() -> Dict[str, Any]:
-    yaml_template_path = (
-        Path(__file__).resolve().parents[3] / "templates" / "resume_template.yaml"
-    )
-    if not os.path.exists(yaml_template_path):
-        raise FileNotFoundError("resume yaml template not found")
-    with open(yaml_template_path, "r", encoding="utf-8") as handle:
-        data = yaml.safe_load(handle)
-        if not isinstance(data, dict):
-            if data is None:
-                raise ValueError(
-                    f"Resume template file {yaml_template_path} is empty or contains only null values"
-                )
-            if isinstance(data, list):
-                raise ValueError(
-                    f"Resume template file {yaml_template_path} contains a list at root level, expected a dictionary"
-                )
-            raise ValueError(
-                f"Resume template file {yaml_template_path} contains {type(data).__name__} at root level, expected a dictionary"
-            )
-        return data
+class SectionNotFoundError(KeyError):
+    """The requested section id does not exist in a resume version."""
+
+    def __str__(self) -> str:  # KeyError would repr() the message
+        return str(self.args[0]) if self.args else ""
 
 
-def _load_resume(version: str) -> Dict[str, Any]:
-    filename = _resume_filename(version)
-    resume_fs = get_resume_fs()
-    if not resume_fs.exists(filename):
-        raise FileNotFoundError(f"Resume version not found: {version}")
-    with resume_fs.open(filename, "r", encoding="utf-8") as handle:
-        data = yaml.safe_load(handle)
+def validate_version_name(version_name: str) -> str:
+    """Return the normalised version name or raise ``ValueError``.
 
-        # Ensure we always return a dictionary
-        if not isinstance(data, dict):
-            if data is None:
-                raise ValueError(
-                    f"Resume file {filename} is empty or contains only null values"
-                )
-            elif isinstance(data, list):
-                raise ValueError(
-                    f"Resume file {filename} contains a list at root level, expected a dictionary"
-                )
-            else:
-                raise ValueError(
-                    f"Resume file {filename} contains {type(data).__name__} at root level, expected a dictionary"
-                )
-
-        return data
+    Names are file stems: no path separators, no ``.yaml`` suffix.
+    """
+    name = (version_name or "").strip()
+    if not name:
+        raise ValueError("Version name cannot be empty.")
+    if name.endswith(".yaml"):
+        raise ValueError(
+            f"Version name '{name}' must not include the .yaml extension; "
+            f"use '{name[:-5]}'."
+        )
+    if not _VERSION_NAME_RE.match(name):
+        raise ValueError(
+            f"Invalid version name '{name}'. Use letters, digits, '_', '-' or '.'."
+        )
+    return name
 
 
-def _save_resume(version: str, data: Dict[str, Any]) -> None:
-    filename = _resume_filename(version)
-    resume_fs = get_resume_fs()
-    with resume_fs.open(filename, "w", encoding="utf-8") as handle:
-        yaml.dump(data, handle, allow_unicode=True, sort_keys=False)
+def _filename(version_name: str) -> str:
+    return f"{validate_version_name(version_name)}.yaml"
 
 
-def find_resume_versions() -> List[str]:
+def _parse_resume_document(text: str, source: str) -> dict[str, Any]:
+    data = yaml.safe_load(text)
+    if not isinstance(data, dict):
+        kind = "empty" if data is None else type(data).__name__
+        raise ValueError(f"{source} must contain a YAML mapping, got {kind}.")
+    return data
+
+
+def version_exists(version_name: str) -> bool:
+    return get_resume_fs().exists(_filename(version_name))
+
+
+def list_versions() -> list[str]:
+    """Return the sorted names of all stored resume versions."""
     resume_fs = get_resume_fs()
     try:
-        # Prefer top-level scan first for local filesystems.
         try:
-            yaml_files = [
-                name for name in resume_fs.listdir(".") if name.endswith(".yaml")
-            ]
+            names = [n for n in resume_fs.listdir(".") if n.endswith(".yaml")]
         except FSError:
-            # If top-level listing fails (common on some remote backends),
-            # fall back to recursive walk-based discovery.
-            yaml_files = []
-
-        # S3 backends may expose objects under nested prefixes even when listdir('.')
-        # is empty (for example when RESUME_FS_URL points to bucket root).
-        if not yaml_files:
-            yaml_files = [
+            names = []
+        # Some S3 layouts expose objects only under nested prefixes.
+        if not names:
+            names = [
                 PurePosixPath(path).name
                 for path in resume_fs.walk.files(filter=["*.yaml"])
             ]
-
-        versions = sorted({name[:-5] for name in yaml_files if name.endswith(".yaml")})
-        return versions
-    except FSError as e:
-        logger.warning("Could not list resume versions: %s", e)
+    except FSError as exc:
+        logger.warning("Could not list resume versions: %s", exc)
         return []
+    return sorted({name[: -len(".yaml")] for name in names if name.endswith(".yaml")})
 
 
-def _dedupe_preserve_order(items: List[str], limit: int | None = None) -> List[str]:
-    seen = set()
-    result: List[str] = []
-    for item in items:
-        if not item:
-            continue
-        normalized = item.strip()
-        if not normalized or normalized in seen:
-            continue
-        seen.add(normalized)
-        result.append(normalized)
-        if limit is not None and len(result) >= limit:
-            break
-    return result
-
-
-def _get_section(
-    version: str, section_id: str
-) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    data = _load_resume(version)
-    for section in data.get("sections", []):
-        if section.get("id") == section_id:
-            return data, section
-    sections = data.get("sections", [])
-    sections = [str(section.get("id")) for section in sections if section.get("id") is not None]
-    all_available_section_ids = ", ".join(sections)
-    closer_sections = rapidfuzz.process.extract(section_id, sections, limit=1)
-
-    if closer_sections:
-        closer_section_ids = [section[0] for section in closer_sections]
-        error_message = f"Section '{section_id}' not found, did you mean '{closer_section_ids[0]}'?, all available section ids are: {all_available_section_ids}"
-    else:
-        error_message = f"Section '{section_id}' not found, no close match found. Available section ids are: {all_available_section_ids}"
-    raise KeyError(error_message)
-
-
-def set_section_visibility(version: str, section_id: str, enabled: bool) -> Dict[str, Any]:
-    """Update style.section_disabled for a given section id.
-
-    Returns a dict with updated style block for callers to format.
-    """
-
-    data = _load_resume(version)
-    sections = data.get("sections") or []
-    if not any(isinstance(s, dict) and s.get("id") == section_id for s in sections):
-        raise KeyError(f"Section '{section_id}' not found in version '{version}'")
-
-    style = data.get("style") or {}
-    if not isinstance(style, dict):
-        style = {}
-
-    disabled = style.get("section_disabled") if isinstance(style.get("section_disabled"), dict) else {}
-    if enabled:
-        disabled.pop(section_id, None)
-    else:
-        disabled[section_id] = True
-
-    if disabled:
-        style["section_disabled"] = disabled
-    elif "section_disabled" in style:
-        style.pop("section_disabled", None)
-
-    data["style"] = style
-    _save_resume(version, data)
-    return {"style": style}
-
-
-def set_section_order(version: str, order: List[str]) -> Dict[str, Any]:
-    """Replace style.section_order with the provided list (filtered to known ids)."""
-
-    data = _load_resume(version)
-    sections = [s for s in data.get("sections") or [] if isinstance(s, dict)]
-    known_ids = [s.get("id") for s in sections if isinstance(s.get("id"), str)]
-    known_set = set(known_ids)
-
-    filtered_order = [sid for sid in order if isinstance(sid, str) and sid in known_set]
-
-    style = data.get("style") or {}
-    if not isinstance(style, dict):
-        style = {}
-
-    if filtered_order:
-        style["section_order"] = filtered_order
-    elif isinstance(style, dict):
-        style.pop("section_order", None)
-
-    data["style"] = style
-    _save_resume(version, data)
-    return {"style": style, "skipped_ids": [sid for sid in order if sid not in known_set]}
-
-
-def get_section_style(version: str) -> Dict[str, Any]:
-    """Return the current style settings (order/disabled) for a resume version."""
-
-    data = _load_resume(version)
-    style = data.get("style") if isinstance(data.get("style"), dict) else {}
-
-    order = style.get("section_order") if isinstance(style.get("section_order"), list) else []
-    disabled = (
-        style.get("section_disabled") if isinstance(style.get("section_disabled"), dict) else {}
+def load_resume(version_name: str) -> dict[str, Any]:
+    filename = _filename(version_name)
+    resume_fs = get_resume_fs()
+    if not resume_fs.exists(filename):
+        raise ResumeNotFoundError(f"Resume version not found: {version_name}")
+    return _parse_resume_document(
+        resume_fs.readtext(filename, encoding="utf-8"), filename
     )
 
-    return {"style": {"section_order": order, "section_disabled": disabled}}
+
+def save_resume(version_name: str, data: dict[str, Any]) -> None:
+    text = yaml.dump(data, allow_unicode=True, sort_keys=False)
+    get_resume_fs().writetext(_filename(version_name), text, encoding="utf-8")
 
 
-def load_complete_resume_as_dict(version: str) -> Dict[str, Any]:
-    return _load_resume(version)
+def delete_resume(version_name: str) -> None:
+    filename = _filename(version_name)
+    resume_fs = get_resume_fs()
+    if not resume_fs.exists(filename):
+        raise ResumeNotFoundError(f"Resume version not found: {version_name}")
+    resume_fs.remove(filename)
+
+
+def load_template() -> dict[str, Any]:
+    """The standard template new versions are created from."""
+    if not RESUME_TEMPLATE_PATH.exists():
+        raise FileNotFoundError(f"Resume template not found: {RESUME_TEMPLATE_PATH}")
+    return _parse_resume_document(
+        RESUME_TEMPLATE_PATH.read_text(encoding="utf-8"), RESUME_TEMPLATE_PATH.name
+    )
+
+
+def section_ids(data: dict[str, Any]) -> list[str]:
+    return [
+        section["id"]
+        for section in data.get("sections") or []
+        if isinstance(section, dict) and isinstance(section.get("id"), str)
+    ]
+
+
+def find_section(
+    data: dict[str, Any], section_id: str, *, version_name: str = ""
+) -> dict[str, Any]:
+    """Return the section dict (by reference) or raise with a suggestion."""
+    for section in data.get("sections") or []:
+        if isinstance(section, dict) and section.get("id") == section_id:
+            return section
+
+    available = section_ids(data)
+    where = f" in version '{version_name}'" if version_name else ""
+    message = f"Section '{section_id}' not found{where}."
+    match = rapidfuzz.process.extractOne(section_id, available) if available else None
+    if match:
+        message += f" Did you mean '{match[0]}'?"
+    message += f" Available section ids: header, {', '.join(available)}"
+    raise SectionNotFoundError(message)
+
+
+def get_section(
+    version_name: str, section_id: str
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Load a version and return ``(document, section)``."""
+    data = load_resume(version_name)
+    return data, find_section(data, section_id, version_name=version_name)

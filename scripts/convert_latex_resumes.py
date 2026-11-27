@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import argparse
-import json
 import re
 from pathlib import Path
-from typing import Dict, List, Tuple, Any
+from typing import Any
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 LEGACY_BASE = ROOT_DIR / "templates"
@@ -26,13 +25,13 @@ def strip_comments(text: str) -> str:
     return "\n".join(cleaned_lines)
 
 
-def extract_braced(text: str, start: int) -> Tuple[str, int]:
+def extract_braced(text: str, start: int) -> tuple[str, int]:
     """Extract the content inside a balanced brace pair starting at *start*."""
 
     if start >= len(text) or text[start] != "{":
         raise ParseError(f"Expected '{{' at position {start}")
     depth = 0
-    buf: List[str] = []
+    buf: list[str] = []
     idx = start
     while idx < len(text):
         char = text[idx]
@@ -55,7 +54,7 @@ def latex_inline_to_markdown(text: str) -> str:
     """Convert a subset of LaTeX inline commands to Markdown equivalents."""
 
     text = text.replace("~", " ")
-    result: List[str] = []
+    result: list[str] = []
     idx = 0
     while idx < len(text):
         if text.startswith("\\textbf", idx):
@@ -110,12 +109,12 @@ def latex_inline_to_markdown(text: str) -> str:
     return collapsed.strip()
 
 
-def read_command_args(text: str, command: str, count: int = 1) -> List[str]:
+def read_command_args(text: str, command: str, count: int = 1) -> list[str]:
     pattern = re.compile(rf"\\{command}\b")
     match = pattern.search(text)
     if not match:
         return []
-    args: List[str] = []
+    args: list[str] = []
     idx = match.end()
     for _ in range(count):
         while idx < len(text) and text[idx].isspace():
@@ -127,11 +126,11 @@ def read_command_args(text: str, command: str, count: int = 1) -> List[str]:
     return args
 
 
-def parse_cvitems(block: str) -> List[str]:
+def parse_cvitems(block: str) -> list[str]:
     """Parse cvitems block into a list of Markdown bullet strings."""
 
     block = strip_comments(block)
-    items: List[str] = []
+    items: list[str] = []
     idx = 0
     while idx < len(block):
         if block.startswith("\\item", idx):
@@ -146,10 +145,10 @@ def parse_cvitems(block: str) -> List[str]:
     return [item for item in (item.strip() for item in items) if item]
 
 
-def parse_cventry_blocks(text: str) -> List[Dict[str, Any]]:
-    """Parse \cventry-like commands into structured dictionaries."""
+def parse_cventry_blocks(text: str) -> list[dict[str, Any]]:
+    r"""Parse \cventry-like commands into structured dictionaries."""
 
-    entries: List[Dict[str, Any]] = []
+    entries: list[dict[str, Any]] = []
     pattern = re.compile(r"\\cventry[^{]*")
     idx = 0
     while True:
@@ -157,7 +156,7 @@ def parse_cventry_blocks(text: str) -> List[Dict[str, Any]]:
         if not match:
             break
         cursor = match.end()
-        fields: List[str] = []
+        fields: list[str] = []
         for _ in range(5):
             while cursor < len(text) and text[cursor].isspace():
                 cursor += 1
@@ -179,7 +178,7 @@ def parse_cventry_blocks(text: str) -> List[Dict[str, Any]]:
     return entries
 
 
-def parse_cvparagraph(text: str) -> List[str]:
+def parse_cvparagraph(text: str) -> list[str]:
     """Extract paragraph lines from a cvparagraph environment."""
 
     match = re.search(
@@ -192,10 +191,10 @@ def parse_cvparagraph(text: str) -> List[str]:
     return lines if lines else [body.strip()] if body.strip() else []
 
 
-def parse_cvskills(text: str) -> List[Dict[str, Any]]:
+def parse_cvskills(text: str) -> list[dict[str, Any]]:
     """Parse cvskills block into category dictionaries."""
 
-    entries: List[Dict[str, Any]] = []
+    entries: list[dict[str, Any]] = []
     pattern = re.compile(r"\\cvskill[^\s{]*")
     idx = 0
     while True:
@@ -203,7 +202,7 @@ def parse_cvskills(text: str) -> List[Dict[str, Any]]:
         if not match:
             break
         cursor = match.end()
-        fields: List[str] = []
+        fields: list[str] = []
         for _ in range(2):
             while cursor < len(text) and text[cursor].isspace():
                 cursor += 1
@@ -219,11 +218,11 @@ def parse_cvskills(text: str) -> List[Dict[str, Any]]:
     return entries
 
 
-def convert_module(path: Path) -> Dict[str, Any]:
+def convert_module(path: Path) -> dict[str, Any]:
     text = strip_comments(path.read_text(encoding="utf-8"))
     title_args = read_command_args(text, "cvsection", 1)
     title = latex_inline_to_markdown(title_args[0]) if title_args else None
-    section: Dict[str, Any]
+    section: dict[str, Any]
     if "cvparagraph" in text:
         section = {"type": "summary", "bullets": parse_cvparagraph(text)}
     elif "cvskills" in text or "cvskillsII" in text:
@@ -237,11 +236,11 @@ def convert_module(path: Path) -> Dict[str, Any]:
     return section
 
 
-def convert_resume(main_tex: Path) -> Dict[str, Any]:
+def convert_resume(main_tex: Path) -> dict[str, Any]:
     """Convert a main resume .tex entry point to structured data."""
 
     content = strip_comments(main_tex.read_text(encoding="utf-8"))
-    metadata: Dict[str, str] = {}
+    metadata: dict[str, str] = {}
     name_args = read_command_args(content, "name", 2)
     if len(name_args) == 2:
         metadata["first_name"] = latex_inline_to_markdown(name_args[0])
@@ -270,7 +269,7 @@ def convert_resume(main_tex: Path) -> Dict[str, Any]:
     }
 
 
-def write_yaml(data: Dict[str, Any], destination: Path) -> None:
+def write_yaml(data: dict[str, Any], destination: Path) -> None:
     import yaml
 
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -280,7 +279,12 @@ def write_yaml(data: Dict[str, Any], destination: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, default=OUTPUT_BASE, help="Target directory for YAML resumes")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=OUTPUT_BASE,
+        help="Target directory for YAML resumes",
+    )
     args = parser.parse_args()
 
     args.output.mkdir(parents=True, exist_ok=True)

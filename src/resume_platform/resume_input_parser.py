@@ -7,13 +7,13 @@ It converts user-edited Markdown back into structured YAML data.
 
 from __future__ import annotations
 
-import re
-import logging
-import json
 import copy
+import json
+import logging
+import re
 import threading
-from typing import Dict, List, Any
 from functools import wraps
+from typing import Any
 
 from resume_platform.infrastructure.settings import get_settings
 
@@ -75,7 +75,7 @@ def log_markdown_parsing(func):
 
     @wraps(func)
     def wrapper(
-        markdown: str, section: Dict[str, Any], version: str, section_id: str
+        markdown: str, section: dict[str, Any], version: str, section_id: str
     ) -> None:
         _configure_logging()
         func_name = func.__name__
@@ -158,16 +158,16 @@ PROJECT_WITH_ORG_RE = re.compile(
 )
 
 
-def parse_header_markdown(markdown: str) -> Dict[str, Any]:
+def parse_header_markdown(markdown: str) -> dict[str, Any]:
     """Parse header section markdown into metadata dictionary.
-    
+
     Args:
         markdown: Markdown text containing key: value pairs
-        
+
     Returns:
         Dictionary of metadata key-value pairs
     """
-    metadata: Dict[str, Any] = {}
+    metadata: dict[str, Any] = {}
     for raw_line in markdown.splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#"):
@@ -200,7 +200,7 @@ EDUCATION_HEADING_RE = re.compile(
 
 @log_markdown_parsing
 def parse_education_markdown(
-    markdown: str, section: Dict[str, Any], version: str, section_id: str
+    markdown: str, section: dict[str, Any], version: str, section_id: str
 ) -> None:
     """Parse education section markdown into structured data.
 
@@ -231,8 +231,8 @@ def parse_education_markdown(
         section_id: Section identifier
     """
     lines = [line.rstrip() for line in markdown.strip().splitlines()]
-    entries: List[Dict[str, Any]] = []
-    current: Dict[str, Any] | None = None
+    entries: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
     pending_degree: str | None = None  # Track degree from previous line
 
     for line in lines:
@@ -313,7 +313,7 @@ def parse_education_markdown(
                 # Save previous entry if exists
                 if current:
                     entries.append(current)
-                    
+
                 current = {
                     "title": match.group("degree").strip(),
                     "organization": match.group("university").strip(),
@@ -341,7 +341,9 @@ def parse_education_markdown(
         # If we have a pending degree, check if this line has university info
         if pending_degree:
             # Try to match: University | Period
-            univ_match = re.match(r"^(?P<university>[^|]+?)(?:\s+\|\s+(?P<period>.*))?$", stripped)
+            univ_match = re.match(
+                r"^(?P<university>[^|]+?)(?:\s+\|\s+(?P<period>.*))?$", stripped
+            )
             if univ_match and not stripped.startswith("-"):
                 current = {
                     "title": pending_degree,
@@ -363,12 +365,13 @@ def parse_education_markdown(
 
     section["entries"] = entries
 
+
 @log_markdown_parsing
 def parse_summary_markdown(
-    markdown: str, section: Dict[str, Any], version: str, section_id: str
+    markdown: str, section: dict[str, Any], version: str, section_id: str
 ) -> None:
     """Parse summary section markdown into structured data.
-    
+
     Args:
         markdown: Markdown text with title and bullet points
         section: Section dictionary to update in-place
@@ -376,7 +379,7 @@ def parse_summary_markdown(
         section_id: Section identifier
     """
     lines = [line.rstrip() for line in markdown.strip().splitlines()]
-    bullets: List[str] = []
+    bullets: list[str] = []
     for line in lines:
         if line.startswith("#"):
             section["title"] = line.lstrip("#").strip()
@@ -398,17 +401,18 @@ _SKILL_CLOSING_BRACKETS = frozenset(_SKILL_BRACKET_PAIRS.values())
 
 def _brackets_balanced(text: str) -> bool:
     """Report whether every bracket in ``text`` opens and closes in order."""
-    expected_closers: List[str] = []
+    expected_closers: list[str] = []
     for char in text:
         if char in _SKILL_BRACKET_PAIRS:
             expected_closers.append(_SKILL_BRACKET_PAIRS[char])
-        elif char in _SKILL_CLOSING_BRACKETS:
-            if not expected_closers or expected_closers.pop() != char:
-                return False
+        elif char in _SKILL_CLOSING_BRACKETS and (
+            not expected_closers or expected_closers.pop() != char
+        ):
+            return False
     return not expected_closers
 
 
-def split_top_level_items(text: str) -> List[str]:
+def split_top_level_items(text: str) -> list[str]:
     """Split ``text`` on delimiters that sit outside any bracketed group.
 
     A skill may legitimately contain a delimiter inside brackets, as in
@@ -422,8 +426,8 @@ def split_top_level_items(text: str) -> List[str]:
     if not _brackets_balanced(text):
         return re.split(r"[,;]", text)
 
-    parts: List[str] = []
-    current: List[str] = []
+    parts: list[str] = []
+    current: list[str] = []
     depth = 0
     for char in text:
         if char in _SKILL_BRACKET_PAIRS:
@@ -444,7 +448,13 @@ def _clean_skill_item(raw_item: str) -> str:
     return raw_item.strip().removeprefix("**").removesuffix("**").strip()
 
 
-def parse_skill_items(line: str) -> List[str]:
+def _split_skill_list(text: str) -> list[str]:
+    """Split a comma-separated skill list, keeping parenthesised commas."""
+    items = (_clean_skill_item(part) for part in split_top_level_items(text))
+    return [item for item in items if item]
+
+
+def parse_skill_items(line: str) -> list[str]:
     """Parse the individual skills out of a single skills line.
 
     Accepts an optional list marker and an optional "Category:" prefix, so
@@ -453,20 +463,19 @@ def parse_skill_items(line: str) -> List[str]:
     content = re.sub(r"^[-*]\s+", "", line.strip(), count=1)
     if ":" in content:
         _, content = content.split(":", 1)
-    items = (_clean_skill_item(part) for part in split_top_level_items(content))
-    return [item for item in items if item]
+    return _split_skill_list(content)
 
 
 @log_markdown_parsing
 def parse_skills_markdown(
-    markdown: str, section: Dict[str, Any], version: str, section_id: str
+    markdown: str, section: dict[str, Any], version: str, section_id: str
 ) -> None:
     """Parse skills section markdown into structured data.
 
     Supports two formats:
     1. New format: - **Programming:** Python, JavaScript, Go
     2. Old format: - Programming: Python, JavaScript, Go
-    
+
     Args:
         markdown: Markdown text with categorized skill lists
         section: Section dictionary to update in-place
@@ -474,7 +483,7 @@ def parse_skills_markdown(
         section_id: Section identifier
     """
     lines = [line.rstrip() for line in markdown.strip().splitlines()]
-    groups: List[Dict[str, Any]] = []
+    groups: list[dict[str, Any]] = []
     for line in lines:
         if line.startswith("#"):
             section["title"] = line.lstrip("#").strip()
@@ -505,12 +514,7 @@ def parse_skills_markdown(
                     # If no closing **, just remove the opening **
                     category = category[2:].strip()
 
-            # Clean up items and remove any bold formatting
-            item_list = []
-            for item in split_top_level_items(items):
-                cleaned_item = _clean_skill_item(item)
-                if cleaned_item:
-                    item_list.append(cleaned_item)
+            item_list = _split_skill_list(items)
         else:
             category = content
             # Handle bold formatting in category (remove ** if present)
@@ -523,7 +527,7 @@ def parse_skills_markdown(
 
 @log_markdown_parsing
 def parse_experience_markdown(
-    markdown: str, section: Dict[str, Any], version: str, section_id: str
+    markdown: str, section: dict[str, Any], version: str, section_id: str
 ) -> None:
     """Parse experience section markdown into structured data.
 
@@ -551,21 +555,15 @@ def parse_experience_markdown(
         version: Resume version identifier
         section_id: Section identifier
     """
-    # Import here to avoid circular dependency
-    from resume_platform.resume.repository import _load_temploate_resume
-    
     lines = [line.rstrip() for line in markdown.strip().splitlines()]
-    entries: List[Dict[str, Any]] = []
-    current: Dict[str, Any] | None = None
-    template_data = _load_temploate_resume()
-    section_ids = [section["id"] for section in template_data.get("sections", [])]
+    entries: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
     for line in lines:
         stripped = line.strip()
         if not stripped:
             continue
         if stripped.startswith("##") and not stripped.startswith("###"):
             section["title"] = stripped.lstrip("#").strip()
-            # entry["id"] = rapidfuzz.process.extract(entry["title"], section_ids, limit=1)[0][0]
             continue
         if stripped.startswith("###"):
             match = ENTRY_HEADING_RE.match(stripped)
@@ -612,7 +610,7 @@ def parse_experience_markdown(
 
 @log_markdown_parsing
 def parse_projects_markdown(
-    markdown: str, section: Dict[str, Any], version: str, section_id: str
+    markdown: str, section: dict[str, Any], version: str, section_id: str
 ) -> None:
     """Parse projects section markdown into structured data.
 
@@ -636,8 +634,8 @@ def parse_projects_markdown(
         section_id: Section identifier
     """
     lines = [line.rstrip() for line in markdown.strip().splitlines()]
-    entries: List[Dict[str, Any]] = []
-    current: Dict[str, Any] | None = None
+    entries: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
 
     for line in lines:
         stripped = line.strip()
@@ -696,10 +694,10 @@ def parse_projects_markdown(
 
 @log_markdown_parsing
 def parse_raw_markdown(
-    markdown: str, section: Dict[str, Any], version: str, section_id: str
+    markdown: str, section: dict[str, Any], version: str, section_id: str
 ) -> None:
     """Parse raw/custom section markdown into structured data.
-    
+
     Args:
         markdown: Markdown text with optional title and content
         section: Section dictionary to update in-place

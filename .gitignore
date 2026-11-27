@@ -13,6 +13,7 @@ wheels/
 data/resumes/output/**/*
 server-info.json
 logs/*.log
+logs/*.jsonl
 samples/**/*
 test_tool_output/
 /.ai/mcp/mcp.json
@@ -21,3 +22,9 @@ data/resumes/*.yaml
 data/vector_db
 .cloudflared
 .coverage
+.coverage.*
+/cloudflared
+
+# Personal editor / assistant settings
+.idea/
+.claude/settings.local.json

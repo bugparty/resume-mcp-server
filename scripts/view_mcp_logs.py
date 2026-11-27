@@ -2,11 +2,13 @@
 """
 Tool script for viewing and analyzing MCP Server logs
 """
+
 import sys
-from pathlib import Path
+
+from resume_platform.infrastructure.settings import get_settings
 
 # Log file path
-LOG_FILE = Path(__file__).resolve().parents[1] / "logs" / "mcp_server.log"
+LOG_FILE = get_settings().logs_dir / "mcp_server.log"
 
 
 def view_all_logs():
@@ -14,10 +16,10 @@ def view_all_logs():
     if not LOG_FILE.exists():
         print(f"Log file does not exist: {LOG_FILE}")
         return
-    
+
     print(f"Reading log file: {LOG_FILE}")
     print("=" * 80)
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+    with open(LOG_FILE, encoding="utf-8") as f:
         print(f.read())
 
 
@@ -26,10 +28,10 @@ def view_recent_logs(lines=50):
     if not LOG_FILE.exists():
         print(f"Log file does not exist: {LOG_FILE}")
         return
-    
+
     print(f"Displaying recent {lines} log lines:")
     print("=" * 80)
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+    with open(LOG_FILE, encoding="utf-8") as f:
         all_lines = f.readlines()
         recent = all_lines[-lines:]
         print("".join(recent))
@@ -40,20 +42,23 @@ def filter_logs_by_tool(tool_name):
     if not LOG_FILE.exists():
         print(f"Log file does not exist: {LOG_FILE}")
         return
-    
+
     print(f"Filtering tool: {tool_name}")
     print("=" * 80)
-    
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+
+    with open(LOG_FILE, encoding="utf-8") as f:
         in_section = False
         for line in f:
             if f"=== MCP TOOL CALL: {tool_name} ===" in line:
                 in_section = True
-            
+
             if in_section:
                 print(line, end="")
-            
-            if f"=== END: {tool_name} ===" in line or f"=== END (ERROR): {tool_name} ===" in line:
+
+            if (
+                f"=== END: {tool_name} ===" in line
+                or f"=== END (ERROR): {tool_name} ===" in line
+            ):
                 in_section = False
                 print()
 
@@ -63,13 +68,13 @@ def get_statistics():
     if not LOG_FILE.exists():
         print(f"Log file does not exist: {LOG_FILE}")
         return
-    
+
     stats = {}
     errors = {}
     total_calls = 0
     total_errors = 0
-    
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+
+    with open(LOG_FILE, encoding="utf-8") as f:
         current_tool = None
         for line in f:
             if "=== MCP TOOL CALL:" in line:
@@ -80,18 +85,18 @@ def get_statistics():
             elif "=== END (ERROR):" in line and current_tool:
                 errors[current_tool] = errors.get(current_tool, 0) + 1
                 total_errors += 1
-    
+
     print("MCP Tool Call Statistics:")
     print("=" * 80)
-    
+
     # Sort by call count
     sorted_tools = sorted(stats.items(), key=lambda x: x[1], reverse=True)
-    
+
     for tool_name, count in sorted_tools:
         error_count = errors.get(tool_name, 0)
         error_info = f" ({error_count} errors)" if error_count > 0 else ""
         print(f"{tool_name:40s}: {count:3d} calls{error_info}")
-    
+
     print("=" * 80)
     print(f"Total: {total_calls} calls")
     if total_errors > 0:
@@ -104,16 +109,15 @@ def show_errors():
     if not LOG_FILE.exists():
         print(f"Log file does not exist: {LOG_FILE}")
         return
-    
+
     print("Error Logs:")
     print("=" * 80)
-    
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+
+    with open(LOG_FILE, encoding="utf-8") as f:
         in_error = False
         for line in f:
             if "=== MCP TOOL CALL:" in line:
                 in_error = False
-                current_section = [line]
             elif in_error or "ERROR" in line or "Error in" in line:
                 in_error = True
                 print(line, end="")
@@ -128,17 +132,19 @@ def show_slow_calls(threshold_seconds=1.0):
     if not LOG_FILE.exists():
         print(f"Log file does not exist: {LOG_FILE}")
         return
-    
+
     print(f"Calls taking longer than {threshold_seconds}s:")
     print("=" * 80)
-    
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+
+    with open(LOG_FILE, encoding="utf-8") as f:
         current_tool = None
         current_section = []
-        
+
         for line in f:
             if "=== MCP TOOL CALL:" in line:
-                current_tool = line.split("=== MCP TOOL CALL:")[1].split("===")[0].strip()
+                current_tool = (
+                    line.split("=== MCP TOOL CALL:")[1].split("===")[0].strip()
+                )
                 current_section = [line]
             elif current_tool:
                 current_section.append(line)
@@ -160,7 +166,7 @@ def clear_logs():
     if not LOG_FILE.exists():
         print(f"Log file does not exist: {LOG_FILE}")
         return
-    
+
     confirm = input(f"Are you sure you want to clear log file {LOG_FILE}? (yes/no): ")
     if confirm.lower() == "yes":
         LOG_FILE.write_text("")
@@ -173,7 +179,9 @@ def main():
     if len(sys.argv) < 2:
         print("Usage:")
         print(f"  {sys.argv[0]} all                  - Show all logs")
-        print(f"  {sys.argv[0]} recent [N]           - Show recent N lines (default 50)")
+        print(
+            f"  {sys.argv[0]} recent [N]           - Show recent N lines (default 50)"
+        )
         print(f"  {sys.argv[0]} filter TOOL_NAME     - Filter logs by tool name")
         print(f"  {sys.argv[0]} stats                - Show statistics")
         print(f"  {sys.argv[0]} errors               - Show all errors")
@@ -188,9 +196,9 @@ def main():
         print(f"  {sys.argv[0]} errors")
         print(f"  {sys.argv[0]} slow 2.0")
         return
-    
+
     command = sys.argv[1]
-    
+
     if command == "all":
         view_all_logs()
     elif command == "recent":

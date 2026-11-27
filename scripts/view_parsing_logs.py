@@ -2,11 +2,13 @@
 """
 Tool script for viewing and analyzing Markdown parsing logs
 """
+
 import sys
-from pathlib import Path
+
+from resume_platform.infrastructure.settings import get_settings
 
 # Log file path
-LOG_FILE = Path(__file__).resolve().parents[1] / "logs" / "markdown_parsing.log"
+LOG_FILE = get_settings().logs_dir / "markdown_parsing.log"
 
 
 def view_all_logs():
@@ -14,10 +16,10 @@ def view_all_logs():
     if not LOG_FILE.exists():
         print(f"Log file does not exist: {LOG_FILE}")
         return
-    
+
     print(f"Reading log file: {LOG_FILE}")
     print("=" * 80)
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+    with open(LOG_FILE, encoding="utf-8") as f:
         print(f.read())
 
 
@@ -26,10 +28,10 @@ def view_recent_logs(lines=50):
     if not LOG_FILE.exists():
         print(f"Log file does not exist: {LOG_FILE}")
         return
-    
+
     print(f"Displaying recent {lines} log lines:")
     print("=" * 80)
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+    with open(LOG_FILE, encoding="utf-8") as f:
         all_lines = f.readlines()
         recent = all_lines[-lines:]
         print("".join(recent))
@@ -40,19 +42,19 @@ def filter_logs_by_function(function_name):
     if not LOG_FILE.exists():
         print(f"Log file does not exist: {LOG_FILE}")
         return
-    
+
     print(f"Filtering function: {function_name}")
     print("=" * 80)
-    
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+
+    with open(LOG_FILE, encoding="utf-8") as f:
         in_section = False
         for line in f:
             if f"=== {function_name} START ===" in line:
                 in_section = True
-            
+
             if in_section:
                 print(line, end="")
-            
+
             if f"=== {function_name} END ===" in line:
                 in_section = False
                 print()
@@ -63,7 +65,7 @@ def get_statistics():
     if not LOG_FILE.exists():
         print(f"Log file does not exist: {LOG_FILE}")
         return
-    
+
     stats = {
         "_parse_summary_markdown": 0,
         "_parse_skills_markdown": 0,
@@ -72,13 +74,13 @@ def get_statistics():
         "_parse_projects_markdown": 0,
         "_parse_raw_markdown": 0,
     }
-    
-    with open(LOG_FILE, "r", encoding="utf-8") as f:
+
+    with open(LOG_FILE, encoding="utf-8") as f:
         for line in f:
-            for func_name in stats.keys():
+            for func_name in stats:
                 if f"=== {func_name} START ===" in line:
                     stats[func_name] += 1
-    
+
     print("Log Statistics:")
     print("=" * 80)
     for func_name, count in stats.items():
@@ -93,7 +95,7 @@ def clear_logs():
     if not LOG_FILE.exists():
         print(f"Log file does not exist: {LOG_FILE}")
         return
-    
+
     confirm = input(f"Are you sure you want to clear log file {LOG_FILE}? (yes/no): ")
     if confirm.lower() == "yes":
         LOG_FILE.write_text("")
@@ -117,9 +119,9 @@ def main():
         print(f"  {sys.argv[0]} filter _parse_summary_markdown")
         print(f"  {sys.argv[0]} stats")
         return
-    
+
     command = sys.argv[1]
-    
+
     if command == "all":
         view_all_logs()
     elif command == "recent":

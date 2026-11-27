@@ -3,6 +3,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 from resume_platform import vector_search
 from resume_platform.infrastructure import llm_config
 
@@ -83,7 +85,7 @@ class FakeCollection:
         embeddings: list[list[float]],
     ) -> None:
         for item_id, document, metadata, embedding in zip(
-            ids, documents, metadatas, embeddings
+            ids, documents, metadatas, embeddings, strict=True
         ):
             self.store[item_id] = {
                 "document": document,
@@ -183,10 +185,8 @@ def test_build_index_reuses_cached_embeddings_and_writes_status(
             },
         )(),
     )
-    monkeypatch.setattr(vector_search, "find_resume_versions", lambda: ["resume_a"])
-    monkeypatch.setattr(
-        vector_search, "load_complete_resume_as_dict", lambda version: _sample_resume()
-    )
+    monkeypatch.setattr(vector_search, "list_versions", lambda: ["resume_a"])
+    monkeypatch.setattr(vector_search, "load_resume", lambda version: _sample_resume())
 
     fresh_chunks = vector_search._merge_chunks(
         vector_search._build_chunks_from_resume("resume_a", _sample_resume())
@@ -321,7 +321,10 @@ def test_get_embedding_model_caches_by_provider(monkeypatch) -> None:
     assert google_first is google_second
     assert google_first.model == "models/gemini-embedding-001"
     assert openai_first is openai_second
-    assert openai_first.model == "text-embedding-embedder_collection/nomic-embed-text-v2-moe"
+    assert (
+        openai_first.model
+        == "text-embedding-embedder_collection/nomic-embed-text-v2-moe"
+    )
     assert openai_first.base_url == "http://127.0.0.1:1234/v1"
     assert openai_first.check_embedding_ctx_length is False
     assert openai_first.tiktoken_enabled is False
@@ -340,7 +343,9 @@ def test_search_entries_returns_clear_error_when_embedding_call_fails(
         vector_search, "ensure_index_ready", lambda: {"auto_rebuilt": False}
     )
     monkeypatch.setattr(
-        vector_search, "_get_client_and_collection", lambda: (object(), FakeCollection())
+        vector_search,
+        "_get_client_and_collection",
+        lambda: (object(), FakeCollection()),
     )
     monkeypatch.setattr(
         vector_search, "get_embedding_model", lambda provider=None: BrokenEmbeddings()
@@ -351,13 +356,11 @@ def test_search_entries_returns_clear_error_when_embedding_call_fails(
         lambda: type("Settings", (), {"embedding_provider": "openai"})(),
     )
 
-    try:
+    with pytest.raises(RuntimeError) as exc_info:
         vector_search.search_entries(query="backend payments", chunk_level="bullet")
-        assert False, "Expected RuntimeError when embedding provider fails"
-    except RuntimeError as exc:
-        message = str(exc)
-        assert "Failed to generate query embedding" in message
-        assert "provider=openai" in message
+    message = str(exc_info.value)
+    assert "Failed to generate query embedding" in message
+    assert "provider=openai" in message
 
 
 def test_build_index_returns_clear_error_when_document_embeddings_fail(
@@ -369,7 +372,6 @@ def test_build_index_returns_clear_error_when_document_embeddings_fail(
         def embed_documents(self, texts: list[str]) -> list[list[float]]:
             raise TypeError("'NoneType' object is not iterable")
 
-    settings = vector_search.get_settings()
     monkeypatch.setattr(
         vector_search,
         "get_settings",
@@ -385,24 +387,22 @@ def test_build_index_returns_clear_error_when_document_embeddings_fail(
             },
         )(),
     )
-    monkeypatch.setattr(vector_search, "find_resume_versions", lambda: ["resume_a"])
+    monkeypatch.setattr(vector_search, "list_versions", lambda: ["resume_a"])
+    monkeypatch.setattr(vector_search, "load_resume", lambda version: _sample_resume())
     monkeypatch.setattr(
-        vector_search, "load_complete_resume_as_dict", lambda version: _sample_resume()
-    )
-    monkeypatch.setattr(
-        vector_search, "_get_client_and_collection", lambda: (object(), FakeCollection())
+        vector_search,
+        "_get_client_and_collection",
+        lambda: (object(), FakeCollection()),
     )
     monkeypatch.setattr(
         vector_search, "get_embedding_model", lambda provider=None: BrokenEmbeddings()
     )
 
-    try:
+    with pytest.raises(RuntimeError) as exc_info:
         vector_search.build_index(force_rebuild=True)
-        assert False, "Expected RuntimeError when document embedding generation fails"
-    except RuntimeError as exc:
-        message = str(exc)
-        assert "Failed to generate document embeddings" in message
-        assert "provider=openai" in message
+    message = str(exc_info.value)
+    assert "Failed to generate document embeddings" in message
+    assert "provider=openai" in message
 
 
 def test_get_embedding_model_uses_openrouter_sdk_when_base_url_is_openrouter(
