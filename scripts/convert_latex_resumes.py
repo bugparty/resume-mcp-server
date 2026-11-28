@@ -1,4 +1,7 @@
-"""Convert legacy LaTeX resume sources into Markdown-centric YAML files."""
+"""Convert legacy awesome-cv LaTeX resumes into resume YAML versions.
+
+uv run python scripts/convert_latex_resumes.py old/resume.tex [more.tex ...]
+"""
 
 from __future__ import annotations
 
@@ -7,9 +10,9 @@ import re
 from pathlib import Path
 from typing import Any
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
-LEGACY_BASE = ROOT_DIR / "templates"
-OUTPUT_BASE = ROOT_DIR / "data" / "resumes"
+from resume_platform.paths import PROJECT_ROOT
+
+OUTPUT_BASE = PROJECT_ROOT / "data" / "resumes"
 
 
 class ParseError(RuntimeError):
@@ -277,22 +280,28 @@ def write_yaml(data: dict[str, Any], destination: Path) -> None:
         yaml.dump(data, handle, allow_unicode=True, sort_keys=False)
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "sources",
+        nargs="+",
+        type=Path,
+        help="Main .tex file(s) of the resumes to convert",
+    )
     parser.add_argument(
         "--output",
         type=Path,
         default=OUTPUT_BASE,
         help="Target directory for YAML resumes",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     args.output.mkdir(parents=True, exist_ok=True)
-    for tex_file in LEGACY_BASE.glob("resume*.tex"):
+    for tex_file in args.sources:
         data = convert_resume(tex_file)
         destination = args.output / f"{tex_file.stem}.yaml"
         write_yaml(data, destination)
-        print(f"Converted {tex_file.name} -> {destination.relative_to(ROOT_DIR)}")
+        print(f"Converted {tex_file} -> {destination}")
 
 
 if __name__ == "__main__":

@@ -7,7 +7,6 @@ memory, and S3 backends.
 
 from __future__ import annotations
 
-import os
 import warnings
 from pathlib import Path
 from typing import Any
@@ -32,6 +31,8 @@ from fs.base import FS  # noqa: E402
 from fs.memoryfs import MemoryFS  # noqa: E402
 from fs.osfs import OSFS  # noqa: E402
 
+from resume_platform.infrastructure.s3_config import S3Connection  # noqa: E402
+
 
 def _join_fs_url(base_url: str, child: str) -> str:
     """Join a backend URL/path with a child segment."""
@@ -41,34 +42,15 @@ def _join_fs_url(base_url: str, child: str) -> str:
 
 
 def _s3_open_kwargs() -> dict[str, Any]:
-    """Build kwargs for fs-s3fs opener from project and AWS env aliases."""
-    kwargs: dict[str, Any] = {}
-
-    endpoint_url = os.getenv("RESUME_S3_ENDPOINT_URL") or os.getenv("S3_ENDPOINT_URL")
-    region = os.getenv("RESUME_S3_REGION") or os.getenv("AWS_REGION")
-    access_key_id = (
-        os.getenv("RESUME_S3_ACCESS_KEY_ID")
-        or os.getenv("RESUME_S3_ACCESS_KEY")
-        or os.getenv("S3_ACCESS_KEY_ID")
-        or os.getenv("AWS_ACCESS_KEY_ID")
-    )
-    secret_access_key = (
-        os.getenv("RESUME_S3_SECRET_ACCESS_KEY")
-        or os.getenv("RESUME_S3_SECRET_KEY")
-        or os.getenv("S3_SECRET_ACCESS_KEY")
-        or os.getenv("AWS_SECRET_ACCESS_KEY")
-    )
-
-    if endpoint_url:
-        kwargs["endpoint_url"] = endpoint_url
-    if region:
-        kwargs["region"] = region
-    if access_key_id:
-        kwargs["aws_access_key_id"] = access_key_id
-    if secret_access_key:
-        kwargs["aws_secret_access_key"] = secret_access_key
-
-    return kwargs
+    """Build kwargs for the fs-s3fs opener from the shared S3 settings."""
+    conn = S3Connection.from_env()
+    kwargs = {
+        "endpoint_url": conn.endpoint_url,
+        "region": conn.region,
+        "aws_access_key_id": conn.access_key_id,
+        "aws_secret_access_key": conn.secret_access_key,
+    }
+    return {key: value for key, value in kwargs.items() if value}
 
 
 def create_filesystem(fs_url: str) -> FS:

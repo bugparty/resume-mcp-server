@@ -10,6 +10,8 @@ import boto3
 from botocore.config import Config
 from botocore.exceptions import BotoCoreError, ClientError
 
+from resume_platform.infrastructure.s3_config import S3Connection
+
 logger = logging.getLogger(__name__)
 
 
@@ -25,20 +27,11 @@ def _get_s3_client_and_settings() -> tuple[Any, str, str, str]:
             "Resume S3 bucket not configured. Set RESUME_S3_BUCKET_NAME or S3_BUCKET_NAME."
         )
 
-    s3_endpoint = os.getenv("RESUME_S3_ENDPOINT_URL") or os.getenv("S3_ENDPOINT_URL")
-    s3_region = os.getenv("RESUME_S3_REGION") or os.getenv("AWS_REGION")
-    access_key = (
-        os.getenv("RESUME_S3_ACCESS_KEY_ID")
-        or os.getenv("RESUME_S3_ACCESS_KEY")
-        or os.getenv("S3_ACCESS_KEY_ID")
-        or os.getenv("AWS_ACCESS_KEY_ID")
-    )
-    secret_key = (
-        os.getenv("RESUME_S3_SECRET_ACCESS_KEY")
-        or os.getenv("RESUME_S3_SECRET_KEY")
-        or os.getenv("S3_SECRET_ACCESS_KEY")
-        or os.getenv("AWS_SECRET_ACCESS_KEY")
-    )
+    conn = S3Connection.from_env()
+    s3_endpoint = conn.endpoint_url
+    s3_region = conn.region
+    access_key = conn.access_key_id
+    secret_key = conn.secret_access_key
 
     client_kwargs: dict[str, Any] = {}
     if s3_endpoint:

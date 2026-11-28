@@ -454,18 +454,6 @@ def _split_skill_list(text: str) -> list[str]:
     return [item for item in items if item]
 
 
-def parse_skill_items(line: str) -> list[str]:
-    """Parse the individual skills out of a single skills line.
-
-    Accepts an optional list marker and an optional "Category:" prefix, so
-    both "- Languages: C++, Python" and "C++, Python" yield ["C++", "Python"].
-    """
-    content = re.sub(r"^[-*]\s+", "", line.strip(), count=1)
-    if ":" in content:
-        _, content = content.split(":", 1)
-    return _split_skill_list(content)
-
-
 @log_markdown_parsing
 def parse_skills_markdown(
     markdown: str, section: dict[str, Any], version: str, section_id: str

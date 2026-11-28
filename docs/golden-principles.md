@@ -96,7 +96,9 @@ the top and are then exempt from the path check.
 No code, scripts, config or binaries kept "just in case"; git history
 remembers them.
 
-*CI:* Ruff (unused imports and variables).
+*CI:* Ruff (unused imports and variables), `test_no_unreferenced_files`
+(scripts, schemas, templates, fixtures and top-level shell scripts must be
+mentioned somewhere).
 *Sweep:* `uvx vulture src scripts --min-confidence 60` (expect false
 positives on decorator-registered functions), plus unreferenced scripts and
 config files.
